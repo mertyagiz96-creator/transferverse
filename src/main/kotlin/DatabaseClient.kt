@@ -27,13 +27,11 @@ object DatabaseClient {
         "romanya" to "romania", "romania" to "romania",
         "ukrayna" to "ukraine", "ukraine" to "ukraine",
         "avusturya" to "austria", "austria" to "austria",
-
         "cek" to "czech republic", "çek" to "czech republic",
         "cekya" to "czech republic", "çekya" to "czech republic",
         "cek cumhuriyeti" to "czech republic", "çek cumhuriyeti" to "czech republic",
         "czech republic" to "czech republic", "czechia" to "czech republic",
         "cekoslovakya" to "czechoslovakia", "çekoslovakya" to "czechoslovakia",
-
         "bosna hersek" to "bosnia-herzegovina", "bosna" to "bosnia-herzegovina", "bosnia-herzegovina" to "bosnia-herzegovina",
         "kanada" to "canada", "amerika" to "united states", "abd" to "united states", "united states" to "united states",
         "brezilya" to "brazil", "brazil" to "brazil",
@@ -45,12 +43,10 @@ object DatabaseClient {
         "paraguay" to "paraguay",
         "peru" to "peru",
         "ekvador" to "ecuador", "ecuador" to "ecuador",
-
         "fildisi sahili" to "cote divoire", "fildişi sahili" to "cote divoire",
         "fildisi" to "cote divoire", "fildişi" to "cote divoire",
         "cote d'ivoire" to "cote divoire", "cote divoire" to "cote divoire",
         "ivory coast" to "cote divoire",
-
         "nijerya" to "nigeria", "nigeria" to "nigeria",
         "kamerun" to "cameroon", "cameroon" to "cameroon", "kameroon" to "cameroon",
         "senegal" to "senegal",
@@ -103,16 +99,26 @@ object DatabaseClient {
         return InputStreamReader(inputStream, Charsets.UTF_8)
     }
 
-    private inline fun forEachRecord(action: (TransferRecord) -> Unit) {
-        val reader = openStream() ?: return
-        JsonReader(reader).use { jsonReader ->
-            jsonReader.beginArray()
-            while (jsonReader.hasNext()) {
-                val record = gson.fromJson<TransferRecord>(jsonReader, TransferRecord::class.java)
-                action(record)
+    // 🚀 EN KRİTİK DEĞİŞİKLİK: Veriyi bir kez okuyup RAM'de tutan önbellek (In-Memory Cache)
+    private val cachedRecords: List<TransferRecord> by lazy {
+        val list = mutableListOf<TransferRecord>()
+        val reader = openStream()
+        if (reader != null) {
+            JsonReader(reader).use { jsonReader ->
+                jsonReader.beginArray()
+                while (jsonReader.hasNext()) {
+                    val record = gson.fromJson<TransferRecord>(jsonReader, TransferRecord::class.java)
+                    list.add(record)
+                }
+                jsonReader.endArray()
             }
-            jsonReader.endArray()
         }
+        println("ÖNBELLEK YÜKLENDİ: Toplam ${list.size} kayıt belleğe alındı.")
+        list
+    }
+
+    private inline fun forEachRecord(action: (TransferRecord) -> Unit) {
+        cachedRecords.forEach(action)
     }
 
     private fun String.toStandardSearch(): String {
