@@ -77,9 +77,13 @@ object DatabaseClient {
     )
 
     private val memoryCache: List<TransferRecord> by lazy {
+        println("🚀 RAM'e veri yükleme işlemi başlatılıyor...")
+        val startTime = System.currentTimeMillis()
         val records = mutableListOf<TransferRecord>()
+
         val dbFile = File(System.getProperty("java.io.tmpdir"), "football_cached.db")
         if (!dbFile.exists()) {
+            println("📂 football_cached.db bulunamadı, resource'dan kopyalanıyor...")
             val inputStream = object {}.javaClass.classLoader.getResourceAsStream("football.db")
                 ?: throw IllegalStateException("❌ 'football.db' resources klasöründe bulunamadı!")
 
@@ -119,10 +123,12 @@ object DatabaseClient {
                 }
             }
         } catch (e: Exception) {
-            println("🔥 Belleğe yükleme hatası: ${e.message}")
+            println("🔥 Canlıda yükleme hatası: ${e.message}")
+            e.printStackTrace()
         }
 
-        println("✅ Tüm veritabanı başarıyla RAM'e yüklendi! Toplam kayıt: ${records.size}")
+        val duration = System.currentTimeMillis() - startTime
+        println("✅ RAM'e yükleme tamamlandı! Süre: ${duration}ms, Toplam kayıt: ${records.size}")
         records
     }
 
@@ -221,7 +227,7 @@ object DatabaseClient {
 
     fun fetchPlayersByClub(clubOrCountry: String): List<Player> {
         val stdParam = clubOrCountry.toStandardSearch()
-        val mappedCountry = countryMap[stdParam] ?: stdParam // 🛠️ Düzeltildi (|| yerine ?:)
+        val mappedCountry = countryMap[stdParam] ?: stdParam
         val isCountry = isCountryParam(clubOrCountry)
 
         val playerAllTransfers = mutableMapOf<Int, MutableList<Triple<String, String, String>>>()
@@ -288,8 +294,8 @@ object DatabaseClient {
         val std1 = param1.toStandardSearch()
         val std2 = param2.toStandardSearch()
 
-        val mappedCountry1 = countryMap[std1] ?: std1 // 🛠️ Düzeltildi
-        val mappedCountry2 = countryMap[std2] ?: std2 // 🛠️ Düzeltildi
+        val mappedCountry1 = countryMap[std1] ?: std1
+        val mappedCountry2 = countryMap[std2] ?: std2
 
         val isParam1Country = isCountryParam(param1)
         val isParam2Country = isCountryParam(param2)
