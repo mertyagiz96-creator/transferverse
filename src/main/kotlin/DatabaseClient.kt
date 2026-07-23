@@ -1,3 +1,5 @@
+import java.io.File
+import java.sql.Connection
 import java.sql.DriverManager
 
 object DatabaseClient {
@@ -34,12 +36,23 @@ object DatabaseClient {
         "suudi arabistan" to "saudi arabia", "katar" to "qatar", "ozbekistan" to "uzbekistan"
     )
 
-    private fun getConnection(): java.sql.Connection {
-        val resource = object {}.javaClass.classLoader.getResource("football.db")
-            ?: throw IllegalStateException("❌ 'football.db' resources klasöründe bulunamadı!")
+    private fun getConnection(): Connection {
+        // Render/Docker ortamında veya fat JAR içinde resources doğrudan dosya yolu olarak okunamaz.
+        // Bu yüzden veritabanı dosyası yoksa resources'dan diske kopyalanır.
+        val dbFile = File("football.db")
 
-        val dbPath = resource.file
-        return DriverManager.getConnection("jdbc:sqlite:$dbPath")
+        if (!dbFile.exists()) {
+            val inputStream = object {}.javaClass.classLoader.getResourceAsStream("football.db")
+                ?: throw IllegalStateException("❌ 'football.db' resources klasöründe bulunamadı!")
+
+            inputStream.use { input ->
+                dbFile.outputStream().use { output ->
+                    input.copyTo(output)
+                }
+            }
+        }
+
+        return DriverManager.getConnection("jdbc:sqlite:${dbFile.absolutePath}")
     }
 
     private fun String.toStandardSearch(): String {
