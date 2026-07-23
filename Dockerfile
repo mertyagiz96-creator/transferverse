@@ -6,10 +6,13 @@ RUN ./gradlew shadowJar --no-daemon
 
 FROM eclipse-temurin:17-jre-alpine
 WORKDIR /app
+
+# Alpine Linux üzerinde SQLite sürücüsünün (C native kütüphanesi) sorunsuz çalışması için
+RUN apk add --no-cache gcompat
+
 COPY --from=build /app/build/libs/*-all.jar app.jar
-COPY --from=build /app/src/main/resources/transfers.json /app/src/main/resources/transfers.json
+COPY --from=build /app/src/main/resources/football.db /app/football.db
 
 EXPOSE 8080
 
-# JVM'e maksimum RAM sınırı koyuyoruz (Render'ın 512MB sınırına karşı Java heap'ini 350MB ile sınırlandırıyoruz)
-CMD ["java", "-Xmx350m", "-jar", "app.jar"]
+CMD ["java", "-Xmx300m", "-jar", "app.jar"]

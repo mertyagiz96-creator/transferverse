@@ -31,3 +31,9 @@ bin/
 ### Gradle & Build ###
 build/
 .gradle/
+
+### Local DB kopyası (kök dizin) ###
+/football.db
+
+### Migration scripti (bir kerelik kullanıldı) ###
+src/main/kotlin/Migration.kt

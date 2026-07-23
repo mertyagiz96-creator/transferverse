@@ -6,8 +6,6 @@ import io.ktor.server.netty.*
 import io.ktor.server.plugins.contentnegotiation.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 
 fun main() {
     val port = System.getenv("PORT")?.toIntOrNull() ?: 8080
@@ -15,12 +13,6 @@ fun main() {
     embeddedServer(Netty, port = port, host = "0.0.0.0") {
         install(ContentNegotiation) {
             json()
-        }
-
-        // 🚀 Sunucu ayağa kalkar kalkmaz arka planda JSON'ı RAM'e doldurur
-        launch(Dispatchers.IO) {
-            println("Açılışta önbellekleme başlatılıyor...")
-            DatabaseClient.prefetchData()
         }
 
         routing {

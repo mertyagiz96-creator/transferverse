@@ -1,11 +1,10 @@
-import com.google.gson.Gson
-import com.google.gson.stream.JsonReader
-import java.io.InputStreamReader
 import java.io.File
+import java.sql.Connection
+import java.sql.DriverManager
 
 object DatabaseClient {
 
-    private val countrySynonyms = mapOf(
+    private val countryMap = mapOf(
         "ingiltere" to "england", "england" to "england", "birlesik krallik" to "england", "uk" to "england",
         "turkiye" to "turkey", "türkiye" to "turkey", "turkey" to "turkey",
         "almanya" to "germany", "germany" to "germany",
@@ -27,12 +26,14 @@ object DatabaseClient {
         "romanya" to "romania", "romania" to "romania",
         "ukrayna" to "ukraine", "ukraine" to "ukraine",
         "avusturya" to "austria", "austria" to "austria",
+
         "cek" to "czech republic", "çek" to "czech republic",
         "cekya" to "czech republic", "çekya" to "czech republic",
         "cek cumhuriyeti" to "czech republic", "çek cumhuriyeti" to "czech republic",
         "czech republic" to "czech republic", "czechia" to "czech republic",
         "cekoslovakya" to "czechoslovakia", "çekoslovakya" to "czechoslovakia",
-        "bosna hersek" to "bosnia-herzegovina", "bosna" to "bosnia-herzegovina", "bosnia-herzegovina" to "bosnia-herzegovina",
+
+        "bosna hersek" to "bosnia-herzegovina", "bosna" to "bosnia-herzegovina",
         "kanada" to "canada", "amerika" to "united states", "abd" to "united states", "united states" to "united states",
         "brezilya" to "brazil", "brazil" to "brazil",
         "arjantin" to "argentina", "argentina" to "argentina",
@@ -43,12 +44,9 @@ object DatabaseClient {
         "paraguay" to "paraguay",
         "peru" to "peru",
         "ekvador" to "ecuador", "ecuador" to "ecuador",
-        "fildisi sahili" to "cote divoire", "fildişi sahili" to "cote divoire",
-        "fildisi" to "cote divoire", "fildişi" to "cote divoire",
-        "cote d'ivoire" to "cote divoire", "cote divoire" to "cote divoire",
-        "ivory coast" to "cote divoire",
+        "fildisi sahili" to "cote d'ivoire", "fildişi sahili" to "cote d'ivoire", "fildişi" to "cote d'ivoire",
         "nijerya" to "nigeria", "nigeria" to "nigeria",
-        "kamerun" to "cameroon", "cameroon" to "cameroon", "kameroon" to "cameroon",
+        "kamerun" to "cameroon", "cameroon" to "cameroon",
         "senegal" to "senegal",
         "fas" to "morocco", "morocco" to "morocco",
         "cezayir" to "algeria", "algeria" to "algeria",
@@ -62,63 +60,28 @@ object DatabaseClient {
         "iran" to "iran",
         "avustralya" to "australia", "australia" to "australia",
         "suudi arabistan" to "saudi arabia",
-        "qatar" to "qatar", "katar" to "qatar",
+        "katar" to "qatar", "qatar" to "qatar",
         "ozbekistan" to "uzbekistan"
     )
 
-    data class TransferRecord(
-        val playerId: Int,
-        val playerName: String,
-        val position: String,
-        val nationality: String,
-        val birthDate: String?,
-        val fromClub: String,
-        val toClub: String,
-        val season: String,
-        val transferId: Int
-    )
+    // 💡 Tek, kalıcı connection. SQLite dosya tabanlı olduğu için tek connection yeterli ve
+    // her istekte yeni connection açıp kapatma maliyetini ortadan kaldırır.
+    private val connection: Connection by lazy { createConnection() }
 
-    private val gson = Gson()
+    // 💡 Artık runtime'da resources'tan kopyalama YOK. football.db Docker image'ında
+    // doğrudan /app/football.db konumunda hazır bulunuyor (bkz. Dockerfile).
+    // Local'de çalıştırırken de proje kök dizininde football.db bulunmalı.
+    private fun createConnection(): Connection {
+        val dbFile = File("football.db")
 
-    private fun openStream(): InputStreamReader? {
-        val directFile = File("/app/src/main/resources/transfers.json")
-        if (directFile.exists()) {
-            return InputStreamReader(directFile.inputStream(), Charsets.UTF_8)
+        if (!dbFile.exists()) {
+            throw IllegalStateException(
+                "❌ football.db bulunamadı: ${dbFile.absolutePath}. " +
+                        "Local çalıştırıyorsanız dosyayı proje kök dizinine kopyalayın."
+            )
         }
 
-        val altFile = File("src/main/resources/transfers.json")
-        if (altFile.exists()) {
-            return InputStreamReader(altFile.inputStream(), Charsets.UTF_8)
-        }
-
-        val inputStream = DatabaseClient::class.java.getResourceAsStream("/transfers.json")
-            ?: Thread.currentThread().contextClassLoader.getResourceAsStream("transfers.json")
-            ?: object {}.javaClass.classLoader.getResourceAsStream("transfers.json")
-            ?: return null
-
-        return InputStreamReader(inputStream, Charsets.UTF_8)
-    }
-
-    // 🚀 EN KRİTİK DEĞİŞİKLİK: Veriyi bir kez okuyup RAM'de tutan önbellek (In-Memory Cache)
-    private val cachedRecords: List<TransferRecord> by lazy {
-        val list = mutableListOf<TransferRecord>()
-        val reader = openStream()
-        if (reader != null) {
-            JsonReader(reader).use { jsonReader ->
-                jsonReader.beginArray()
-                while (jsonReader.hasNext()) {
-                    val record = gson.fromJson<TransferRecord>(jsonReader, TransferRecord::class.java)
-                    list.add(record)
-                }
-                jsonReader.endArray()
-            }
-        }
-        println("ÖNBELLEK YÜKLENDİ: Toplam ${list.size} kayıt belleğe alındı.")
-        list
-    }
-
-    private inline fun forEachRecord(action: (TransferRecord) -> Unit) {
-        cachedRecords.forEach(action)
+        return DriverManager.getConnection("jdbc:sqlite:${dbFile.absolutePath}")
     }
 
     private fun String.toStandardSearch(): String {
@@ -129,7 +92,6 @@ object DatabaseClient {
             .replace("ş", "s").replace("Ş", "s")
             .replace("ö", "o").replace("Ö", "o")
             .replace("ç", "c").replace("Ç", "c")
-            .replace("'", "").replace("'", "").replace("`", "").replace("’", "")
             .trim()
     }
 
@@ -148,46 +110,30 @@ object DatabaseClient {
         if (clubName == null) return false
         val cleanClub = clubName.toStandardSearch()
         val target = targetClub.toStandardSearch()
-        if (isYouthClub(cleanClub)) return false
 
-        if (target == "gs" || target == "galatasaray") {
-            return cleanClub.contains("galatasaray") || cleanClub == "gs" || cleanClub.split(Regex("[^a-z0-9]+")).contains("gs")
+        if (isYouthClub(cleanClub)) {
+            return false
         }
 
         return cleanClub.contains(target)
     }
 
-    private fun isCountryParam(param: String): Boolean {
-        val stdParam = param.toStandardSearch()
-        return countrySynonyms.containsKey(stdParam)
+    // 💡 Sadece SADECE ilk/ana uyruğu baz alan kusursuz kontrol
+    private fun isPrimaryCountryMatch(playerNationality: String, searchParam: String, mappedCountry: String): Boolean {
+        val stdNat = playerNationality.toStandardSearch()
+        val stdSearch = searchParam.toStandardSearch()
+        val stdMapped = mappedCountry.toStandardSearch()
+
+        // Oyuncu uyruk metnini kelimelere ayırıp ilk kelimeyi (yani ana uyruğu) alıyoruz
+        val natWords = stdNat.split(Regex("[^a-z]+")).filter { it.isNotEmpty() }
+        val primaryNationality = natWords.firstOrNull() ?: return false
+
+        return primaryNationality == stdSearch || primaryNationality == stdMapped
     }
 
-    private fun isCountryMatch(playerNationality: String, searchParam: String): Boolean {
-        if (playerNationality.isBlank()) return false
-
-        val primaryNationality = playerNationality.split(Regex("[,/\\s-]"))
-            .firstOrNull { it.isNotBlank() } ?: playerNationality
-
-        val stdNat = primaryNationality.toStandardSearch()
-        val stdSearch = searchParam.toStandardSearch()
-        val resolvedSearch = (countrySynonyms[stdSearch] ?: stdSearch).toStandardSearch()
-
-        val isTargetCote = resolvedSearch.contains("cote") || resolvedSearch.contains("ivory") || resolvedSearch.contains("fildisi")
-        val isPlayerCote = stdNat.contains("cote") || stdNat.contains("ivory") || stdNat.contains("fildisi")
-        if (isTargetCote || isPlayerCote) {
-            return isTargetCote && isPlayerCote
-        }
-
-        val isTargetCzech = resolvedSearch.contains("czech") || resolvedSearch.contains("cek")
-        val isPlayerCzech = stdNat.contains("czech") || stdNat.contains("cek")
-        if (isTargetCzech || isPlayerCzech) {
-            return isTargetCzech && isPlayerCzech
-        }
-
-        val natTokens = stdNat.split(Regex("[^a-z0-9]+")).filter { it.isNotBlank() }
-        val searchTokens = resolvedSearch.split(Regex("[^a-z0-9]+")).filter { it.isNotBlank() }
-
-        return searchTokens.all { sToken -> natTokens.contains(sToken) }
+    private fun isCountryParam(param: String): Boolean {
+        val std = param.toStandardSearch()
+        return countryMap.containsKey(std) || countryMap.containsValue(std)
     }
 
     private fun parseSeasonToSortValue(season: String?): Int {
@@ -202,128 +148,308 @@ object DatabaseClient {
 
     fun fetchAllUniqueSuggestions(): List<String> {
         val suggestions = mutableSetOf<String>()
-        forEachRecord { record ->
-            if (record.fromClub.isNotBlank()) {
-                val cleaned = record.fromClub.replace('\u00a0', ' ').trim()
-                if (cleaned.length > 1 && !isYouthClub(cleaned)) suggestions.add(cleaned)
+        val sql = """
+            SELECT DISTINCT from_club FROM transfers UNION
+            SELECT DISTINCT to_club FROM transfers UNION
+            SELECT DISTINCT nationality FROM players
+        """.trimIndent()
+
+        try {
+            connection.prepareStatement(sql).use { stmt ->
+                stmt.executeQuery().use { rs ->
+                    while (rs.next()) {
+                        val value = rs.getString(1)
+                        if (!value.isNullOrBlank()) {
+                            val cleaned = value.replace('\u00a0', ' ').trim()
+                            if (cleaned.length > 1 && !isYouthClub(cleaned)) {
+                                suggestions.add(cleaned)
+                            }
+                        }
+                    }
+                }
             }
-            if (record.toClub.isNotBlank()) {
-                val cleaned = record.toClub.replace('\u00a0', ' ').trim()
-                if (cleaned.length > 1 && !isYouthClub(cleaned)) suggestions.add(cleaned)
-            }
-            if (record.nationality.isNotBlank()) {
-                val cleaned = cleanNationalityText(record.nationality)
-                if (cleaned.length > 1) suggestions.add(cleaned)
-            }
+        } catch (e: Exception) {
+            println("🔥 suggestions HATASI: ${e.message}")
         }
-        suggestions.addAll(countrySynonyms.keys)
+
+        val mappedTurkishCountries = countryMap.keys
+            .filter { it.length > 2 }
+            .map { it.replaceFirstChar { char -> char.uppercase() } }
+
+        suggestions.addAll(mappedTurkishCountries)
+
+        suggestions.addAll(listOf(
+            "Türkiye", "Mısır", "Fas", "Cezayir", "Tunus", "Nijerya", "Gana", "Kamerun",
+            "Senegal", "Fildişi Sahili", "Güney Afrika", "Japonya", "Güney Kore", "İran",
+            "Suudi Arabistan", "Katar", "Özbekistan", "Brezilya", "Arjantin", "Kolombiya",
+            "Uruguay", "Meksika", "Şili", "İsveç", "Norveç", "Danimarka", "Çekya"
+        ))
+
         return suggestions.sorted()
     }
 
+    // 💡 ARTIK SQL SEVİYESİNDE FİLTRELİYORUZ: from_club_std / to_club_std / nationality_std
+    // kolonları + index'ler sayesinde 1.1M satırlık tabloyu taramak yerine sadece eşleşen
+    // satırlar çekiliyor. Kotlin tarafındaki matchesOriginalClub/isPrimaryCountryMatch kontrolü
+    // ise SQL'in kaba LIKE eşleşmesinden sonra "youth club eleme" ve "tam eşleşme" gibi ince
+    // iş mantığını uygulamak için hâlâ çalışıyor (ama artık çok daha az satır üzerinde).
     fun fetchPlayersByClub(clubOrCountry: String): List<Player> {
+        val stdParam = clubOrCountry.toStandardSearch()
+        val mappedCountry = countryMap[stdParam] ?: stdParam
         val isCountry = isCountryParam(clubOrCountry)
+
+        val sql = if (isCountry) {
+            """
+            SELECT p.id, p.name, p.position, p.nationality, p.birthdate, t.from_club, t.to_club, t.season 
+            FROM players p 
+            JOIN transfers t ON p.id = t.transfer_id
+            WHERE p.nationality_std LIKE ?
+            """.trimIndent()
+        } else {
+            """
+            SELECT p.id, p.name, p.position, p.nationality, p.birthdate, t.from_club, t.to_club, t.season 
+            FROM players p 
+            JOIN transfers t ON p.id = t.transfer_id
+            WHERE t.from_club_std LIKE ? OR t.to_club_std LIKE ?
+            """.trimIndent()
+        }
 
         val playerAllTransfers = mutableMapOf<Int, MutableList<Triple<String, String, String>>>()
         val playerInfoMap = mutableMapOf<Int, Player>()
 
-        forEachRecord { record ->
-            val pId = record.playerId
-            playerAllTransfers.getOrPut(pId) { mutableListOf() }.add(Triple(record.fromClub, record.toClub, record.season))
-            if (!playerInfoMap.containsKey(pId)) {
-                playerInfoMap[pId] = Player(
-                    playerId = pId, name = record.playerName, position = record.position,
-                    nationality = record.nationality, team = clubOrCountry, birthDate = record.birthDate,
-                    season1 = null, season2 = null, transferId = record.transferId
-                )
+        try {
+            connection.prepareStatement(sql).use { stmt ->
+                if (isCountry) {
+                    val searchTerm = "%$mappedCountry%"
+                    stmt.setString(1, searchTerm)
+                } else {
+                    val searchTerm = "%$stdParam%"
+                    stmt.setString(1, searchTerm)
+                    stmt.setString(2, searchTerm)
+                }
+
+                stmt.executeQuery().use { rs ->
+                    while (rs.next()) {
+                        val pId = rs.getInt("id")
+                        val fromClub = rs.getString("from_club") ?: ""
+                        val toClub = rs.getString("to_club") ?: ""
+                        val season = rs.getString("season") ?: continue
+
+                        playerAllTransfers.getOrPut(pId) { mutableListOf() }.add(Triple(fromClub, toClub, season))
+
+                        if (!playerInfoMap.containsKey(pId)) {
+                            val rawNat = rs.getString("nationality") ?: ""
+                            val playerName = rs.getString("name") ?: ""
+
+                            playerInfoMap[pId] = Player(
+                                playerId = pId,
+                                name = playerName,
+                                position = rs.getString("position") ?: "",
+                                nationality = cleanNationalityText(rawNat),
+                                team = clubOrCountry,
+                                birthDate = rs.getString("birthdate"),
+                                season1 = null,
+                                season2 = null,
+                                transferId = pId
+                            )
+                        }
+                    }
+                }
             }
+        } catch (e: Exception) {
+            println("🔥 fetchPlayersByClub HATASI: ${e.message}")
         }
 
         val resultList = mutableListOf<Player>()
+
         for ((pId, transfers) in playerAllTransfers) {
             val player = playerInfoMap[pId] ?: continue
             val validSeasonsForClub = mutableListOf<String>()
             var hasRealMatch = false
 
             for (tr in transfers) {
+                val f = tr.first
+                val t = tr.second
+                val s = tr.third
+
                 if (isCountry) {
-                    if (isCountryMatch(player.nationality, clubOrCountry)) {
+                    if (isPrimaryCountryMatch(player.nationality, clubOrCountry, mappedCountry)) {
                         hasRealMatch = true
-                        validSeasonsForClub.add(tr.third)
+                        validSeasonsForClub.add(s)
                     }
                 } else {
-                    if (matchesOriginalClub(tr.first, clubOrCountry) || matchesOriginalClub(tr.second, clubOrCountry)) {
+                    val isFromReal = matchesOriginalClub(f, clubOrCountry)
+                    val isToReal = matchesOriginalClub(t, clubOrCountry)
+
+                    if (isFromReal || isToReal) {
                         hasRealMatch = true
-                        validSeasonsForClub.add(tr.third)
+                        validSeasonsForClub.add(s)
                     }
                 }
             }
 
-            if (hasRealMatch && validSeasonsForSpaceOrList(validSeasonsForClub)) {
+            if (hasRealMatch && validSeasonsForClub.isNotEmpty()) {
                 val seasonValue = if (isCountry) "-" else validSeasonsForClub.minOrNull()
-                resultList.add(player.copy(season1 = seasonValue))
+                val finalPlayer = player.copy(season1 = seasonValue)
+                resultList.add(finalPlayer)
             }
         }
 
-        return resultList.distinctBy { transfer -> transfer.transferId }
+        return resultList.distinctBy { it.transferId }
             .sortedByDescending { parseSeasonToSortValue(it.season1) }
     }
 
-    private fun validSeasonsForSpaceOrList(list: List<String>): Boolean = list.isNotEmpty()
-
     fun fetchCommonPlayers(param1: String, param2: String): List<Player> {
+        val std1 = param1.toStandardSearch()
+        val std2 = param2.toStandardSearch()
+
+        val mappedCountry1 = countryMap[std1] ?: std1
+        val mappedCountry2 = countryMap[std2] ?: std2
+
         val isParam1Country = isCountryParam(param1)
         val isParam2Country = isCountryParam(param2)
+
+        // 💡 SQL'de "aday oyuncu id" havuzunu daraltıyoruz: iki parametreden en az biriyle
+        // eşleşen transfer/oyuncu satırlarını çekiyoruz (OR mantığıyla), sonrasında Kotlin'de
+        // her iki koşulun da (AND) sağlandığı oyuncuları filtreliyoruz. Bu sayede yine
+        // 1.1M satırlık tam tabloyu değil, sadece iki arama terimiyle eşleşen satırları çekiyoruz.
+        val sql = buildString {
+            append(
+                """
+                SELECT p.id, p.name, p.position, p.nationality, p.birthdate, t.from_club, t.to_club, t.season 
+                FROM players p 
+                JOIN transfers t ON p.id = t.transfer_id
+                WHERE 
+                """.trimIndent()
+            )
+
+            val conditions = mutableListOf<String>()
+            if (isParam1Country) conditions.add("p.nationality_std LIKE ?") else conditions.add("(t.from_club_std LIKE ? OR t.to_club_std LIKE ?)")
+            if (isParam2Country) conditions.add("p.nationality_std LIKE ?") else conditions.add("(t.from_club_std LIKE ? OR t.to_club_std LIKE ?)")
+
+            append(conditions.joinToString(" OR "))
+        }
 
         val playerAllTransfers = mutableMapOf<Int, MutableList<Triple<String, String, String>>>()
         val playerInfoMap = mutableMapOf<Int, Player>()
 
-        forEachRecord { record ->
-            val pId = record.playerId
-            playerAllTransfers.getOrPut(pId) { mutableListOf() }.add(Triple(record.fromClub, record.toClub, record.season))
-            if (!playerInfoMap.containsKey(pId)) {
-                playerInfoMap[pId] = Player(
-                    playerId = pId, name = record.playerName, position = record.position,
-                    nationality = record.nationality, team = "$param1 / $param2", birthDate = record.birthDate,
-                    season1 = null, season2 = null, transferId = record.transferId
-                )
+        try {
+            connection.prepareStatement(sql).use { stmt ->
+                var paramIndex = 1
+
+                if (isParam1Country) {
+                    stmt.setString(paramIndex++, "%$mappedCountry1%")
+                } else {
+                    val term = "%$std1%"
+                    stmt.setString(paramIndex++, term)
+                    stmt.setString(paramIndex++, term)
+                }
+
+                if (isParam2Country) {
+                    stmt.setString(paramIndex++, "%$mappedCountry2%")
+                } else {
+                    val term = "%$std2%"
+                    stmt.setString(paramIndex++, term)
+                    stmt.setString(paramIndex, term)
+                }
+
+                stmt.executeQuery().use { rs ->
+                    while (rs.next()) {
+                        val pId = rs.getInt("id")
+                        val fromClub = rs.getString("from_club") ?: ""
+                        val toClub = rs.getString("to_club") ?: ""
+                        val season = rs.getString("season") ?: continue
+
+                        playerAllTransfers.getOrPut(pId) { mutableListOf() }.add(Triple(fromClub, toClub, season))
+
+                        if (!playerInfoMap.containsKey(pId)) {
+                            val rawNat = rs.getString("nationality") ?: ""
+                            val playerName = rs.getString("name") ?: ""
+
+                            playerInfoMap[pId] = Player(
+                                playerId = pId,
+                                name = playerName,
+                                position = rs.getString("position") ?: "",
+                                nationality = cleanNationalityText(rawNat),
+                                team = "$param1 / $param2",
+                                birthDate = rs.getString("birthdate"),
+                                season1 = null,
+                                season2 = null,
+                                transferId = pId
+                            )
+                        }
+                    }
+                }
             }
+        } catch (e: Exception) {
+            println("🔥 fetchCommonPlayers HATASI: ${e.message}")
         }
 
         val rawList = mutableListOf<Player>()
+
         for ((pId, transfers) in playerAllTransfers) {
             val player = playerInfoMap[pId] ?: continue
+
             val seasons1 = mutableListOf<String>()
             val seasons2 = mutableListOf<String>()
 
             for (tr in transfers) {
-                val match1 = if (isParam1Country) isCountryMatch(player.nationality, param1) else matchesOriginalClub(tr.first, param1) || matchesOriginalClub(tr.second, param1)
-                val match2 = if (isParam2Country) isCountryMatch(player.nationality, param2) else matchesOriginalClub(tr.first, param2) || matchesOriginalClub(tr.second, param2)
-                if (match1) seasons1.add(tr.third)
-                if (match2) seasons2.add(tr.third)
+                val f = tr.first
+                val t = tr.second
+                val s = tr.third
+
+                val match1 = if (isParam1Country) {
+                    isPrimaryCountryMatch(player.nationality, param1, mappedCountry1)
+                } else {
+                    matchesOriginalClub(f, param1) || matchesOriginalClub(t, param1)
+                }
+
+                val match2 = if (isParam2Country) {
+                    isPrimaryCountryMatch(player.nationality, param2, mappedCountry2)
+                } else {
+                    matchesOriginalClub(f, param2) || matchesOriginalClub(t, param2)
+                }
+
+                if (match1) seasons1.add(s)
+                if (match2) seasons2.add(s)
             }
 
-            val condition1Met = if (isParam1Country) isCountryMatch(player.nationality, param1) else seasons1.isNotEmpty()
-            val condition2Met = if (isParam2Country) isCountryMatch(player.nationality, param2) else seasons2.isNotEmpty()
+            val condition1Met = if (isParam1Country) {
+                isPrimaryCountryMatch(player.nationality, param1, mappedCountry1)
+            } else {
+                seasons1.isNotEmpty()
+            }
 
-            if (condition1Met && condition2Met) {
+            val condition2Met = if (isParam2Country) {
+                isPrimaryCountryMatch(player.nationality, param2, mappedCountry2)
+            } else {
+                seasons2.isNotEmpty()
+            }
+
+            // 💡 İki ülke aratıldığında aynı anda iki ana uyruğa sahip olmak imkansız olduğundan doğrudan elenir
+            val isValidCommonMatch = if (isParam1Country && isParam2Country) {
+                false
+            } else {
+                condition1Met && condition2Met
+            }
+
+            if (isValidCommonMatch) {
                 val min1 = if (isParam1Country) "-" else seasons1.minOrNull() ?: "-"
                 val min2 = if (isParam2Country) "-" else seasons2.minOrNull() ?: "-"
-                rawList.add(player.copy(season1 = min1, season2 = min2))
+
+                val finalPlayer = player.copy(season1 = min1, season2 = min2)
+                rawList.add(finalPlayer)
             }
         }
 
-        return rawList.distinctBy { transfer -> transfer.transferId }
+        return rawList.distinctBy { it.transferId }
             .sortedByDescending { parseSeasonToSortValue(it.season1) }
     }
 
-    fun prefetchData() {
-        // Bu çağrı cachedRecords 'lazy' olduğu için direkt tetiklenir ve veriyi yükler
-        val size = cachedRecords.size
-        println("Önbellek manuel tetiklendi: $size kayıt hazır.")
-    }
-
     private fun cleanNationalityText(rawNat: String): String {
-        return rawNat.replace('\u00a0', ' ').replace(160.toChar(), ' ')
-            .replace(Regex("Mevki|Uyruk|[0-9()]+"), "").trim()
+        return rawNat.replace('\u00a0', ' ')
+            .replace(160.toChar(), ' ')
+            .replace(Regex("Mevki|Uyruk|[0-9()]+"), "")
+            .trim()
     }
 }
