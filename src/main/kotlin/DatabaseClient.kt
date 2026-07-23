@@ -60,7 +60,7 @@ object DatabaseClient {
         "iran" to "iran",
         "avustralya" to "australia", "australia" to "australia",
         "suudi arabistan" to "saudi arabia",
-        "katar" to "qatar", "qatar" to "qatar",
+        "qatar" to "qatar", "katar" to "qatar",
         "ozbekistan" to "uzbekistan"
     )
 
@@ -76,7 +76,10 @@ object DatabaseClient {
         val transferId: Int
     )
 
-    private val memoryCache: List<TransferRecord> by lazy {
+    // 'lazy' kaldırıldı. Singleton (object) yüklendiği an (sunucu ayağa kalkarken) RAM'e yükleme başlar.
+    val memoryCache: List<TransferRecord> = loadCacheToMemory()
+
+    private fun loadCacheToMemory(): List<TransferRecord> {
         println("🚀 RAM'e veri yükleme işlemi başlatılıyor...")
         val startTime = System.currentTimeMillis()
         val records = mutableListOf<TransferRecord>()
@@ -129,7 +132,7 @@ object DatabaseClient {
 
         val duration = System.currentTimeMillis() - startTime
         println("✅ RAM'e yükleme tamamlandı! Süre: ${duration}ms, Toplam kayıt: ${records.size}")
-        records
+        return records
     }
 
     private fun String.toStandardSearch(): String {
