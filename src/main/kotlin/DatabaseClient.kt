@@ -316,6 +316,12 @@ object DatabaseClient {
             .sortedByDescending { parseSeasonToSortValue(it.season1) }
     }
 
+    fun prefetchData() {
+        // Bu çağrı cachedRecords 'lazy' olduğu için direkt tetiklenir ve veriyi yükler
+        val size = cachedRecords.size
+        println("Önbellek manuel tetiklendi: $size kayıt hazır.")
+    }
+
     private fun cleanNationalityText(rawNat: String): String {
         return rawNat.replace('\u00a0', ' ').replace(160.toChar(), ' ')
             .replace(Regex("Mevki|Uyruk|[0-9()]+"), "").trim()
