@@ -7,7 +7,7 @@ RUN ./gradlew shadowJar --no-daemon
 FROM eclipse-temurin:17-jre-alpine
 WORKDIR /app
 COPY --from=build /app/build/libs/*-all.jar app.jar
-COPY --from=build /app/src/main/resources/football.db /app/src/main/resources/football.db
+COPY --from=build /app/src/main/resources/transfers.json /app/src/main/resources/transfers.json
 
 EXPOSE 8080
 
