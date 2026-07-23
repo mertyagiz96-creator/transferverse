@@ -87,14 +87,23 @@ object DatabaseClient {
 
     private fun loadJsonToMemory(): List<TransferRecord> {
         try {
-            val inputStream = object {}.javaClass.classLoader.getResourceAsStream("transfers.json")
-                ?: return emptyList()
+            val inputStream = DatabaseClient::class.java.getResourceAsStream("/transfers.json")
+                ?: Thread.currentThread().contextClassLoader.getResourceAsStream("transfers.json")
+                ?: object {}.javaClass.classLoader.getResourceAsStream("transfers.json")
+
+            if (inputStream == null) {
+                println("KRİTİK HATA: transfers.json dosyası kaynak dizininde (classpath) bulunamadı!")
+                return emptyList()
+            }
 
             InputStreamReader(inputStream, Charsets.UTF_8).use { reader ->
                 val type = object : TypeToken<List<TransferRecord>>() {}.type
-                return Gson().fromJson(reader, type) ?: emptyList()
+                val list = Gson().fromJson<List<TransferRecord>>(reader, type) ?: emptyList()
+                println("BAŞARILI: transfers.json belleğe yüklendi. Toplam kayıt: ${list.size}")
+                return list
             }
         } catch (e: Exception) {
+            println("KRİTİK HATA: JSON belleğe yüklenirken exception fırlatıldı!")
             e.printStackTrace()
             return emptyList()
         }
@@ -141,11 +150,9 @@ object DatabaseClient {
         return countrySynonyms.containsKey(stdParam)
     }
 
-    // İLK UYRUK BAZLI KESİN EŞLEŞTİRME (Çek, Fildişi ve Kamerun dahil tüm çok kelimeli/özel ülkeler tam uyumlu)
     private fun isCountryMatch(playerNationality: String, searchParam: String): Boolean {
         if (playerNationality.isBlank()) return false
 
-        // Oyuncunun veri setindeki uyruk metninden SADECE İLK UYRUĞU alıyoruz (ikincileri tamamen çöpe atıyoruz)
         val primaryNationality = playerNationality.split(Regex("[,/\\s-]"))
             .firstOrNull { it.isNotBlank() } ?: playerNationality
 
@@ -153,21 +160,18 @@ object DatabaseClient {
         val stdSearch = searchParam.toStandardSearch()
         val resolvedSearch = (countrySynonyms[stdSearch] ?: stdSearch).toStandardSearch()
 
-        // Özel Fildişi Kontrolü (Cote d'Ivoire / Ivory Coast / Fildişi)
         val isTargetCote = resolvedSearch.contains("cote") || resolvedSearch.contains("ivory") || resolvedSearch.contains("fildisi")
         val isPlayerCote = stdNat.contains("cote") || stdNat.contains("ivory") || stdNat.contains("fildisi")
         if (isTargetCote || isPlayerCote) {
             return isTargetCote && isPlayerCote
         }
 
-        // Özel Çek / Czechia / Czech Republic Kontrolü
         val isTargetCzech = resolvedSearch.contains("czech") || resolvedSearch.contains("cek")
         val isPlayerCzech = stdNat.contains("czech") || stdNat.contains("cek")
         if (isTargetCzech || isPlayerCzech) {
             return isTargetCzech && isPlayerCzech
         }
 
-        // Genel kelime bazlı tam eşleşme kontrolü
         val natTokens = stdNat.split(Regex("[^a-z0-9]+")).filter { it.isNotBlank() }
         val searchTokens = resolvedSearch.split(Regex("[^a-z0-9]+")).filter { it.isNotBlank() }
 
