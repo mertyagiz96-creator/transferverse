@@ -3,6 +3,12 @@ plugins {
     id("io.ktor.plugin") version "2.3.4"
     id("com.github.johnrengelman.shadow") version "8.1.1"
     kotlin("plugin.serialization") version "1.9.10"
+    application
+}
+
+application {
+    // Paket adı olmadığı için direkt dosya adının sonuna Kt ekliyoruz
+    mainClass.set("ApplicationKt")
 }
 
 repositories {
