@@ -1,5 +1,5 @@
 import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
+import com.google.gson.stream.JsonReader
 import java.io.InputStreamReader
 
 object DatabaseClient {
@@ -81,31 +81,25 @@ object DatabaseClient {
         val transferId: Int
     )
 
-    val memoryCache: List<TransferRecord> by lazy {
-        loadJsonToMemory()
+    private val gson = Gson()
+
+    private fun openStream(): InputStreamReader? {
+        val inputStream = DatabaseClient::class.java.getResourceAsStream("/transfers.json")
+            ?: Thread.currentThread().contextClassLoader.getResourceAsStream("transfers.json")
+            ?: object {}.javaClass.classLoader.getResourceAsStream("transfers.json")
+            ?: return null
+        return InputStreamReader(inputStream, Charsets.UTF_8)
     }
 
-    private fun loadJsonToMemory(): List<TransferRecord> {
-        try {
-            val inputStream = DatabaseClient::class.java.getResourceAsStream("/transfers.json")
-                ?: Thread.currentThread().contextClassLoader.getResourceAsStream("transfers.json")
-                ?: object {}.javaClass.classLoader.getResourceAsStream("transfers.json")
-
-            if (inputStream == null) {
-                println("KRİTİK HATA: transfers.json dosyası kaynak dizininde (classpath) bulunamadı!")
-                return emptyList()
+    private inline fun forEachRecord(action: (TransferRecord) -> Unit) {
+        val reader = openStream() ?: return
+        JsonReader(reader).use { jsonReader ->
+            jsonReader.beginArray()
+            while (jsonReader.hasNext()) {
+                val record = gson.fromJson<TransferRecord>(jsonReader, TransferRecord::class.java)
+                action(record)
             }
-
-            InputStreamReader(inputStream, Charsets.UTF_8).use { reader ->
-                val type = object : TypeToken<List<TransferRecord>>() {}.type
-                val list = Gson().fromJson<List<TransferRecord>>(reader, type) ?: emptyList()
-                println("BAŞARILI: transfers.json belleğe yüklendi. Toplam kayıt: ${list.size}")
-                return list
-            }
-        } catch (e: Exception) {
-            println("KRİTİK HATA: JSON belleğe yüklenirken exception fırlatıldı!")
-            e.printStackTrace()
-            return emptyList()
+            jsonReader.endArray()
         }
     }
 
@@ -190,7 +184,7 @@ object DatabaseClient {
 
     fun fetchAllUniqueSuggestions(): List<String> {
         val suggestions = mutableSetOf<String>()
-        for (record in memoryCache) {
+        forEachRecord { record ->
             if (record.fromClub.isNotBlank()) {
                 val cleaned = record.fromClub.replace('\u00a0', ' ').trim()
                 if (cleaned.length > 1 && !isYouthClub(cleaned)) suggestions.add(cleaned)
@@ -214,7 +208,7 @@ object DatabaseClient {
         val playerAllTransfers = mutableMapOf<Int, MutableList<Triple<String, String, String>>>()
         val playerInfoMap = mutableMapOf<Int, Player>()
 
-        for (record in memoryCache) {
+        forEachRecord { record ->
             val pId = record.playerId
             playerAllTransfers.getOrPut(pId) { mutableListOf() }.add(Triple(record.fromClub, record.toClub, record.season))
             if (!playerInfoMap.containsKey(pId)) {
@@ -265,7 +259,7 @@ object DatabaseClient {
         val playerAllTransfers = mutableMapOf<Int, MutableList<Triple<String, String, String>>>()
         val playerInfoMap = mutableMapOf<Int, Player>()
 
-        for (record in memoryCache) {
+        forEachRecord { record ->
             val pId = record.playerId
             playerAllTransfers.getOrPut(pId) { mutableListOf() }.add(Triple(record.fromClub, record.toClub, record.season))
             if (!playerInfoMap.containsKey(pId)) {
