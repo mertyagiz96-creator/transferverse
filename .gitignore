@@ -26,10 +26,8 @@ bin/
 .vscode/
 
 ### Mac OS ###
-.DS_Storebuild/
-.gradle/
-build/
-.gradle/
-build/
+.DS_Store
+
+### Gradle & Build ###
 build/
 .gradle/
