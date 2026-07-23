@@ -1,5 +1,4 @@
 import java.io.File
-import java.sql.Connection
 import java.sql.DriverManager
 
 object DatabaseClient {
@@ -76,17 +75,18 @@ object DatabaseClient {
         val transferId: Int
     )
 
-    // 'lazy' kaldırıldı. Singleton (object) yüklendiği an (sunucu ayağa kalkarken) RAM'e yükleme başlar.
-    val memoryCache: List<TransferRecord> = loadCacheToMemory()
+    // Önceden işlenmiş bellek yapıları (Uygulama açılırken sadece 1 kez dolur)
+    val memoryCache: List<TransferRecord>
+    val playerAllTransfers: Map<Int, List<Triple<String, String, String>>>
+    val playerInfoMap: Map<Int, Player>
 
-    private fun loadCacheToMemory(): List<TransferRecord> {
-        println("🚀 RAM'e veri yükleme işlemi başlatılıyor...")
+    init {
+        println("🚀 Uygulama başlatılıyor, veriler RAM'e yükleniyor...")
         val startTime = System.currentTimeMillis()
         val records = mutableListOf<TransferRecord>()
 
         val dbFile = File(System.getProperty("java.io.tmpdir"), "football_cached.db")
         if (!dbFile.exists()) {
-            println("📂 football_cached.db bulunamadı, resource'dan kopyalanıyor...")
             val inputStream = object {}.javaClass.classLoader.getResourceAsStream("football.db")
                 ?: throw IllegalStateException("❌ 'football.db' resources klasöründe bulunamadı!")
 
@@ -126,13 +126,40 @@ object DatabaseClient {
                 }
             }
         } catch (e: Exception) {
-            println("🔥 Canlıda yükleme hatası: ${e.message}")
+            println("🔥 Veri yükleme hatası: ${e.message}")
             e.printStackTrace()
         }
 
+        memoryCache = records
+
+        // Haritaları baştan tek seferde oluşturuyoruz ki aramalarda CPU harcamayalım
+        val tempTransfers = mutableMapOf<Int, MutableList<Triple<String, String, String>>>()
+        val tempInfo = mutableMapOf<Int, Player>()
+
+        for (record in memoryCache) {
+            val pId = record.playerId
+            tempTransfers.getOrPut(pId) { mutableListOf() }.add(Triple(record.fromClub, record.toClub, record.season))
+
+            if (!tempInfo.containsKey(pId)) {
+                tempInfo[pId] = Player(
+                    playerId = pId,
+                    name = record.playerName,
+                    position = record.position,
+                    nationality = record.nationality,
+                    team = "",
+                    birthDate = record.birthDate,
+                    season1 = null,
+                    season2 = null,
+                    transferId = record.transferId
+                )
+            }
+        }
+
+        playerAllTransfers = tempTransfers
+        playerInfoMap = tempInfo
+
         val duration = System.currentTimeMillis() - startTime
-        println("✅ RAM'e yükleme tamamlandı! Süre: ${duration}ms, Toplam kayıt: ${records.size}")
-        return records
+        println("✅ RAM yüklemesi ve indeksleme bitti! Süre: ${duration}ms, Kayıt: ${records.size}")
     }
 
     private fun String.toStandardSearch(): String {
@@ -233,32 +260,10 @@ object DatabaseClient {
         val mappedCountry = countryMap[stdParam] ?: stdParam
         val isCountry = isCountryParam(clubOrCountry)
 
-        val playerAllTransfers = mutableMapOf<Int, MutableList<Triple<String, String, String>>>()
-        val playerInfoMap = mutableMapOf<Int, Player>()
-
-        for (record in memoryCache) {
-            val pId = record.playerId
-            playerAllTransfers.getOrPut(pId) { mutableListOf() }.add(Triple(record.fromClub, record.toClub, record.season))
-
-            if (!playerInfoMap.containsKey(pId)) {
-                playerInfoMap[pId] = Player(
-                    playerId = pId,
-                    name = record.playerName,
-                    position = record.position,
-                    nationality = record.nationality,
-                    team = clubOrCountry,
-                    birthDate = record.birthDate,
-                    season1 = null,
-                    season2 = null,
-                    transferId = record.transferId
-                )
-            }
-        }
-
         val resultList = mutableListOf<Player>()
 
         for ((pId, transfers) in playerAllTransfers) {
-            val player = playerInfoMap[pId] ?: continue
+            val player = playerInfoMap[pId]?.copy(team = clubOrCountry) ?: continue
             val validSeasonsForClub = mutableListOf<String>()
             var hasRealMatch = false
 
@@ -303,32 +308,10 @@ object DatabaseClient {
         val isParam1Country = isCountryParam(param1)
         val isParam2Country = isCountryParam(param2)
 
-        val playerAllTransfers = mutableMapOf<Int, MutableList<Triple<String, String, String>>>()
-        val playerInfoMap = mutableMapOf<Int, Player>()
-
-        for (record in memoryCache) {
-            val pId = record.playerId
-            playerAllTransfers.getOrPut(pId) { mutableListOf() }.add(Triple(record.fromClub, record.toClub, record.season))
-
-            if (!playerInfoMap.containsKey(pId)) {
-                playerInfoMap[pId] = Player(
-                    playerId = pId,
-                    name = record.playerName,
-                    position = record.position,
-                    nationality = record.nationality,
-                    team = "$param1 / $param2",
-                    birthDate = record.birthDate,
-                    season1 = null,
-                    season2 = null,
-                    transferId = record.transferId
-                )
-            }
-        }
-
         val rawList = mutableListOf<Player>()
 
         for ((pId, transfers) in playerAllTransfers) {
-            val player = playerInfoMap[pId] ?: continue
+            val player = playerInfoMap[pId]?.copy(team = "$param1 / $param2") ?: continue
 
             val seasons1 = mutableListOf<String>()
             val seasons2 = mutableListOf<String>()
