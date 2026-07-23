@@ -31,6 +31,7 @@ dependencies {
     // JSON serialization
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.0")
     implementation("org.jsoup:jsoup:1.17.2")
+    implementation("com.google.code.gson:gson:2.10.1")
     // Logging
     implementation("org.slf4j:slf4j-simple:1.7.36")
 }
