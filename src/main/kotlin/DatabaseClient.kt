@@ -1,6 +1,7 @@
 import com.google.gson.Gson
 import com.google.gson.stream.JsonReader
 import java.io.InputStreamReader
+import java.io.File
 
 object DatabaseClient {
 
@@ -84,10 +85,21 @@ object DatabaseClient {
     private val gson = Gson()
 
     private fun openStream(): InputStreamReader? {
+        val directFile = File("/app/src/main/resources/transfers.json")
+        if (directFile.exists()) {
+            return InputStreamReader(directFile.inputStream(), Charsets.UTF_8)
+        }
+
+        val altFile = File("src/main/resources/transfers.json")
+        if (altFile.exists()) {
+            return InputStreamReader(altFile.inputStream(), Charsets.UTF_8)
+        }
+
         val inputStream = DatabaseClient::class.java.getResourceAsStream("/transfers.json")
             ?: Thread.currentThread().contextClassLoader.getResourceAsStream("transfers.json")
             ?: object {}.javaClass.classLoader.getResourceAsStream("transfers.json")
             ?: return null
+
         return InputStreamReader(inputStream, Charsets.UTF_8)
     }
 
