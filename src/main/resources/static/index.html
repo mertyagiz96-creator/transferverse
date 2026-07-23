@@ -28,12 +28,11 @@
             flex-direction: column;
             align-items: center;
             padding: 40px 20px;
-            position: relative;
         }
 
         .container {
             width: 100%;
-            max-width: 900px;
+            max-width: 1150px;
             background: rgba(255, 255, 255, 0.07);
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
@@ -49,7 +48,6 @@
             font-size: 2.2rem;
             margin-bottom: 4px;
             letter-spacing: 1px;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
         }
 
         .dedication {
@@ -58,24 +56,95 @@
             color: var(--light-green);
             font-weight: 600;
             letter-spacing: 1px;
-            margin-bottom: 12px;
+            margin-bottom: 8px;
         }
 
         .subtitle {
             text-align: center;
             color: #a5d6a7;
             font-size: 0.95rem;
-            margin-bottom: 30px;
+            margin-bottom: 20px;
         }
 
+        /* Ultra Modern ve Renkli Taranıyor Alanı */
+        .top-loader {
+            display: none;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, rgba(27, 94, 32, 0.8), rgba(10, 40, 15, 0.9));
+            border: 1.5px solid var(--accent-gold);
+            border-radius: 14px;
+            padding: 10px 22px;
+            margin: 0 auto 20px auto;
+            max-width: 440px;
+            gap: 15px;
+            box-shadow: 0 0 20px rgba(255, 179, 0, 0.25), inset 0 1px 4px rgba(255, 255, 255, 0.2);
+            animation: loaderGlow 2s infinite alternate;
+        }
+
+        @keyframes loaderGlow {
+            0% { box-shadow: 0 0 10px rgba(255, 179, 0, 0.2), inset 0 1px 4px rgba(255, 255, 255, 0.2); }
+            100% { box-shadow: 0 0 25px rgba(76, 175, 80, 0.5), inset 0 1px 6px rgba(255, 255, 255, 0.4); }
+        }
+
+        .loader-track {
+            position: relative;
+            width: 190px;
+            height: 24px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+
+        .loader-track::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(76, 175, 80, 0.3), transparent);
+            animation: shimmer 1.5s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        .rolling-ball {
+            position: absolute;
+            font-size: 20px;
+            top: -1px;
+            left: 0px;
+            animation: rollAcrossModern 1.1s infinite cubic-bezier(0.4, 0, 0.2, 1);
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
+        }
+
+        @keyframes rollAcrossModern {
+            0% { left: -2px; transform: rotate(0deg) scale(0.9); }
+            50% { transform: rotate(180deg) scale(1.1); }
+            100% { left: 165px; transform: rotate(360deg) scale(0.9); }
+        }
+
+        .top-loader span {
+            font-size: 0.9rem;
+            background: linear-gradient(135deg, #ffffff, #a5d6a7, var(--accent-gold));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 700;
+            letter-spacing: 0.8px;
+            white-space: nowrap;
+        }
+
+        /* Canlandırılmış, Dikkat Çekici Arama Kartı */
         .search-card {
             display: grid;
             grid-template-columns: 1fr 1fr auto;
             gap: 15px;
-            background: rgba(0, 0, 0, 0.25);
-            padding: 20px;
-            border-radius: 14px;
-            border: 1px solid rgba(76, 175, 80, 0.3);
+            background: linear-gradient(135deg, rgba(27, 94, 32, 0.4), rgba(13, 48, 18, 0.6));
+            padding: 22px;
+            border-radius: 16px;
+            border: 1px solid rgba(76, 175, 80, 0.5);
+            box-shadow: inset 0 1px 3px rgba(255, 255, 255, 0.1), 0 10px 25px rgba(0, 0, 0, 0.3);
             margin-bottom: 30px;
         }
 
@@ -85,48 +154,60 @@
         }
 
         .input-group label {
-            font-size: 0.85rem;
-            color: #c8e6c9;
-            margin-bottom: 6px;
-            font-weight: 600;
+            font-size: 0.88rem;
+            color: #a5d6a7;
+            margin-bottom: 7px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
         }
 
         .input-group input {
-            padding: 12px 16px;
-            border-radius: 8px;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            background: rgba(255, 255, 255, 0.9);
-            color: #1b431c;
-            font-size: 1rem;
+            padding: 14px 18px;
+            border-radius: 10px;
+            border: 1.5px solid rgba(76, 175, 80, 0.4);
+            background: rgba(10, 30, 12, 0.7);
+            color: #ffffff;
+            font-size: 1.05rem;
             font-weight: 600;
             outline: none;
             transition: all 0.3s ease;
         }
 
+        .input-group input::placeholder {
+            color: rgba(255, 255, 255, 0.4);
+            font-weight: 400;
+        }
+
         .input-group input:focus {
             border-color: var(--light-green);
-            box-shadow: 0 0 10px rgba(76, 175, 80, 0.5);
-            background: #ffffff;
+            background: rgba(15, 45, 18, 0.95);
+            box-shadow: 0 0 15px rgba(76, 175, 80, 0.6);
+            transform: translateY(-1px);
         }
 
         .btn-search {
             align-self: flex-end;
-            padding: 12px 28px;
-            background: linear-gradient(135deg, var(--light-green), var(--dark-green));
+            padding: 14px 32px;
+            background: linear-gradient(135deg, #66bb6a, #1b5e20);
             color: white;
             border: none;
-            border-radius: 8px;
-            font-size: 1rem;
+            border-radius: 10px;
+            font-size: 1.05rem;
             font-weight: bold;
             cursor: pointer;
-            box-shadow: 0 4px 15px rgba(46, 125, 50, 0.4);
+            box-shadow: 0 6px 20px rgba(46, 125, 50, 0.5);
             transition: all 0.3s ease;
+            letter-spacing: 0.5px;
         }
 
         .btn-search:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(76, 175, 80, 0.6);
-            background: linear-gradient(135deg, #66bb6a, var(--primary-green));
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(76, 175, 80, 0.8);
+            background: linear-gradient(135deg, #81c784, var(--primary-green));
+        }
+
+        .btn-search:active {
+            transform: translateY(-1px);
         }
 
         .table-wrapper {
@@ -148,7 +229,6 @@
             padding: 14px 18px;
             font-size: 0.95rem;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
             border-bottom: 2px solid var(--light-green);
         }
 
@@ -159,12 +239,18 @@
             color: #e0e0e0;
         }
 
-        tbody tr {
-            transition: background 0.2s ease;
-        }
-
         tbody tr:hover {
             background: rgba(76, 175, 80, 0.15);
+        }
+
+        .badge-id {
+            background: rgba(255, 255, 255, 0.1);
+            color: #90caf9;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-family: monospace;
+            font-weight: bold;
         }
 
         .badge-country {
@@ -180,11 +266,20 @@
             font-weight: 500;
         }
 
+        .badge-season {
+            background: rgba(76, 175, 80, 0.2);
+            color: #c8e6c9;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
         .footer-signature {
             margin-top: 40px;
             text-align: right;
             width: 100%;
-            max-width: 900px;
+            max-width: 1150px;
             font-size: 0.85rem;
             color: rgba(255, 255, 255, 0.5);
             letter-spacing: 1px;
@@ -209,19 +304,30 @@
 
 <div class="container">
     <h1>⚽ TransferVerse</h1>
-    <div class="dedication">Harman'a Sevgiler ❤️</div>
-    <p class="subtitle">İki Kulüp Arasındaki Ortak Oyuncular veya Kulüp - Ülke Araması</p>
+    <div class="dedication">Harman's Sevgiler ❤️</div>
+    <p class="subtitle">İki Kulüp Arasındaki Ortak Oyuncular veya Kulüp / Ülke Araması</p>
 
+    <!-- Ultra Modern ve Canlı Taranıyor Kutucuğu -->
+    <div id="topLoader" class="top-loader">
+        <div class="loader-track">
+            <div class="rolling-ball">⚽</div>
+        </div>
+        <span>Transferler Taranıyor...</span>
+    </div>
+
+    <!-- Canlandırılmış, Dikkat Çekici Arama Kartı -->
     <div class="search-card">
         <div class="input-group">
             <label for="club1Input">1. Kulüp veya Ülke</label>
-            <input id="club1Input" type="text" placeholder="Örn: Galatasaray" value="Galatasaray">
+            <input id="club1Input" type="text" list="suggestionsList" placeholder="Örn: Galatasaray veya Türkiye" value="Galatasaray">
         </div>
 
         <div class="input-group">
             <label for="club2Input">2. Kulüp veya Ülke</label>
-            <input id="club2Input" type="text" placeholder="Örn: Antalyaspor" value="Antalyaspor">
+            <input id="club2Input" type="text" list="suggestionsList" placeholder="Örn: Kocaelispor veya Almanya" value="Kocaelispor">
         </div>
+
+        <datalist id="suggestionsList"></datalist>
 
         <button id="searchBtn" class="btn-search">Ara</button>
     </div>
@@ -230,9 +336,13 @@
         <table>
             <thead>
             <tr>
+                <th>ID</th>
                 <th>Oyuncu Adı</th>
                 <th>Mevki</th>
                 <th>Uyruk</th>
+                <th>Doğum Tarihi</th>
+                <th>1. Kulüp / Ülke Sezonu</th>
+                <th>2. Kulüp / Ülke Sezonu</th>
             </tr>
             </thead>
             <tbody id="resultsTable"></tbody>
@@ -241,73 +351,45 @@
 </div>
 
 <div class="footer-signature">
-    Developed with ❤️ by <span>mertoreuss</span>
+    Developed with ❤️ by <span>mertyagiz</span>
 </div>
 
 <script>
-    // Türkçe ülke isimlerini İngilizceye çeviren genişletilmiş sözlük
-    const countryMap = {
-        // Avrupa
-        "almanya": "Germany", "fransa": "France", "ingiltere": "England",
-        "ispanya": "Spain", "italya": "Italy", "hollanda": "Netherlands",
-        "portekiz": "Portugal", "turkiye": "Turkey", "türkiye": "Turkey",
-        "belçika": "Belgium", "belcika": "Belgium", "hırvatistan": "Croatia",
-        "hirvatistan": "Croatia", "isveç": "Sweden", "isvec": "Sweden",
-        "isviçre": "Switzerland", "isvicre": "Switzerland", "danimarka": "Denmark",
-        "norveç": "Norway", "norvec": "Norway", "yunanistan": "Greece",
-        "sırbistan": "Serbia", "sirbistan": "Serbia", "bosna hersek": "Bosnia-Herzegovina",
-        "bosna": "Bosnia-Herzegovina", "polonya": "Poland", "rusya": "Russia",
-        "ukrayna": "Ukraine", "romanya": "Romania", "avusturya": "Austria",
-        "çekya": "Czech Republic", "cekyas": "Czech Republic",
-
-        // Amerika
-        "kanada": "Canada", "amerika": "United States", "abd": "United States",
-        "brezilya": "Brazil", "arjantin": "Argentina", "kolombiya": "Colombia",
-        "uruguay": "Uruguay", "şili": "Chile", "sili": "Chile", "meksika": "Mexico",
-        "paraguay": "Paraguay", "peru": "Peru", "ekvador": "Ecuador",
-
-        // Afrika
-        "fildişi sahili": "Cote d'Ivoire", "fildisi sahili": "Cote d'Ivoire", "fildişi": "Cote d'Ivoire",
-        "nijerya": "Nigeria", "kamerun": "Cameroon", "senegal": "Senegal",
-        "fas": "Morocco", "cezayir": "Algeria", "mısır": "Egypt", "misir": "Egypt",
-        "gana": "Ghana", "gane": "Ghana", "güney afrika": "South Africa",
-        "kongo": "Congo", "demokratik kongo": "DR Congo",
-
-        // Asya & Okyanusya
-        "japonya": "Japan", "güney kore": "Korea, South", "guney kore": "Korea, South",
-        "çin": "China", "cin": "China", "iran": "Iran", "avustralya": "Australia",
-        "suudi arabistan": "Saudi Arabia", "katar": "Qatar", "özbekistan": "Uzbekistan"
-    };
-
-    function formatQueryParam(text) {
-        if (!text) return "";
-        const lowerText = text.trim().toLocaleLowerCase('tr');
-        return countryMap[lowerText] || text.trim();
+    async function loadSuggestions() {
+        try {
+            const response = await fetch('/suggestions');
+            if (response.ok) {
+                const list = await response.json();
+                const datalist = document.getElementById("suggestionsList");
+                datalist.innerHTML = "";
+                list.forEach(item => {
+                    const option = document.createElement("option");
+                    option.value = item;
+                    datalist.appendChild(option);
+                });
+            }
+        } catch (e) {
+            console.log("Öneriler yüklenirken pas geçildi.");
+        }
     }
 
     async function searchPlayers() {
-        const rawInput1 = document.getElementById("club1Input").value;
-        const rawInput2 = document.getElementById("club2Input").value;
-
-        const input1 = formatQueryParam(rawInput1);
-        const input2 = formatQueryParam(rawInput2);
-
+        const input1 = document.getElementById("club1Input").value.trim();
+        const input2 = document.getElementById("club2Input").value.trim();
         const resultsTable = document.getElementById("resultsTable");
-        resultsTable.innerHTML = "<tr><td colspan='3' style='text-align:center; padding:20px;'>Aranıyor...</td></tr>";
+        const topLoader = document.getElementById("topLoader");
 
         if (!input1 && !input2) {
-            resultsTable.innerHTML = "<tr><td colspan='3' style='text-align:center; padding:20px;'>Lütfen en az bir kulüp veya ülke giriniz.</td></tr>";
+            resultsTable.innerHTML = "<tr><td colspan='7' style='text-align:center; padding:20px;'>Lütfen en az bir alan doldurunuz.</td></tr>";
             return;
         }
 
+        topLoader.style.display = "flex";
+
         try {
-            let url = "";
-            if (input1 && input2) {
-                url = `/commonPlayers?club1=${encodeURIComponent(input1)}&club2=${encodeURIComponent(input2)}`;
-            } else {
-                const param = input1 || input2;
-                url = `/players?club=${encodeURIComponent(param)}`;
-            }
+            let url = input1 && input2
+                ? `/commonPlayers?club1=${encodeURIComponent(input1)}&club2=${encodeURIComponent(input2)}`
+                : `/players?club=${encodeURIComponent(input1 || input2)}`;
 
             const response = await fetch(url);
             const players = await response.json();
@@ -315,15 +397,19 @@
             resultsTable.innerHTML = "";
 
             if (!players || players.length === 0) {
-                resultsTable.innerHTML = "<tr><td colspan='3' style='text-align:center; padding:20px;'>Aranan kriterlere uygun oyuncu bulunamadı.</td></tr>";
+                resultsTable.innerHTML = "<tr><td colspan='7' style='text-align:center; padding:20px;'>Kriterlere uygun oyuncu bulunamadı.</td></tr>";
                 return;
             }
 
             players.forEach(player => {
                 const row = resultsTable.insertRow();
 
+                const idCell = row.insertCell();
+                idCell.innerHTML = `<span class="badge-id">${player.playerId || "-"}</span>`;
+
+                let cleanName = (player.name || "-").replace(/\s*\(\d+\)\s*/g, "").trim();
                 const nameCell = row.insertCell();
-                nameCell.textContent = player.name || "-";
+                nameCell.textContent = cleanName;
                 nameCell.style.fontWeight = "600";
 
                 const posCell = row.insertCell();
@@ -331,17 +417,32 @@
                 posCell.className = "badge-position";
 
                 const natCell = row.insertCell();
-                natCell.innerHTML = `<span class="badge-country">${player.nationality || "-"}</span>`;
+                let rawNationality = (player.nationality || "-").trim();
+                let firstNationality = rawNationality.split(/[\s,–-]+/)[0];
+                natCell.innerHTML = `<span class="badge-country">${firstNationality}</span>`;
+
+                const dobCell = row.insertCell();
+                dobCell.textContent = player.birthDate || "-";
+
+                const s1Cell = row.insertCell();
+                s1Cell.innerHTML = `<span class="badge-season">${player.season1 || "-"}</span>`;
+
+                const s2Cell = row.insertCell();
+                s2Cell.innerHTML = `<span class="badge-season">${player.season2 || "-"}</span>`;
             });
 
         } catch (error) {
-            console.error("Hata:", error);
-            resultsTable.innerHTML = `<tr><td colspan='3' style='text-align:center; color:#ff8a80; padding:20px;'>Hata oluştu: ${error.message}</td></tr>`;
+            resultsTable.innerHTML = `<tr><td colspan='7' style='text-align:center; color:#ff8a80; padding:20px;'>Hata: ${error.message}</td></tr>`;
+        } finally {
+            topLoader.style.display = "none";
         }
     }
 
     document.getElementById("searchBtn").addEventListener("click", searchPlayers);
-    window.onload = () => { searchPlayers(); };
+    window.onload = () => {
+        loadSuggestions();
+        searchPlayers();
+    };
 </script>
 </body>
 </html>

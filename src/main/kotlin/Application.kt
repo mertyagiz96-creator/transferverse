@@ -18,6 +18,12 @@ fun main() {
         routing {
             staticResources("/", "static", index = "index.html")
 
+            // Otomatik tamamlama (suggestions) için eklenen endpoint
+            get("/suggestions") {
+                val suggestions = DatabaseClient.fetchAllUniqueSuggestions()
+                call.respond(suggestions)
+            }
+
             get("/players") {
                 val clubParam = call.request.queryParameters["club"]
                 if (clubParam.isNullOrBlank()) {
