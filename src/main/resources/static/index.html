@@ -262,38 +262,84 @@
             position: relative;
         }
 
-        h1 {
-            text-align: center;
-            font-size: 2.4rem;
-            margin-bottom: 4px;
-            letter-spacing: 1.5px;
-            font-weight: 800;
-            background: linear-gradient(135deg, #ffffff 20%, var(--light-green) 55%, var(--accent-gold) 100%);
-            -webkit-background-clip: text;
-            background-clip: text;
-            -webkit-text-fill-color: transparent;
-            text-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
+        /* 💡 ÜST LOGO BARI — TransferKolik'in kendi özgün marka barı. Herhangi bir
+           üçüncü taraf sitenin logosu/tasarımı kopyalanmadı; bu tamamen orijinal,
+           genel bir "üstte yatay bar + logo" deseni (bu deseni hemen her site kullanır,
+           kimseye ait değildir). Renkler mevcut tema sistemine bağlı, tema değişince
+           logo barı da otomatik uyum sağlıyor.
+        */
+        .site-header {
+            width: calc(100% + 40px);
+            margin: -40px -20px 26px -20px;
+            background: rgba(0, 0, 0, 0.38);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            position: sticky;
+            top: 0;
+            z-index: 300;
+        }
+
+        .site-header-inner {
+            max-width: 1150px;
+            margin: 0 auto;
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+        }
+
+        .logo-mark {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-decoration: none;
+        }
+
+        .logo-badge {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            background: radial-gradient(circle at 32% 28%, var(--light-green), var(--dark-green) 75%);
+            border: 1.5px solid rgba(255, 255, 255, 0.28);
+            box-shadow:
+                    0 4px 16px rgba(0, 0, 0, 0.45),
+                    0 0 10px var(--accent-gold),
+                    inset 0 1px 3px rgba(255, 255, 255, 0.4),
+                    inset 0 -3px 6px rgba(0, 0, 0, 0.3);
             transition: background 0.6s ease;
+            animation: badgePulse 3s ease-in-out infinite;
         }
 
-        /* 💡 Başlık artık düz beyaz değil, temaya göre otomatik uyum sağlayan
-           bir gradient (renk geçişli) parıltı efektiyle yazılıyor. */
-        .title-text {
-            background: linear-gradient(135deg, #ffffff 0%, var(--light-green) 55%, var(--accent-gold) 100%);
-            -webkit-background-clip: text;
-            background-clip: text;
-            -webkit-text-fill-color: transparent;
-            color: transparent;
-            text-shadow: 0 2px 18px rgba(76, 175, 80, 0.35);
-            transition: text-shadow 0.6s ease;
+        @keyframes badgePulse {
+            0%, 100% {
+                box-shadow:
+                        0 4px 16px rgba(0, 0, 0, 0.45),
+                        0 0 10px var(--accent-gold),
+                        inset 0 1px 3px rgba(255, 255, 255, 0.4),
+                        inset 0 -3px 6px rgba(0, 0, 0, 0.3);
+            }
+            50% {
+                box-shadow:
+                        0 4px 20px rgba(0, 0, 0, 0.45),
+                        0 0 20px var(--accent-gold),
+                        inset 0 1px 3px rgba(255, 255, 255, 0.45),
+                        inset 0 -3px 6px rgba(0, 0, 0, 0.3);
+            }
         }
 
-        body.theme-sunset .title-text {
-            text-shadow: 0 2px 18px rgba(232, 93, 47, 0.4);
+        .logo-text {
+            font-size: 1.35rem;
+            font-weight: 800;
+            letter-spacing: 0.3px;
+            color: #ffffff;
         }
 
-        body.theme-night .title-text {
-            text-shadow: 0 2px 18px rgba(57, 73, 171, 0.5);
+        .logo-text-accent {
+            color: #ffc233;
         }
 
         .dedication {
@@ -687,10 +733,29 @@
                 width: 38px;
                 height: 38px;
             }
+
+            .logo-text {
+                font-size: 1.15rem;
+            }
+
+            .logo-badge {
+                width: 32px;
+                height: 32px;
+                font-size: 1rem;
+            }
         }
     </style>
 </head>
 <body>
+
+<header class="site-header">
+    <div class="site-header-inner">
+        <a href="/" class="logo-mark" title="TransferKolik Ana Sayfa">
+            <span class="logo-badge">⚽</span>
+            <span class="logo-text">Transfer<span class="logo-text-accent">Kolik</span></span>
+        </a>
+    </div>
+</header>
 
 <div class="container">
 
@@ -736,8 +801,7 @@
         </button>
     </div>
 
-    <h1>⚽ <span class="title-text">TransferKolik</span></h1>
-    <div class="dedication">Harman'a Sevgiler ❤️</div>
+    <div class="dedication">⚽ Harman'a Sevgiler ❤️</div>
     <p class="subtitle">İki Kulüp Arasındaki Ortak Oyuncular veya Kulüp / Ülke Araması</p>
 
     <div id="topLoader" class="top-loader">
