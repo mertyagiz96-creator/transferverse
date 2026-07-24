@@ -118,9 +118,34 @@ object DatabaseClient {
         return clubAliasMap[std] ?: std
     }
 
-    // 💡 Tek, kalıcı connection. SQLite dosya tabanlı olduğu için tek connection yeterli ve
-    // her istekte yeni connection açıp kapatma maliyetini ortadan kaldırır.
-    private val connection: Connection by lazy { createConnection() }
+    // 💡 EŞZAMANLI GÜVENLİK: Tek paylaşılan connection yerine küçük bir havuz (pool)
+    // kullanıyoruz. SQLite JDBC sürücüsü, tek bir Connection nesnesinin birden fazla
+    // thread tarafından TAM OLARAK AYNI ANDA kullanılmasını güvenli desteklemiyor.
+    // Bu havuz sayesinde her istek kendi bağlantısını alıp işini bitirince geri
+    // bırakıyor; havuz o an boşsa istek kısa bir süre bekliyor (hata almak yerine).
+    // Ayrıca WAL modu, eşzamanlı okumaları çok daha güvenli ve hızlı hale getiriyor.
+    private const val POOL_SIZE = 6
+    private val connectionPool: java.util.concurrent.BlockingQueue<Connection> by lazy { createConnectionPool() }
+
+    private fun createConnectionPool(): java.util.concurrent.BlockingQueue<Connection> {
+        val pool: java.util.concurrent.BlockingQueue<Connection> =
+            java.util.concurrent.ArrayBlockingQueue(POOL_SIZE)
+        repeat(POOL_SIZE) {
+            pool.put(createConnection())
+        }
+        return pool
+    }
+
+    // Havuzdan bir bağlantı alıp işi bitince geri bırakan yardımcı fonksiyon.
+    // Tüm sorgular artık bunun üzerinden çalışıyor, hiçbiri connection'ı doğrudan paylaşmıyor.
+    private fun <T> withConnection(block: (Connection) -> T): T {
+        val conn = connectionPool.take()
+        try {
+            return block(conn)
+        } finally {
+            connectionPool.put(conn)
+        }
+    }
 
     // 💡 Artık runtime'da resources'tan kopyalama YOK. football.db Docker image'ında
     // doğrudan /app/football.db konumunda hazır bulunuyor (bkz. Dockerfile).
@@ -135,7 +160,17 @@ object DatabaseClient {
             )
         }
 
-        return DriverManager.getConnection("jdbc:sqlite:${dbFile.absolutePath}")
+        val conn = DriverManager.getConnection("jdbc:sqlite:${dbFile.absolutePath}")
+
+        // 💡 WAL modu: birden fazla kullanıcı aynı anda arama yaparken okumaları
+        // güvenli ve hızlı hale getiriyor. busy_timeout: nadir bir çakışma anında
+        // hemen hata vermek yerine kısa süre bekleyip tekrar denemesini sağlıyor.
+        conn.createStatement().use { stmt ->
+            stmt.execute("PRAGMA journal_mode=WAL;")
+            stmt.execute("PRAGMA busy_timeout=5000;")
+        }
+
+        return conn
     }
 
     private fun String.toStandardSearch(): String {
@@ -218,20 +253,22 @@ object DatabaseClient {
         """.trimIndent()
 
         try {
-            connection.prepareStatement(sql).use { stmt ->
-                stmt.executeQuery().use { rs ->
-                    while (rs.next()) {
-                        val value = rs.getString(1)
-                        if (!value.isNullOrBlank()) {
-                            val cleaned = value.replace('\u00a0', ' ').trim()
-                            // 💡 Çift-uyruklu değerler (örn. "Czech Republic  Angola") için
-                            // sadece ana/ilk parçayı öneriye ekliyoruz, böylece "Czech Republic X",
-                            // "Czech Republic Y" gibi onlarca anlamsız tekrar yerine tek temiz
-                            // "Czech Republic" önerisi kalıyor. Kulüp isimlerinde çift boşluk
-                            // olmadığı için bu, kulüp önerilerini etkilemiyor.
-                            val primaryValue = cleaned.split(Regex("\\s{2,}")).firstOrNull()?.trim() ?: cleaned
-                            if (primaryValue.length > 1 && !isYouthClub(primaryValue)) {
-                                suggestions.add(primaryValue)
+            withConnection { conn ->
+                conn.prepareStatement(sql).use { stmt ->
+                    stmt.executeQuery().use { rs ->
+                        while (rs.next()) {
+                            val value = rs.getString(1)
+                            if (!value.isNullOrBlank()) {
+                                val cleaned = value.replace('\u00a0', ' ').trim()
+                                // 💡 Çift-uyruklu değerler (örn. "Czech Republic  Angola") için
+                                // sadece ana/ilk parçayı öneriye ekliyoruz, böylece "Czech Republic X",
+                                // "Czech Republic Y" gibi onlarca anlamsız tekrar yerine tek temiz
+                                // "Czech Republic" önerisi kalıyor. Kulüp isimlerinde çift boşluk
+                                // olmadığı için bu, kulüp önerilerini etkilemiyor.
+                                val primaryValue = cleaned.split(Regex("\\s{2,}")).firstOrNull()?.trim() ?: cleaned
+                                if (primaryValue.length > 1 && !isYouthClub(primaryValue)) {
+                                    suggestions.add(primaryValue)
+                                }
                             }
                         }
                     }
@@ -292,40 +329,42 @@ object DatabaseClient {
         val playerInfoMap = mutableMapOf<Int, Player>()
 
         try {
-            connection.prepareStatement(sql).use { stmt ->
-                if (isCountry) {
-                    val searchTerm = "%$mappedCountry%"
-                    stmt.setString(1, searchTerm)
-                } else {
-                    val searchTerm = "%$resolvedClubTerm%"
-                    stmt.setString(1, searchTerm)
-                    stmt.setString(2, searchTerm)
-                }
+            withConnection { conn ->
+                conn.prepareStatement(sql).use { stmt ->
+                    if (isCountry) {
+                        val searchTerm = "%$mappedCountry%"
+                        stmt.setString(1, searchTerm)
+                    } else {
+                        val searchTerm = "%$resolvedClubTerm%"
+                        stmt.setString(1, searchTerm)
+                        stmt.setString(2, searchTerm)
+                    }
 
-                stmt.executeQuery().use { rs ->
-                    while (rs.next()) {
-                        val pId = rs.getInt("id")
-                        val fromClub = rs.getString("from_club") ?: ""
-                        val toClub = rs.getString("to_club") ?: ""
-                        val season = rs.getString("season") ?: continue
+                    stmt.executeQuery().use { rs ->
+                        while (rs.next()) {
+                            val pId = rs.getInt("id")
+                            val fromClub = rs.getString("from_club") ?: ""
+                            val toClub = rs.getString("to_club") ?: ""
+                            val season = rs.getString("season") ?: continue
 
-                        playerAllTransfers.getOrPut(pId) { mutableListOf() }.add(Triple(fromClub, toClub, season))
+                            playerAllTransfers.getOrPut(pId) { mutableListOf() }.add(Triple(fromClub, toClub, season))
 
-                        if (!playerInfoMap.containsKey(pId)) {
-                            val rawNat = rs.getString("nationality") ?: ""
-                            val playerName = rs.getString("name") ?: ""
+                            if (!playerInfoMap.containsKey(pId)) {
+                                val rawNat = rs.getString("nationality") ?: ""
+                                val playerName = rs.getString("name") ?: ""
 
-                            playerInfoMap[pId] = Player(
-                                playerId = pId,
-                                name = playerName,
-                                position = rs.getString("position") ?: "",
-                                nationality = cleanNationalityText(rawNat),
-                                team = clubOrCountry,
-                                birthDate = rs.getString("birthdate"),
-                                season1 = null,
-                                season2 = null,
-                                transferId = pId
-                            )
+                                playerInfoMap[pId] = Player(
+                                    playerId = pId,
+                                    name = playerName,
+                                    position = rs.getString("position") ?: "",
+                                    nationality = cleanNationalityText(rawNat),
+                                    team = clubOrCountry,
+                                    birthDate = rs.getString("birthdate"),
+                                    season1 = null,
+                                    season2 = null,
+                                    transferId = pId
+                                )
+                            }
                         }
                     }
                 }
@@ -411,49 +450,51 @@ object DatabaseClient {
         val playerInfoMap = mutableMapOf<Int, Player>()
 
         try {
-            connection.prepareStatement(sql).use { stmt ->
-                var paramIndex = 1
+            withConnection { conn ->
+                conn.prepareStatement(sql).use { stmt ->
+                    var paramIndex = 1
 
-                if (isParam1Country) {
-                    stmt.setString(paramIndex++, "%$mappedCountry1%")
-                } else {
-                    val term = "%$resolvedClubTerm1%"
-                    stmt.setString(paramIndex++, term)
-                    stmt.setString(paramIndex++, term)
-                }
+                    if (isParam1Country) {
+                        stmt.setString(paramIndex++, "%$mappedCountry1%")
+                    } else {
+                        val term = "%$resolvedClubTerm1%"
+                        stmt.setString(paramIndex++, term)
+                        stmt.setString(paramIndex++, term)
+                    }
 
-                if (isParam2Country) {
-                    stmt.setString(paramIndex++, "%$mappedCountry2%")
-                } else {
-                    val term = "%$resolvedClubTerm2%"
-                    stmt.setString(paramIndex++, term)
-                    stmt.setString(paramIndex, term)
-                }
+                    if (isParam2Country) {
+                        stmt.setString(paramIndex++, "%$mappedCountry2%")
+                    } else {
+                        val term = "%$resolvedClubTerm2%"
+                        stmt.setString(paramIndex++, term)
+                        stmt.setString(paramIndex, term)
+                    }
 
-                stmt.executeQuery().use { rs ->
-                    while (rs.next()) {
-                        val pId = rs.getInt("id")
-                        val fromClub = rs.getString("from_club") ?: ""
-                        val toClub = rs.getString("to_club") ?: ""
-                        val season = rs.getString("season") ?: continue
+                    stmt.executeQuery().use { rs ->
+                        while (rs.next()) {
+                            val pId = rs.getInt("id")
+                            val fromClub = rs.getString("from_club") ?: ""
+                            val toClub = rs.getString("to_club") ?: ""
+                            val season = rs.getString("season") ?: continue
 
-                        playerAllTransfers.getOrPut(pId) { mutableListOf() }.add(Triple(fromClub, toClub, season))
+                            playerAllTransfers.getOrPut(pId) { mutableListOf() }.add(Triple(fromClub, toClub, season))
 
-                        if (!playerInfoMap.containsKey(pId)) {
-                            val rawNat = rs.getString("nationality") ?: ""
-                            val playerName = rs.getString("name") ?: ""
+                            if (!playerInfoMap.containsKey(pId)) {
+                                val rawNat = rs.getString("nationality") ?: ""
+                                val playerName = rs.getString("name") ?: ""
 
-                            playerInfoMap[pId] = Player(
-                                playerId = pId,
-                                name = playerName,
-                                position = rs.getString("position") ?: "",
-                                nationality = cleanNationalityText(rawNat),
-                                team = "$param1 / $param2",
-                                birthDate = rs.getString("birthdate"),
-                                season1 = null,
-                                season2 = null,
-                                transferId = pId
-                            )
+                                playerInfoMap[pId] = Player(
+                                    playerId = pId,
+                                    name = playerName,
+                                    position = rs.getString("position") ?: "",
+                                    nationality = cleanNationalityText(rawNat),
+                                    team = "$param1 / $param2",
+                                    birthDate = rs.getString("birthdate"),
+                                    season1 = null,
+                                    season2 = null,
+                                    transferId = pId
+                                )
+                            }
                         }
                     }
                 }

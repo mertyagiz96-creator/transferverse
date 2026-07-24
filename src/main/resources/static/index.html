@@ -180,6 +180,15 @@
             color: #ffffff;
         }
 
+        /* 💡 Ses butonu için ayrı stil: varsayılan (açık) hâli normal buton gibi
+           görünsün, sadece kapatılınca soluk/gri bir "sessiz" görünümü alsın —
+           diğer özelliklerin "aktif" altın parlamasıyla karışmasın. */
+        .toolbar-btn.muted {
+            opacity: 0.5;
+            background: rgba(255, 255, 255, 0.03);
+            border-color: rgba(255, 255, 255, 0.12);
+        }
+
         .year-filter-panel {
             display: none;
             position: absolute;
@@ -255,10 +264,36 @@
 
         h1 {
             text-align: center;
-            color: #ffffff;
-            font-size: 2.2rem;
+            font-size: 2.4rem;
             margin-bottom: 4px;
-            letter-spacing: 1px;
+            letter-spacing: 1.5px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #ffffff 20%, var(--light-green) 55%, var(--accent-gold) 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
+            transition: background 0.6s ease;
+        }
+
+        /* 💡 Başlık artık düz beyaz değil, temaya göre otomatik uyum sağlayan
+           bir gradient (renk geçişli) parıltı efektiyle yazılıyor. */
+        .title-text {
+            background: linear-gradient(135deg, #ffffff 0%, var(--light-green) 55%, var(--accent-gold) 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            color: transparent;
+            text-shadow: 0 2px 18px rgba(76, 175, 80, 0.35);
+            transition: text-shadow 0.6s ease;
+        }
+
+        body.theme-sunset .title-text {
+            text-shadow: 0 2px 18px rgba(232, 93, 47, 0.4);
+        }
+
+        body.theme-night .title-text {
+            text-shadow: 0 2px 18px rgba(57, 73, 171, 0.5);
         }
 
         .dedication {
@@ -505,7 +540,10 @@
             padding: 4px 10px;
             border-radius: 20px;
             font-size: 0.85rem;
-            display: inline-block;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            white-space: nowrap;
         }
 
         .badge-position {
@@ -636,14 +674,6 @@
             🕵️ Hunter Mode
         </button>
 
-        <button id="shareBtn" class="toolbar-btn" title="Bu aramanın linkini kopyala">
-            🔗 Paylaş
-        </button>
-
-        <button id="soundToggleBtn" class="toolbar-btn active" title="Arama sesini aç/kapat">
-            🔊 Ses
-        </button>
-
         <div class="toolbar-wrapper">
             <button id="yearFilterBtn" class="toolbar-btn" title="Sonuçları belirli bir yıldan önce/sonra olacak şekilde filtrele">
                 📅 Yıl Filtresi
@@ -660,9 +690,17 @@
                 </div>
             </div>
         </div>
+
+        <button id="soundToggleBtn" class="toolbar-btn" title="Arama sesini aç/kapat">
+            🔊 Ses
+        </button>
+
+        <button id="shareBtn" class="toolbar-btn" title="Bu aramanın linkini kopyala">
+            🔗 Paylaş
+        </button>
     </div>
 
-    <h1>⚽ TransferKolik</h1>
+    <h1>⚽ <span class="title-text">TransferKolik</span></h1>
     <div class="dedication">Harman'a Sevgiler ❤️</div>
     <p class="subtitle">İki Kulüp Arasındaki Ortak Oyuncular veya Kulüp / Ülke Araması</p>
 
@@ -807,7 +845,7 @@
         const btn = document.getElementById('soundToggleBtn');
         btn.addEventListener('click', () => {
             soundOn = !soundOn;
-            btn.classList.toggle('active', soundOn);
+            btn.classList.toggle('muted', !soundOn);
             btn.textContent = soundOn ? '🔊 Ses' : '🔇 Ses';
         });
     }
