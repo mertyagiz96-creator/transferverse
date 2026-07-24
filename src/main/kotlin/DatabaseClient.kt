@@ -61,8 +61,61 @@ object DatabaseClient {
         "avustralya" to "australia", "australia" to "australia",
         "suudi arabistan" to "saudi arabia",
         "katar" to "qatar", "qatar" to "qatar",
-        "ozbekistan" to "uzbekistan"
+        "ozbekistan" to "uzbekistan",
+
+        // 💡 Aşağıdakiler ek olarak eklendi, mevcut hiçbir eşleme değiştirilmedi
+        "iskocya" to "scotland", "scotland" to "scotland",
+        "galler" to "wales", "wales" to "wales",
+        "irlanda" to "ireland", "ireland" to "ireland", "republic of ireland" to "ireland",
+        "kuzey irlanda" to "northern ireland", "northern ireland" to "northern ireland",
+        "macaristan" to "hungary", "hungary" to "hungary",
+        "slovakya" to "slovakia", "slovakia" to "slovakia",
+        "slovenya" to "slovenia", "slovenia" to "slovenia",
+        "bulgaristan" to "bulgaria", "bulgaria" to "bulgaria",
+        "finlandiya" to "finland", "finland" to "finland",
+        "izlanda" to "iceland", "iceland" to "iceland",
+        "israil" to "israel", "israel" to "israel",
+        "arnavutluk" to "albania", "albania" to "albania",
+        "karadag" to "montenegro", "montenegro" to "montenegro",
+        "kuzey makedonya" to "north macedonia", "north macedonia" to "north macedonia", "makedonya" to "north macedonia",
+        "kosova" to "kosovo", "kosovo" to "kosovo",
+        "gurcistan" to "georgia", "georgia" to "georgia",
+        "ermenistan" to "armenia", "armenia" to "armenia",
+        "azerbaycan" to "azerbaijan", "azerbaijan" to "azerbaijan",
+        "litvanya" to "lithuania", "lithuania" to "lithuania",
+        "letonya" to "latvia", "latvia" to "latvia",
+        "estonya" to "estonia", "estonia" to "estonia",
+        "kibris" to "cyprus", "kıbrıs" to "cyprus", "cyprus" to "cyprus",
+        "malta" to "malta",
+        "luksemburg" to "luxembourg", "lüksemburg" to "luxembourg", "luxembourg" to "luxembourg",
+        "hindistan" to "india", "india" to "india",
+        "endonezya" to "indonesia", "indonesia" to "indonesia",
+        "tayland" to "thailand", "thailand" to "thailand",
+        "vietnam" to "vietnam",
+        "yeni zelanda" to "new zealand", "new zealand" to "new zealand",
+        "tunus" to "tunisia", "tunisia" to "tunisia",
+        "mali" to "mali",
+        "gine" to "guinea", "guinea" to "guinea"
     )
+
+    // 💡 Bazı kulüpler veritabanında tam isimle değil, kısaltmayla kayıtlı
+    // (örn. "Manchester United" değil "Man Utd" olarak geçiyor). Bu sözlük,
+    // kullanıcı tam ismi yazınca aramayı veritabanındaki gerçek kısaltmaya
+    // çeviriyor. Sadece bilinen istisnalar için, diğer kulüplere dokunmuyor.
+    private val clubAliasMap = mapOf(
+        "manchester united" to "man utd",
+        "manchester utd" to "man utd",
+        "man united" to "man utd",
+        "manchester city" to "man city"
+    )
+
+    // Arama teriminin standartlaştırılmış + (varsa) alias'ı çözülmüş hâlini döndürür.
+    // SQL sorgusuna ve Kotlin tarafındaki matchesOriginalClub kontrolüne aynı terim
+    // gönderilsin diye tek bir yerden hesaplanıyor.
+    private fun resolveClubSearchTerm(raw: String): String {
+        val std = raw.toStandardSearch()
+        return clubAliasMap[std] ?: std
+    }
 
     // 💡 Tek, kalıcı connection. SQLite dosya tabanlı olduğu için tek connection yeterli ve
     // her istekte yeni connection açıp kapatma maliyetini ortadan kaldırır.
@@ -85,13 +138,20 @@ object DatabaseClient {
     }
 
     private fun String.toStandardSearch(): String {
-        return this.lowercase()
-            .replace("ı", "i").replace("İ", "i")
-            .replace("ğ", "g").replace("Ğ", "g")
-            .replace("ü", "u").replace("Ü", "u")
-            .replace("ş", "s").replace("Ş", "s")
-            .replace("ö", "o").replace("Ö", "o")
-            .replace("ç", "c").replace("Ç", "c")
+        // 💡 ÖNEMLİ SIRA: Türkçe karakter dönüşümlerini lowercase()'DEN ÖNCE yapıyoruz.
+        // Sebep: Kotlin'in genel .lowercase() fonksiyonu (locale belirtilmeden), Türkçe
+        // büyük "İ" harfini tek bir "i" değil, "i" + görünmez bir nokta işareti (iki ayrı
+        // karakter) haline çeviriyor. Bu yüzden önce lowercase() çağrılırsa "İnter" gibi
+        // aramalar sessizce bozuluyor ve hiçbir sonuçla eşleşmiyordu. Değişimleri önce
+        // yapıp en sona sadece düz ASCII harfler için .lowercase() çağırmak bu sorunu çözüyor.
+        return this
+            .replace("İ", "i").replace("ı", "i")
+            .replace("Ğ", "g").replace("ğ", "g")
+            .replace("Ü", "u").replace("ü", "u")
+            .replace("Ş", "s").replace("ş", "s")
+            .replace("Ö", "o").replace("ö", "o")
+            .replace("Ç", "c").replace("ç", "c")
+            .lowercase()
             .trim()
     }
 
@@ -106,16 +166,15 @@ object DatabaseClient {
         return youthKeywords.any { lower.contains(it) }
     }
 
-    private fun matchesOriginalClub(clubName: String?, targetClub: String): Boolean {
+    private fun matchesOriginalClub(clubName: String?, resolvedTarget: String): Boolean {
         if (clubName == null) return false
         val cleanClub = clubName.toStandardSearch()
-        val target = targetClub.toStandardSearch()
 
         if (isYouthClub(cleanClub)) {
             return false
         }
 
-        return cleanClub.contains(target)
+        return cleanClub.contains(resolvedTarget)
     }
 
     // 💡 Sadece SADECE ilk/ana uyruğu baz alan kusursuz kontrol
@@ -124,9 +183,12 @@ object DatabaseClient {
         val stdSearch = searchParam.toStandardSearch()
         val stdMapped = mappedCountry.toStandardSearch()
 
-        // Oyuncu uyruk metnini kelimelere ayırıp ilk kelimeyi (yani ana uyruğu) alıyoruz
-        val natWords = stdNat.split(Regex("[^a-z]+")).filter { it.isNotEmpty() }
-        val primaryNationality = natWords.firstOrNull() ?: return false
+        // Birden fazla uyruk verisi ÇİFT BOŞLUKLA ayrılıyor (örn: "Cameroon  France").
+        // Bu yüzden sadece çift boşlukta bölüyoruz; tek boşluklu veya apostroflu çok
+        // kelimelik ülke isimleri (örn. "Czech Republic", "Cote d'Ivoire") bu sayede
+        // bölünmeden tek parça kalıyor ve doğru şekilde eşleşiyor.
+        val primaryNationality = stdNat.split(Regex("\\s{2,}")).firstOrNull()?.trim()
+            ?: return false
 
         return primaryNationality == stdSearch || primaryNationality == stdMapped
     }
@@ -161,8 +223,14 @@ object DatabaseClient {
                         val value = rs.getString(1)
                         if (!value.isNullOrBlank()) {
                             val cleaned = value.replace('\u00a0', ' ').trim()
-                            if (cleaned.length > 1 && !isYouthClub(cleaned)) {
-                                suggestions.add(cleaned)
+                            // 💡 Çift-uyruklu değerler (örn. "Czech Republic  Angola") için
+                            // sadece ana/ilk parçayı öneriye ekliyoruz, böylece "Czech Republic X",
+                            // "Czech Republic Y" gibi onlarca anlamsız tekrar yerine tek temiz
+                            // "Czech Republic" önerisi kalıyor. Kulüp isimlerinde çift boşluk
+                            // olmadığı için bu, kulüp önerilerini etkilemiyor.
+                            val primaryValue = cleaned.split(Regex("\\s{2,}")).firstOrNull()?.trim() ?: cleaned
+                            if (primaryValue.length > 1 && !isYouthClub(primaryValue)) {
+                                suggestions.add(primaryValue)
                             }
                         }
                     }
@@ -197,6 +265,7 @@ object DatabaseClient {
         val stdParam = clubOrCountry.toStandardSearch()
         val mappedCountry = countryMap[stdParam] ?: stdParam
         val isCountry = isCountryParam(clubOrCountry)
+        val resolvedClubTerm = resolveClubSearchTerm(clubOrCountry)
 
         val sql = if (isCountry) {
             """
@@ -223,7 +292,7 @@ object DatabaseClient {
                     val searchTerm = "%$mappedCountry%"
                     stmt.setString(1, searchTerm)
                 } else {
-                    val searchTerm = "%$stdParam%"
+                    val searchTerm = "%$resolvedClubTerm%"
                     stmt.setString(1, searchTerm)
                     stmt.setString(2, searchTerm)
                 }
@@ -278,8 +347,8 @@ object DatabaseClient {
                         validSeasonsForClub.add(s)
                     }
                 } else {
-                    val isFromReal = matchesOriginalClub(f, clubOrCountry)
-                    val isToReal = matchesOriginalClub(t, clubOrCountry)
+                    val isFromReal = matchesOriginalClub(f, resolvedClubTerm)
+                    val isToReal = matchesOriginalClub(t, resolvedClubTerm)
 
                     if (isFromReal || isToReal) {
                         hasRealMatch = true
@@ -308,6 +377,9 @@ object DatabaseClient {
 
         val isParam1Country = isCountryParam(param1)
         val isParam2Country = isCountryParam(param2)
+
+        val resolvedClubTerm1 = resolveClubSearchTerm(param1)
+        val resolvedClubTerm2 = resolveClubSearchTerm(param2)
 
         // 💡 SQL'de "aday oyuncu id" havuzunu daraltıyoruz: iki parametreden en az biriyle
         // eşleşen transfer/oyuncu satırlarını çekiyoruz (OR mantığıyla), sonrasında Kotlin'de
@@ -340,7 +412,7 @@ object DatabaseClient {
                 if (isParam1Country) {
                     stmt.setString(paramIndex++, "%$mappedCountry1%")
                 } else {
-                    val term = "%$std1%"
+                    val term = "%$resolvedClubTerm1%"
                     stmt.setString(paramIndex++, term)
                     stmt.setString(paramIndex++, term)
                 }
@@ -348,7 +420,7 @@ object DatabaseClient {
                 if (isParam2Country) {
                     stmt.setString(paramIndex++, "%$mappedCountry2%")
                 } else {
-                    val term = "%$std2%"
+                    val term = "%$resolvedClubTerm2%"
                     stmt.setString(paramIndex++, term)
                     stmt.setString(paramIndex, term)
                 }
@@ -401,13 +473,13 @@ object DatabaseClient {
                 val match1 = if (isParam1Country) {
                     isPrimaryCountryMatch(player.nationality, param1, mappedCountry1)
                 } else {
-                    matchesOriginalClub(f, param1) || matchesOriginalClub(t, param1)
+                    matchesOriginalClub(f, resolvedClubTerm1) || matchesOriginalClub(t, resolvedClubTerm1)
                 }
 
                 val match2 = if (isParam2Country) {
                     isPrimaryCountryMatch(player.nationality, param2, mappedCountry2)
                 } else {
-                    matchesOriginalClub(f, param2) || matchesOriginalClub(t, param2)
+                    matchesOriginalClub(f, resolvedClubTerm2) || matchesOriginalClub(t, resolvedClubTerm2)
                 }
 
                 if (match1) seasons1.add(s)

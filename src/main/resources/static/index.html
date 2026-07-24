@@ -146,11 +146,15 @@
             border: 1px solid rgba(76, 175, 80, 0.5);
             box-shadow: inset 0 1px 3px rgba(255, 255, 255, 0.1), 0 10px 25px rgba(0, 0, 0, 0.3);
             margin-bottom: 30px;
+            /* Açılır öneri kutusunun kart dışına taşabilmesi için */
+            overflow: visible;
         }
 
         .input-group {
             display: flex;
             flex-direction: column;
+            /* Öneri dropdown'ının konumlanabilmesi için referans nokta */
+            position: relative;
         }
 
         .input-group label {
@@ -171,6 +175,10 @@
             font-weight: 600;
             outline: none;
             transition: all 0.3s ease;
+            width: 100%;
+            /* iOS Safari input'lara garip default stiller uygulayabiliyor, sıfırlıyoruz */
+            -webkit-appearance: none;
+            appearance: none;
         }
 
         .input-group input::placeholder {
@@ -183,6 +191,50 @@
             background: rgba(15, 45, 18, 0.95);
             box-shadow: 0 0 15px rgba(76, 175, 80, 0.6);
             transform: translateY(-1px);
+        }
+
+        /* 💡 Custom autocomplete dropdown — native <datalist> yerine.
+           iOS/mobil Safari <datalist>'i düzgün desteklemediği için (öneriler hiç
+           görünmüyor), kendi JS ile inşa ettiğimiz bu dropdown tüm platformlarda
+           (masaüstü + mobil, her tarayıcı) aynı şekilde çalışır. */
+        .autocomplete-dropdown {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            margin-top: 4px;
+            background: rgba(8, 26, 10, 0.98);
+            border: 1.5px solid rgba(76, 175, 80, 0.5);
+            border-radius: 10px;
+            max-height: 240px;
+            overflow-y: auto;
+            z-index: 100;
+            box-shadow: 0 12px 28px rgba(0, 0, 0, 0.55);
+        }
+
+        .autocomplete-item {
+            padding: 12px 18px;
+            color: #e0e0e0;
+            cursor: pointer;
+            font-size: 0.98rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .autocomplete-item:last-child {
+            border-bottom: none;
+        }
+
+        .autocomplete-item:hover,
+        .autocomplete-item.active {
+            background: rgba(76, 175, 80, 0.25);
+        }
+
+        .autocomplete-empty {
+            padding: 12px 18px;
+            color: rgba(255, 255, 255, 0.4);
+            font-size: 0.9rem;
+            font-style: italic;
         }
 
         .btn-search {
@@ -319,15 +371,15 @@
     <div class="search-card">
         <div class="input-group">
             <label for="club1Input">1. Kulüp veya Ülke</label>
-            <input id="club1Input" type="text" list="suggestionsList" placeholder="Örn: Galatasaray veya Türkiye" value="Galatasaray">
+            <input id="club1Input" type="text" autocomplete="off" placeholder="Örn: Galatasaray veya Türkiye" value="Galatasaray">
+            <div id="club1Dropdown" class="autocomplete-dropdown"></div>
         </div>
 
         <div class="input-group">
             <label for="club2Input">2. Kulüp veya Ülke</label>
-            <input id="club2Input" type="text" list="suggestionsList" placeholder="Örn: Kocaelispor veya Almanya" value="Kocaelispor">
+            <input id="club2Input" type="text" autocomplete="off" placeholder="Örn: Kocaelispor veya Almanya" value="Kocaelispor">
+            <div id="club2Dropdown" class="autocomplete-dropdown"></div>
         </div>
-
-        <datalist id="suggestionsList"></datalist>
 
         <button id="searchBtn" class="btn-search">Ara</button>
     </div>
@@ -355,22 +407,115 @@
 </div>
 
 <script>
+    let allSuggestions = [];
+
     async function loadSuggestions() {
         try {
             const response = await fetch('/suggestions');
             if (response.ok) {
-                const list = await response.json();
-                const datalist = document.getElementById("suggestionsList");
-                datalist.innerHTML = "";
-                list.forEach(item => {
-                    const option = document.createElement("option");
-                    option.value = item;
-                    datalist.appendChild(option);
-                });
+                allSuggestions = await response.json();
             }
         } catch (e) {
             console.log("Öneriler yüklenirken pas geçildi.");
         }
+    }
+
+    // Türkçe karakterlere duyarlı, büyük/küçük harf duyarsız karşılaştırma için
+    function normalize(str) {
+        return str.toLocaleLowerCase('tr-TR');
+    }
+
+    // 💡 Native <datalist> yerine kendi yazdığımız autocomplete.
+    // Sebep: iOS/mobil Safari <datalist> önerilerini göstermiyor, bu yöntem
+    // ise düz JavaScript + DOM ile çalıştığı için tüm platformlarda tutarlı çalışıyor.
+    function setupAutocomplete(inputId, dropdownId) {
+        const input = document.getElementById(inputId);
+        const dropdown = document.getElementById(dropdownId);
+        let activeIndex = -1;
+
+        function closeDropdown() {
+            dropdown.style.display = "none";
+            dropdown.innerHTML = "";
+            activeIndex = -1;
+        }
+
+        function renderMatches() {
+            const query = input.value.trim();
+            if (!query) {
+                closeDropdown();
+                return;
+            }
+
+            const normalizedQuery = normalize(query);
+            const matches = allSuggestions
+                .filter(s => normalize(s).includes(normalizedQuery))
+                .slice(0, 8);
+
+            dropdown.innerHTML = "";
+            activeIndex = -1;
+
+            if (matches.length === 0) {
+                closeDropdown();
+                return;
+            }
+
+            matches.forEach(match => {
+                const item = document.createElement("div");
+                item.className = "autocomplete-item";
+                item.textContent = match;
+
+                // mousedown kullanıyoruz ki input'un blur event'i devreye girmeden
+                // önce tıklama işlensin (aksi halde blur dropdown'ı kapatıp tıklamayı iptal eder)
+                item.addEventListener("mousedown", (e) => {
+                    e.preventDefault();
+                    input.value = match;
+                    closeDropdown();
+                });
+
+                dropdown.appendChild(item);
+            });
+
+            dropdown.style.display = "block";
+        }
+
+        input.addEventListener("input", renderMatches);
+        input.addEventListener("focus", renderMatches);
+
+        input.addEventListener("blur", () => {
+            // Dropdown öğesine tıklama işlenebilsin diye küçük bir gecikmeyle kapatıyoruz
+            setTimeout(closeDropdown, 150);
+        });
+
+        // Klavye ile yukarı/aşağı/enter desteği (masaüstünde kullanışlı, mobilde zararsız)
+        input.addEventListener("keydown", (e) => {
+            const items = dropdown.querySelectorAll(".autocomplete-item");
+            if (items.length === 0) return;
+
+            if (e.key === "ArrowDown") {
+                e.preventDefault();
+                activeIndex = Math.min(activeIndex + 1, items.length - 1);
+            } else if (e.key === "ArrowUp") {
+                e.preventDefault();
+                activeIndex = Math.max(activeIndex - 1, 0);
+            } else if (e.key === "Enter") {
+                if (activeIndex >= 0 && items[activeIndex]) {
+                    e.preventDefault();
+                    input.value = items[activeIndex].textContent;
+                    closeDropdown();
+                }
+                return;
+            } else if (e.key === "Escape") {
+                closeDropdown();
+                return;
+            } else {
+                return;
+            }
+
+            items.forEach((item, idx) => {
+                item.classList.toggle("active", idx === activeIndex);
+            });
+            items[activeIndex].scrollIntoView({ block: "nearest" });
+        });
     }
 
     async function searchPlayers() {
@@ -441,6 +586,8 @@
     document.getElementById("searchBtn").addEventListener("click", searchPlayers);
     window.onload = () => {
         loadSuggestions();
+        setupAutocomplete("club1Input", "club1Dropdown");
+        setupAutocomplete("club2Input", "club2Dropdown");
         searchPlayers();
     };
 </script>
