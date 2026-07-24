@@ -269,6 +269,47 @@
             color: #e0e0e0;
         }
 
+        /* 💡 Hunter Mode zorluk seviyesi seçici — yıl filtresi paneliyle aynı
+           görsel dilde, sadece iki seçenekli buton listesi. */
+        .level-option-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 2px;
+            width: 100%;
+            padding: 10px 12px;
+            border-radius: 8px;
+            border: 1.5px solid rgba(var(--light-green-rgb), 0.3);
+            background: rgba(255, 255, 255, 0.04);
+            color: #e0e0e0;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 0.9rem;
+            text-align: left;
+            transition: all 0.2s ease;
+        }
+
+        .level-option-btn:hover {
+            background: rgba(var(--light-green-rgb), 0.15);
+        }
+
+        .level-option-btn.active {
+            background: linear-gradient(135deg, var(--light-green), var(--dark-green));
+            border-color: var(--accent-gold);
+            box-shadow: 0 0 10px rgba(255, 179, 0, 0.3);
+            color: #ffffff;
+        }
+
+        .level-option-btn .level-desc {
+            font-size: 0.75rem;
+            font-weight: 400;
+            color: rgba(255, 255, 255, 0.65);
+        }
+
+        .level-option-btn + .level-option-btn {
+            margin-top: 8px;
+        }
+
         .toolbar-wrapper {
             position: relative;
         }
@@ -731,15 +772,15 @@
                 width: 100%;
             }
 
+            .year-filter-panel {
+                left: 0;
+                right: 0;
+            }
+
             /* Paylaş, en az kullanılan ve tek kalan buton olduğu için kendi
                satırında tam genişlik ve ortalanmış duruyor */
             #shareBtn {
                 grid-column: 1 / -1;
-            }
-
-            .year-filter-panel {
-                left: 0;
-                right: 0;
             }
 
             /* 💡 Mobilde dokunma hedefi küçük kalmasın diye tema noktalarını büyütüyoruz */
@@ -785,9 +826,25 @@
             🎲 Şans Modu
         </button>
 
-        <button id="hunterModeBtn" class="toolbar-btn" title="Oyuncu isimlerini gizleyip eğlenceli bir tahmin oyununa çevirir">
-            🕵️ Hunter Mode
-        </button>
+        <div class="toolbar-wrapper" id="hunterModeWrapper">
+            <button id="hunterModeBtn" class="toolbar-btn" title="Oyuncu isimlerini gizleyip eğlenceli bir tahmin oyununa çevirir">
+                🕵️ Hunter Mode
+            </button>
+            <div id="hunterModePanel" class="year-filter-panel">
+                <button id="hunterOffBtn" class="level-option-btn active">
+                    ⚪ Kapalı
+                    <span class="level-desc">İsimler normal görünür</span>
+                </button>
+                <button id="levelEasyBtn" class="level-option-btn">
+                    🟢 Çaylak
+                    <span class="level-desc">Harflerin çoğu görünür</span>
+                </button>
+                <button id="levelHardBtn" class="level-option-btn">
+                    🔴 Usta
+                    <span class="level-desc">Sadece ad/soyadın ilk harfi görünür</span>
+                </button>
+            </div>
+        </div>
 
         <div class="toolbar-wrapper">
             <button id="yearFilterBtn" class="toolbar-btn" title="Sonuçları belirli bir yıldan önce/sonra olacak şekilde filtrele">
@@ -867,6 +924,7 @@
     let allSuggestions = [];
     let currentPlayers = [];
     let hunterModeOn = false;
+    let hunterLevel = 'hard'; // 'easy' = Çaylak, 'hard' = Usta (varsayılan) — Hunter Mode kapalıyken etkisiz
     let yearFilterActive = false;
     let yearFilterValue = null;
     let yearFilterMode = 'before';
@@ -1184,6 +1242,21 @@
     }
 
     function maskName(name) {
+        // 🔴 USTA seviyesi: sadece her kelimenin (ad/soyad) ilk harfi açık,
+        // geri kalan her şey maskeli — mevcut ÇAYLAK mantığına hiç dokunmuyor.
+        if (hunterLevel === 'hard') {
+            return name.split(' ').map(word => {
+                return word.split('').map((ch, idx) => {
+                    if (idx === 0) return ch;
+                    if (/[a-zA-ZçÇğĞıİöÖşŞüÜ]/.test(ch)) {
+                        return '★';
+                    }
+                    return ch;
+                }).join('');
+            }).join(' ');
+        }
+
+        // 🟢 ÇAYLAK seviyesi (varsayılan) — birebir aynı, önceki mantık değişmedi.
         return name.split(' ').map(word => {
             const letters = word.split('');
             const len = letters.length;
@@ -1212,13 +1285,54 @@
         }).join(' ');
     }
 
-    function setupHunterModeToggle() {
+    function setupHunterModePanel() {
         const btn = document.getElementById('hunterModeBtn');
-        btn.addEventListener('click', () => {
-            hunterModeOn = !hunterModeOn;
+        const panel = document.getElementById('hunterModePanel');
+        const offBtn = document.getElementById('hunterOffBtn');
+        const easyBtn = document.getElementById('levelEasyBtn');
+        const hardBtn = document.getElementById('levelHardBtn');
+
+        function refreshActiveStates() {
+            offBtn.classList.toggle('active', !hunterModeOn);
+            easyBtn.classList.toggle('active', hunterModeOn && hunterLevel === 'easy');
+            hardBtn.classList.toggle('active', hunterModeOn && hunterLevel === 'hard');
             btn.classList.toggle('active', hunterModeOn);
+        }
+
+        btn.addEventListener('click', () => {
+            panel.classList.toggle('open');
+        });
+
+        offBtn.addEventListener('click', () => {
+            hunterModeOn = false;
+            refreshActiveStates();
+            panel.classList.remove('open');
             renderPlayersTable(currentPlayers);
         });
+
+        easyBtn.addEventListener('click', () => {
+            hunterModeOn = true;
+            hunterLevel = 'easy';
+            refreshActiveStates();
+            panel.classList.remove('open');
+            renderPlayersTable(currentPlayers);
+        });
+
+        hardBtn.addEventListener('click', () => {
+            hunterModeOn = true;
+            hunterLevel = 'hard';
+            refreshActiveStates();
+            panel.classList.remove('open');
+            renderPlayersTable(currentPlayers);
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('#hunterModeWrapper')) {
+                panel.classList.remove('open');
+            }
+        });
+
+        refreshActiveStates();
     }
 
     function seasonToYear(season) {
@@ -1396,7 +1510,7 @@
         setupAutocomplete("club1Input", "club1Dropdown");
         setupAutocomplete("club2Input", "club2Dropdown");
         setupThemeSwitcher();
-        setupHunterModeToggle();
+        setupHunterModePanel();
         setupYearFilter();
         setupShareButton();
         setupSoundToggle();
