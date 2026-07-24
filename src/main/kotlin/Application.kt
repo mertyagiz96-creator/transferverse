@@ -1,3 +1,4 @@
+import io.ktor.http.HttpStatusCode
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
@@ -43,6 +44,30 @@ fun main() {
                 }
                 val common = DatabaseClient.fetchCommonPlayers(club1, club2)
                 call.respond(common)
+            }
+
+            // 💡 YENİ: "Oyuncu Modu" — mevcut 3 endpoint'e hiç dokunulmadı, bu tamamen
+            // ayrı/ek bir uç nokta. Verilen kulüplerin (virgülle ayrılmış) HEPSİNDE
+            // gerçekten oynamış rastgele bir oyuncuyu döndürür, yoksa 404 döner.
+            get("/playerMode") {
+                val clubsParam = call.request.queryParameters["clubs"]
+                if (clubsParam.isNullOrBlank()) {
+                    call.respond(HttpStatusCode.BadRequest)
+                    return@get
+                }
+
+                val clubs = clubsParam.split(",").map { it.trim() }.filter { it.isNotBlank() }
+                if (clubs.size < 2) {
+                    call.respond(HttpStatusCode.BadRequest)
+                    return@get
+                }
+
+                val result = DatabaseClient.fetchPlayerAcrossClubs(clubs)
+                if (result == null) {
+                    call.respond(HttpStatusCode.NotFound)
+                } else {
+                    call.respond(result)
+                }
             }
         }
     }.start(wait = true)

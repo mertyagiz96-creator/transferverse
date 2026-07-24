@@ -191,6 +191,54 @@
             color: #ffffff;
         }
 
+        /* 💡 Oyuncu Modu sonuç kartı */
+        .player-mode-card {
+            text-align: center;
+            max-width: 420px;
+            margin: 0 auto;
+        }
+
+        .player-mode-title {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: #e0e0e0;
+            margin-bottom: 16px;
+        }
+
+        .player-mode-clubs {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 18px;
+        }
+
+        .player-mode-club {
+            background: rgba(var(--light-green-rgb), 0.15);
+            border: 1.5px solid rgba(var(--light-green-rgb), 0.4);
+            border-radius: 10px;
+            padding: 10px 16px;
+            font-weight: 700;
+            font-size: 1.05rem;
+            color: #ffffff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .player-mode-answer {
+            font-size: 1.3rem;
+            font-weight: 800;
+            letter-spacing: 1px;
+            color: rgba(255, 255, 255, 0.35);
+            margin-bottom: 6px;
+        }
+
+        .player-mode-answer.revealed {
+            color: var(--accent-gold);
+            letter-spacing: normal;
+        }
+
         /* 💡 Ses butonu için ayrı stil: varsayılan (açık) hâli normal buton gibi
            görünsün, sadece kapatılınca soluk/gri bir "sessiz" görünümü alsın —
            diğer özelliklerin "aktif" altın parlamasıyla karışmasın. */
@@ -777,12 +825,6 @@
                 right: 0;
             }
 
-            /* Paylaş, en az kullanılan ve tek kalan buton olduğu için kendi
-               satırında tam genişlik ve ortalanmış duruyor */
-            #shareBtn {
-                grid-column: 1 / -1;
-            }
-
             /* 💡 Mobilde dokunma hedefi küçük kalmasın diye tema noktalarını büyütüyoruz */
             .theme-btn {
                 width: 38px;
@@ -836,9 +878,13 @@
             🎲 Şans Modu
         </button>
 
+        <button id="playerModeBtn" class="toolbar-btn" title="İki büyük kulüpte birden oynamış gizemli bir oyuncuyu tahmin etmeye çalışın">
+            🎮 Oyuncu Modu
+        </button>
+
         <div class="toolbar-wrapper" id="hunterModeWrapper">
             <button id="hunterModeBtn" class="toolbar-btn" title="Oyuncu isimlerini gizleyip eğlenceli bir tahmin oyununa çevirir">
-                🕵️ Hunter Mode
+                🎭 Maskeleme
             </button>
             <div id="hunterModePanel" class="year-filter-panel">
                 <button id="hunterOffBtn" class="level-option-btn active">
@@ -856,7 +902,7 @@
             </div>
         </div>
 
-        <div class="toolbar-wrapper">
+        <div class="toolbar-wrapper" id="yearFilterWrapper">
             <button id="yearFilterBtn" class="toolbar-btn" title="Sonuçları belirli bir yıldan önce/sonra olacak şekilde filtrele">
                 📅 Yıl Filtresi
             </button>
@@ -1148,6 +1194,114 @@
                 "<tr><td colspan='7' style='text-align:center; padding:20px;'>🤔 Şimdi tahmin sırası! Emin olunca 'Ara' butonuna basın.</td></tr>";
 
             showToast('🎲 Şans çekildi!');
+        });
+    }
+
+    // 💡 OYUNCU MODU — Şans Modu'ndaki aynı bilindik kulüp listesinden rastgele 2
+    // tanesini seçip, bu iki kulübün GERÇEKTEN İKİSİNDE DE oynamış bir oyuncu olup
+    // olmadığını sunucuya soruyor. Her rastgele çift eşleşme garantili değil, o yüzden
+    // birkaç deneme yapıyoruz (hızlı, indexli sorgular olduğu için sorun değil).
+    let playerModeActive = false;
+
+    async function startPlayerMode() {
+        const resultsTable = document.getElementById("resultsTable");
+        const topLoader = document.getElementById("topLoader");
+        topLoader.style.display = "flex";
+        playSearchSound();
+
+        const maxAttempts = 8;
+        let found = null;
+
+        for (let i = 0; i < maxAttempts; i++) {
+            const shuffled = [...luckyClubs].sort(() => Math.random() - 0.5);
+            const pick = shuffled.slice(0, 2);
+
+            try {
+                const res = await fetch(`/playerMode?clubs=${encodeURIComponent(pick.join(','))}`);
+                if (res.ok) {
+                    found = await res.json();
+                    break;
+                }
+            } catch (e) {
+                // sessizce bir sonraki denemeye geç
+            }
+        }
+
+        topLoader.style.display = "none";
+        currentPlayers = []; // normal arama sonuçlarıyla karışmasın
+
+        let bodyHtml;
+        if (!found) {
+            bodyHtml = `<div class="player-mode-title">😅 Uygun bir eşleşme bulunamadı.</div>`;
+        } else {
+            const safeName = found.playerName.replace(/\s*\(\d+\)\s*/g, "").trim().replace(/"/g, "&quot;");
+
+            const clubListHtml = found.clubs.map(c => {
+                const seasonBadge = (c.season && c.season !== '-')
+                    ? `<span class="badge-season">${c.season}</span>`
+                    : '';
+                return `<div class="player-mode-club">${c.club} ${seasonBadge}</div>`;
+            }).join('');
+
+            bodyHtml = `
+                <div class="player-mode-title">🎮 Bu takımlar arasında gidip gelen gizemli oyuncu kim?</div>
+                <div class="player-mode-clubs">${clubListHtml}</div>
+                <div class="player-mode-answer" id="playerModeAnswer" data-real="${safeName}">???</div>
+                <button id="revealPlayerModeBtn" class="btn-search" style="margin-bottom: 12px;">Oyuncuyu Göster</button>
+            `;
+        }
+
+        resultsTable.innerHTML = `
+            <tr>
+                <td colspan="7" style="padding: 24px;">
+                    <div class="player-mode-card">
+                        ${bodyHtml}
+                        <button id="newPlayerModeBtn" class="toolbar-btn">🔄 Yeni Oyuncu</button>
+                    </div>
+                </td>
+            </tr>
+        `;
+
+        const revealBtn = document.getElementById('revealPlayerModeBtn');
+        if (revealBtn) {
+            revealBtn.addEventListener('click', () => {
+                const answerEl = document.getElementById('playerModeAnswer');
+                answerEl.textContent = answerEl.dataset.real;
+                answerEl.classList.add('revealed');
+            });
+        }
+
+        document.getElementById('newPlayerModeBtn').addEventListener('click', startPlayerMode);
+    }
+
+    // 💡 Oyuncu Modu bir AÇ/KAPA anahtarı gibi çalışıyor: açılınca normal arama
+    // kutuları (search-card) tamamen gizleniyor (kafa karışıklığı olmasın diye),
+    // buton altın renkte "aktif" görünüyor. Tekrar basılınca kutular geri gelip
+    // normal aramaya (mevcut takım-takım oyununa hiç dokunmadan) dönülüyor.
+    function setupPlayerMode() {
+        const btn = document.getElementById('playerModeBtn');
+        const searchCard = document.querySelector('.search-card');
+        const luckyBtn = document.getElementById('luckyModeBtn');
+        const hunterWrapper = document.getElementById('hunterModeWrapper');
+        const yearWrapper = document.getElementById('yearFilterWrapper');
+
+        btn.addEventListener('click', () => {
+            playerModeActive = !playerModeActive;
+            btn.classList.toggle('active', playerModeActive);
+
+            if (playerModeActive) {
+                searchCard.style.display = 'none';
+                luckyBtn.style.display = 'none';
+                hunterWrapper.style.display = 'none';
+                yearWrapper.style.display = 'none';
+                startPlayerMode();
+            } else {
+                searchCard.style.display = '';
+                luckyBtn.style.display = '';
+                hunterWrapper.style.display = '';
+                yearWrapper.style.display = '';
+                searchPlayers();
+            }
         });
     }
 
@@ -1525,6 +1679,7 @@
         setupShareButton();
         setupSoundToggle();
         setupLuckyMode();
+        setupPlayerMode();
         searchPlayers();
     };
 </script>

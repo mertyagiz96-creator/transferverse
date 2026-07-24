@@ -1,6 +1,18 @@
 import java.io.File
 import java.sql.Connection
 import java.sql.DriverManager
+import kotlinx.serialization.Serializable
+
+// 💡 "Oyuncu Modu" için yeni, izole veri sınıfları — mevcut Player sınıfına ya da
+// başka bir endpoint'e hiç dokunmuyor, tamamen ek/ayrı bir yapı.
+@Serializable
+data class ClubSeason(val club: String, val season: String)
+
+@Serializable
+data class MultiClubPlayerResult(
+    val playerName: String,
+    val clubs: List<ClubSeason>
+)
 
 object DatabaseClient {
 
@@ -562,6 +574,84 @@ object DatabaseClient {
 
         return rawList.distinctBy { it.transferId }
             .sortedByDescending { parseSeasonToSortValue(it.season1) }
+    }
+
+    // 💡 "OYUNCU MODU" — verilen 2 (ya da daha fazla) kulübün HEPSİNDE gerçekten
+    // oynamış rastgele bir oyuncu buluyor. Mevcut fetchPlayersByClub/fetchCommonPlayers
+    // fonksiyonlarına hiç dokunmuyor, tamamen ayrı ve izole bir sorgu yolu.
+    fun fetchPlayerAcrossClubs(clubs: List<String>): MultiClubPlayerResult? {
+        if (clubs.size < 2) return null
+
+        val resolvedTerms = clubs.map { resolveClubSearchTerm(it) }
+
+        val sql = buildString {
+            append(
+                """
+                SELECT p.id, p.name, t.from_club, t.to_club, t.season
+                FROM players p
+                JOIN transfers t ON p.id = t.transfer_id
+                WHERE 
+                """.trimIndent()
+            )
+            val conditions = resolvedTerms.map { "(t.from_club_std LIKE ? OR t.to_club_std LIKE ?)" }
+            append(conditions.joinToString(" OR "))
+        }
+
+        // playerId -> (orijinal kulüp adı -> o kulüpteki en erken sezon)
+        val playerClubSeasons = mutableMapOf<Int, MutableMap<String, String>>()
+        val playerNames = mutableMapOf<Int, String>()
+
+        try {
+            withConnection { conn ->
+                conn.prepareStatement(sql).use { stmt ->
+                    var idx = 1
+                    resolvedTerms.forEach { term ->
+                        val p = "%$term%"
+                        stmt.setString(idx++, p)
+                        stmt.setString(idx++, p)
+                    }
+
+                    stmt.executeQuery().use { rs ->
+                        while (rs.next()) {
+                            val pId = rs.getInt("id")
+                            val name = rs.getString("name") ?: continue
+                            val fromClub = rs.getString("from_club") ?: ""
+                            val toClub = rs.getString("to_club") ?: ""
+                            val season = rs.getString("season") ?: continue
+
+                            playerNames[pId] = name
+
+                            clubs.forEachIndexed { cIdx, originalClub ->
+                                val resolved = resolvedTerms[cIdx]
+                                if (matchesOriginalClub(fromClub, resolved) || matchesOriginalClub(toClub, resolved)) {
+                                    val bucket = playerClubSeasons.getOrPut(pId) { mutableMapOf() }
+                                    val existing = bucket[originalClub]
+                                    if (existing == null || parseSeasonToSortValue(season) < parseSeasonToSortValue(existing)) {
+                                        bucket[originalClub] = season
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            println("🔥 fetchPlayerAcrossClubs HATASI: ${e.message}")
+            return null
+        }
+
+        // Sadece istenen TÜM kulüplerde eşleşmiş oyuncular kalsın
+        val fullMatches = playerClubSeasons.filter { (_, clubMap) -> clubs.all { clubMap.containsKey(it) } }
+
+        if (fullMatches.isEmpty()) return null
+
+        val (chosenId, clubSeasonMap) = fullMatches.entries.random()
+        val playerName = playerNames[chosenId] ?: return null
+
+        return MultiClubPlayerResult(
+            playerName = playerName,
+            clubs = clubs.map { ClubSeason(it, clubSeasonMap[it] ?: "-") }
+        )
     }
 
     private fun cleanNationalityText(rawNat: String): String {
