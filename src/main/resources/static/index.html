@@ -239,6 +239,40 @@
             letter-spacing: normal;
         }
 
+        /* 💡 Mevki ipucu — cevaptan biraz daha soluk/küçük, ipucu hissi versin */
+        .player-mode-position {
+            font-size: 1rem;
+            font-weight: 700;
+            color: rgba(255, 255, 255, 0.4);
+            margin-bottom: 10px;
+        }
+
+        .player-mode-position.revealed {
+            color: var(--light-green);
+        }
+
+        /* 💡 Maskeli gösterim — tam açık altın ile hâlâ gizli soluk gri arası bir ton */
+        .player-mode-answer.masked-revealed {
+            color: var(--light-green);
+            letter-spacing: 1px;
+        }
+
+        /* 💡 Üç buton simetrik, yan yana — mobilde sığmazsa şık şekilde iki satıra sarıyor */
+        .player-mode-hint-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .player-mode-hint-row button {
+            flex: 1 1 30%;
+            min-width: 100px;
+            padding: 12px 10px;
+            font-size: 0.85rem;
+            white-space: normal;
+        }
+
         /* 💡 Ses butonu için ayrı stil: varsayılan (açık) hâli normal buton gibi
            görünsün, sadece kapatılınca soluk/gri bir "sessiz" görünümü alsın —
            diğer özelliklerin "aktif" altın parlamasıyla karışmasın. */
@@ -1236,7 +1270,12 @@
         if (!found) {
             bodyHtml = `<div class="player-mode-title">😅 Uygun bir eşleşme bulunamadı.</div>`;
         } else {
-            const safeName = found.playerName.replace(/\s*\(\d+\)\s*/g, "").trim().replace(/"/g, "&quot;");
+            const cleanFullName = found.playerName.replace(/\s*\(\d+\)\s*/g, "").trim();
+            const safeName = cleanFullName.replace(/"/g, "&quot;");
+            const safeMasked = maskNameEasy(cleanFullName).replace(/"/g, "&quot;");
+            const safePosition = (found.position && found.position.trim())
+                ? found.position.trim().replace(/"/g, "&quot;")
+                : "Bilinmiyor";
 
             const clubListHtml = found.clubs.map(c => {
                 const seasonBadge = (c.season && c.season !== '-')
@@ -1246,10 +1285,15 @@
             }).join('');
 
             bodyHtml = `
-                <div class="player-mode-title">🎮 Bu takımlar arasında gidip gelen gizemli oyuncu kim?</div>
+                <div class="player-mode-title">🎮 Bu takımlar arasında gidip gelen reis kim?</div>
                 <div class="player-mode-clubs">${clubListHtml}</div>
-                <div class="player-mode-answer" id="playerModeAnswer" data-real="${safeName}">???</div>
-                <button id="revealPlayerModeBtn" class="btn-search" style="margin-bottom: 12px;">Oyuncuyu Göster</button>
+                <div class="player-mode-position" id="playerModePosition" data-real="${safePosition}">Mevki: ???</div>
+                <div class="player-mode-answer" id="playerModeAnswer" data-real="${safeName}" data-masked="${safeMasked}">???</div>
+                <div class="player-mode-hint-row">
+                    <button id="revealPositionBtn" class="toolbar-btn">🧭 Mevkisini Göster</button>
+                    <button id="revealMaskedBtn" class="toolbar-btn">🎭 Maskeli Göster</button>
+                    <button id="revealPlayerModeBtn" class="btn-search">Oyuncuyu Göster</button>
+                </div>
             `;
         }
 
@@ -1264,12 +1308,34 @@
             </tr>
         `;
 
+        const revealPositionBtn = document.getElementById('revealPositionBtn');
+        if (revealPositionBtn) {
+            revealPositionBtn.addEventListener('click', () => {
+                const positionEl = document.getElementById('playerModePosition');
+                positionEl.textContent = 'Mevki: ' + positionEl.dataset.real;
+                positionEl.classList.add('revealed');
+            });
+        }
+
+        const revealMaskedBtn = document.getElementById('revealMaskedBtn');
+        if (revealMaskedBtn) {
+            revealMaskedBtn.addEventListener('click', () => {
+                const answerEl = document.getElementById('playerModeAnswer');
+                // Tam isim zaten açıldıysa maskeli haline geri döndürmeyelim
+                if (!answerEl.classList.contains('revealed')) {
+                    answerEl.textContent = answerEl.dataset.masked;
+                    answerEl.classList.add('masked-revealed');
+                }
+            });
+        }
+
         const revealBtn = document.getElementById('revealPlayerModeBtn');
         if (revealBtn) {
             revealBtn.addEventListener('click', () => {
                 const answerEl = document.getElementById('playerModeAnswer');
                 answerEl.textContent = answerEl.dataset.real;
                 answerEl.classList.add('revealed');
+                answerEl.classList.remove('masked-revealed');
             });
         }
 
@@ -1407,6 +1473,34 @@
         });
     }
 
+    // 🟢 ÇAYLAK maskeleme mantığı — ayrı bir fonksiyona çıkarıldı ki hem
+    // Maskeleme özelliği hem Oyuncu Modu'ndaki "Maskeli Göster" ipucu aynı,
+    // tutarlı mantığı kullansın. Davranış birebir öncekiyle aynı.
+    function maskNameEasy(name) {
+        return name.split(' ').map(word => {
+            const letters = word.split('');
+            const len = letters.length;
+
+            if (len <= 3) {
+                const midIdx = Math.floor(len / 2);
+                return letters.map((ch, idx) => {
+                    if (idx === midIdx && /[a-zA-ZçÇğĞıİöÖşŞüÜ]/.test(ch)) {
+                        return '★';
+                    }
+                    return ch;
+                }).join('');
+            }
+
+            return letters.map((ch, idx) => {
+                if (idx === 0 || idx === len - 1) return ch;
+                if (/[a-zA-ZçÇğĞıİöÖşŞüÜ]/.test(ch) && Math.random() < 0.35) {
+                    return '★';
+                }
+                return ch;
+            }).join('');
+        }).join(' ');
+    }
+
     function maskName(name) {
         // 🔴 USTA seviyesi: sadece her kelimenin (ad/soyad) ilk harfi açık,
         // geri kalan her şey maskeli — mevcut ÇAYLAK mantığına hiç dokunmuyor.
@@ -1422,33 +1516,8 @@
             }).join(' ');
         }
 
-        // 🟢 ÇAYLAK seviyesi (varsayılan) — birebir aynı, önceki mantık değişmedi.
-        return name.split(' ').map(word => {
-            const letters = word.split('');
-            const len = letters.length;
-
-            // Kısa kelimelerde (3 harf ve altı) sadece ortadaki tek harfi maskeliyoruz,
-            // aksi halde tamamen okunmaz hale geliyor.
-            if (len <= 3) {
-                const midIdx = Math.floor(len / 2);
-                return letters.map((ch, idx) => {
-                    if (idx === midIdx && /[a-zA-ZçÇğĞıİöÖşŞüÜ]/.test(ch)) {
-                        return '★';
-                    }
-                    return ch;
-                }).join('');
-            }
-
-            // Uzun kelimelerde ilk ve son harf her zaman açık kalıyor, aradaki
-            // harflerin sadece %35'i (öncekinden çok daha az) maskeleniyor.
-            return letters.map((ch, idx) => {
-                if (idx === 0 || idx === len - 1) return ch;
-                if (/[a-zA-ZçÇğĞıİöÖşŞüÜ]/.test(ch) && Math.random() < 0.35) {
-                    return '★';
-                }
-                return ch;
-            }).join('');
-        }).join(' ');
+        // 🟢 ÇAYLAK seviyesi (varsayılan) — ortak fonksiyona devrediyoruz.
+        return maskNameEasy(name);
     }
 
     function setupHunterModePanel() {

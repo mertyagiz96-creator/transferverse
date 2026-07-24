@@ -11,6 +11,7 @@ data class ClubSeason(val club: String, val season: String)
 @Serializable
 data class MultiClubPlayerResult(
     val playerName: String,
+    val position: String,
     val clubs: List<ClubSeason>
 )
 
@@ -587,7 +588,7 @@ object DatabaseClient {
         val sql = buildString {
             append(
                 """
-                SELECT p.id, p.name, t.from_club, t.to_club, t.season
+                SELECT p.id, p.name, p.position, t.from_club, t.to_club, t.season
                 FROM players p
                 JOIN transfers t ON p.id = t.transfer_id
                 WHERE 
@@ -600,6 +601,7 @@ object DatabaseClient {
         // playerId -> (orijinal kulüp adı -> o kulüpteki en erken sezon)
         val playerClubSeasons = mutableMapOf<Int, MutableMap<String, String>>()
         val playerNames = mutableMapOf<Int, String>()
+        val playerPositions = mutableMapOf<Int, String>()
 
         try {
             withConnection { conn ->
@@ -615,11 +617,13 @@ object DatabaseClient {
                         while (rs.next()) {
                             val pId = rs.getInt("id")
                             val name = rs.getString("name") ?: continue
+                            val position = rs.getString("position") ?: ""
                             val fromClub = rs.getString("from_club") ?: ""
                             val toClub = rs.getString("to_club") ?: ""
                             val season = rs.getString("season") ?: continue
 
                             playerNames[pId] = name
+                            playerPositions[pId] = position
 
                             clubs.forEachIndexed { cIdx, originalClub ->
                                 val resolved = resolvedTerms[cIdx]
@@ -647,9 +651,11 @@ object DatabaseClient {
 
         val (chosenId, clubSeasonMap) = fullMatches.entries.random()
         val playerName = playerNames[chosenId] ?: return null
+        val position = playerPositions[chosenId] ?: ""
 
         return MultiClubPlayerResult(
             playerName = playerName,
+            position = position,
             clubs = clubs.map { ClubSeason(it, clubSeasonMap[it] ?: "-") }
         )
     }
