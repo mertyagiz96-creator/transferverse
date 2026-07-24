@@ -106,7 +106,8 @@ object DatabaseClient {
         "manchester united" to "man utd",
         "manchester utd" to "man utd",
         "man united" to "man utd",
-        "manchester city" to "man city"
+        "manchester city" to "man city",
+        "borussia dortmund" to "bor. dortmund"
     )
 
     // Arama teriminin standartlaştırılmış + (varsa) alias'ı çözülmüş hâlini döndürür.
@@ -250,7 +251,11 @@ object DatabaseClient {
             "Türkiye", "Mısır", "Fas", "Cezayir", "Tunus", "Nijerya", "Gana", "Kamerun",
             "Senegal", "Fildişi Sahili", "Güney Afrika", "Japonya", "Güney Kore", "İran",
             "Suudi Arabistan", "Katar", "Özbekistan", "Brezilya", "Arjantin", "Kolombiya",
-            "Uruguay", "Meksika", "Şili", "İsveç", "Norveç", "Danimarka", "Çekya"
+            "Uruguay", "Meksika", "Şili", "İsveç", "Norveç", "Danimarka", "Çekya",
+            // 💡 Veritabanında bu isimlerle DEĞİL, kısaltmayla ("Man Utd", "Man City")
+            // kayıtlı olduğu için otomatik listeye giremiyorlardı. Elle ekliyoruz;
+            // aramada zaten clubAliasMap üzerinden doğru şekilde çözümleniyor.
+            "Manchester United", "Manchester City"
         ))
 
         return suggestions.sorted()

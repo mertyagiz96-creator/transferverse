@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TransferVerse | Player Finder</title>
+    <title>TransferKolik | Player Finder</title>
     <style>
         :root {
             --primary-green: #2e7d32;
@@ -11,6 +11,25 @@
             --light-green: #4caf50;
             --accent-gold: #ffb300;
             --bg-gradient: linear-gradient(135deg, #0d3012 0%, #1b431c 50%, #081c0a 100%);
+        }
+
+        /* 💡 TEMALAR — sadece CSS değişkenlerini değiştiriyoruz, aşağıdaki tüm
+           stiller zaten bu değişkenleri kullandığı için otomatik olarak yeni
+           renklere bürünüyor. Hiçbir HTML elementi ya da JS mantığı etkilenmiyor. */
+        body.theme-sunset {
+            --primary-green: #e85d2f;
+            --dark-green: #7a2418;
+            --light-green: #ff9457;
+            --accent-gold: #ffd166;
+            --bg-gradient: linear-gradient(135deg, #2b0f1a 0%, #6a1b2f 45%, #c1502e 100%);
+        }
+
+        body.theme-night {
+            --primary-green: #3949ab;
+            --dark-green: #131b4d;
+            --light-green: #5c7cfa;
+            --accent-gold: #64b5f6;
+            --bg-gradient: linear-gradient(135deg, #02030f 0%, #0b1330 45%, #16213e 100%);
         }
 
         * {
@@ -28,6 +47,32 @@
             flex-direction: column;
             align-items: center;
             padding: 40px 20px;
+            position: relative;
+            overflow-x: hidden;
+            transition: background 0.6s ease;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: -20%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 900px;
+            height: 900px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(76, 175, 80, 0.18) 0%, transparent 65%);
+            pointer-events: none;
+            z-index: 0;
+            transition: background 0.6s ease;
+        }
+
+        body.theme-sunset::before {
+            background: radial-gradient(circle, rgba(255, 148, 87, 0.28) 0%, transparent 65%);
+        }
+
+        body.theme-night::before {
+            background: radial-gradient(circle, rgba(92, 124, 250, 0.25) 0%, transparent 65%);
         }
 
         .container {
@@ -40,6 +85,172 @@
             border-radius: 20px;
             padding: 30px;
             box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
+            position: relative;
+            z-index: 1;
+            transition: box-shadow 0.6s ease;
+        }
+
+        body.theme-sunset .container {
+            box-shadow: 0 15px 40px rgba(232, 93, 47, 0.35), 0 0 0 1px rgba(255, 209, 102, 0.12) inset;
+        }
+
+        body.theme-night .container {
+            box-shadow: 0 15px 40px rgba(57, 73, 171, 0.45), 0 0 0 1px rgba(100, 181, 246, 0.15) inset;
+        }
+
+        .top-toolbar {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+
+        .theme-switcher {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-right: auto;
+        }
+
+        .theme-label {
+            font-size: 0.78rem;
+            color: rgba(255, 255, 255, 0.55);
+            font-weight: 600;
+            letter-spacing: 0.3px;
+            margin-right: 2px;
+        }
+
+        .theme-btn {
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            border: 2px solid rgba(255, 255, 255, 0.25);
+            cursor: pointer;
+            padding: 0;
+            transition: transform 0.2s ease, border-color 0.2s ease;
+        }
+
+        .theme-btn:hover {
+            transform: scale(1.15);
+        }
+
+        .theme-btn.active {
+            border-color: #ffffff;
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        }
+
+        .theme-btn[data-theme="green"] {
+            background: linear-gradient(135deg, #4caf50, #1b5e20);
+        }
+
+        .theme-btn[data-theme="sunset"] {
+            background: linear-gradient(135deg, #ff9457, #7a2418);
+        }
+
+        .theme-btn[data-theme="night"] {
+            background: linear-gradient(135deg, #5c7cfa, #131b4d);
+        }
+
+        .toolbar-btn {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 7px 14px;
+            border-radius: 20px;
+            border: 1.5px solid rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.06);
+            color: #e0e0e0;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            white-space: nowrap;
+        }
+
+        .toolbar-btn:hover {
+            background: rgba(255, 255, 255, 0.14);
+        }
+
+        .toolbar-btn.active {
+            background: linear-gradient(135deg, var(--light-green), var(--dark-green));
+            border-color: var(--accent-gold);
+            box-shadow: 0 0 12px rgba(255, 179, 0, 0.35);
+            color: #ffffff;
+        }
+
+        .year-filter-panel {
+            display: none;
+            position: absolute;
+            top: 100%;
+            right: 0;
+            margin-top: 8px;
+            background: rgba(8, 26, 10, 0.98);
+            border: 1.5px solid rgba(76, 175, 80, 0.5);
+            border-radius: 12px;
+            padding: 14px;
+            gap: 8px;
+            flex-direction: column;
+            z-index: 60;
+            box-shadow: 0 12px 28px rgba(0, 0, 0, 0.55);
+            min-width: 220px;
+        }
+
+        .year-filter-panel.open {
+            display: flex;
+        }
+
+        .year-filter-panel input,
+        .year-filter-panel select {
+            padding: 8px 10px;
+            border-radius: 8px;
+            border: 1px solid rgba(76, 175, 80, 0.4);
+            background: rgba(10, 30, 12, 0.7);
+            color: #ffffff;
+            font-size: 0.9rem;
+        }
+
+        /* 💡 Tarayıcının varsayılan artı/eksi ok butonlarını (number spinner) gizliyoruz
+           — garip davranıyordu (tıklayınca değeri rastgele artırıyordu), kullanıcı
+           sadece elle yazsın istiyoruz. */
+        .year-filter-panel input[type="number"]::-webkit-inner-spin-button,
+        .year-filter-panel input[type="number"]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        .year-filter-panel input[type="number"] {
+            -moz-appearance: textfield;
+        }
+
+        .year-filter-panel .yf-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .year-filter-panel .yf-actions button {
+            flex: 1;
+            padding: 8px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.85rem;
+        }
+
+        #yearFilterApplyBtn {
+            background: linear-gradient(135deg, #66bb6a, #1b5e20);
+            color: white;
+        }
+
+        #yearFilterClearBtn {
+            background: rgba(255, 255, 255, 0.1);
+            color: #e0e0e0;
+        }
+
+        .toolbar-wrapper {
+            position: relative;
         }
 
         h1 {
@@ -66,7 +277,6 @@
             margin-bottom: 20px;
         }
 
-        /* Ultra Modern ve Renkli Taranıyor Alanı */
         .top-loader {
             display: none;
             align-items: center;
@@ -135,7 +345,6 @@
             white-space: nowrap;
         }
 
-        /* Canlandırılmış, Dikkat Çekici Arama Kartı */
         .search-card {
             display: grid;
             grid-template-columns: 1fr 1fr auto;
@@ -146,14 +355,12 @@
             border: 1px solid rgba(76, 175, 80, 0.5);
             box-shadow: inset 0 1px 3px rgba(255, 255, 255, 0.1), 0 10px 25px rgba(0, 0, 0, 0.3);
             margin-bottom: 30px;
-            /* Açılır öneri kutusunun kart dışına taşabilmesi için */
             overflow: visible;
         }
 
         .input-group {
             display: flex;
             flex-direction: column;
-            /* Öneri dropdown'ının konumlanabilmesi için referans nokta */
             position: relative;
         }
 
@@ -176,7 +383,6 @@
             outline: none;
             transition: all 0.3s ease;
             width: 100%;
-            /* iOS Safari input'lara garip default stiller uygulayabiliyor, sıfırlıyoruz */
             -webkit-appearance: none;
             appearance: none;
         }
@@ -193,10 +399,6 @@
             transform: translateY(-1px);
         }
 
-        /* 💡 Custom autocomplete dropdown — native <datalist> yerine.
-           iOS/mobil Safari <datalist>'i düzgün desteklemediği için (öneriler hiç
-           görünmüyor), kendi JS ile inşa ettiğimiz bu dropdown tüm platformlarda
-           (masaüstü + mobil, her tarayıcı) aynı şekilde çalışır. */
         .autocomplete-dropdown {
             display: none;
             position: absolute;
@@ -228,13 +430,6 @@
         .autocomplete-item:hover,
         .autocomplete-item.active {
             background: rgba(76, 175, 80, 0.25);
-        }
-
-        .autocomplete-empty {
-            padding: 12px 18px;
-            color: rgba(255, 255, 255, 0.4);
-            font-size: 0.9rem;
-            font-style: italic;
         }
 
         .btn-search {
@@ -327,6 +522,37 @@
             font-weight: 600;
         }
 
+        .hunter-name-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            white-space: nowrap;
+        }
+
+        .hunter-name {
+            font-family: 'Courier New', monospace;
+            letter-spacing: 1px;
+        }
+
+        .hunter-name.revealed {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            letter-spacing: normal;
+        }
+
+        .hunter-reveal-btn {
+            margin-left: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 6px;
+            cursor: pointer;
+            padding: 2px 7px;
+            font-size: 0.85rem;
+        }
+
+        .hunter-reveal-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
         .footer-signature {
             margin-top: 40px;
             text-align: right;
@@ -342,6 +568,30 @@
             font-weight: bold;
         }
 
+        /* 💡 Kısa bildirim (toast) — "Link kopyalandı" gibi geri bildirimler için */
+        #appToast {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%) translateY(20px);
+            background: rgba(20, 20, 20, 0.95);
+            color: #ffffff;
+            padding: 12px 22px;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease, transform 0.3s ease;
+            z-index: 500;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+        }
+
+        #appToast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
         @media (max-width: 650px) {
             .search-card {
                 grid-template-columns: 1fr;
@@ -349,17 +599,73 @@
             .btn-search {
                 width: 100%;
             }
+            .top-toolbar {
+                justify-content: center;
+            }
+            .theme-switcher {
+                margin-right: 0;
+            }
+            /* 💡 Mobilde dokunma hedefi küçük kalmasın diye tema noktalarını büyütüyoruz */
+            .theme-btn {
+                width: 38px;
+                height: 38px;
+            }
+            .theme-switcher {
+                gap: 10px;
+            }
         }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>⚽ TransferVerse</h1>
+
+    <div class="top-toolbar">
+        <div class="theme-switcher">
+            <span class="theme-label">Tema:</span>
+            <button class="theme-btn active" data-theme="green" title="Yeşil (Varsayılan)"></button>
+            <button class="theme-btn" data-theme="sunset" title="Gün Batımı"></button>
+            <button class="theme-btn" data-theme="night" title="Gece Mavisi"></button>
+        </div>
+
+        <button id="luckyModeBtn" class="toolbar-btn" title="Rastgele iki takım/ülke seçer, aramayı siz başlatırsınız — tahmin oyunu için ideal">
+            🎲 Şans Modu
+        </button>
+
+        <button id="hunterModeBtn" class="toolbar-btn" title="Oyuncu isimlerini gizleyip eğlenceli bir tahmin oyununa çevirir">
+            🕵️ Hunter Mode
+        </button>
+
+        <button id="shareBtn" class="toolbar-btn" title="Bu aramanın linkini kopyala">
+            🔗 Paylaş
+        </button>
+
+        <button id="soundToggleBtn" class="toolbar-btn active" title="Arama sesini aç/kapat">
+            🔊 Ses
+        </button>
+
+        <div class="toolbar-wrapper">
+            <button id="yearFilterBtn" class="toolbar-btn" title="Sonuçları belirli bir yıldan önce/sonra olacak şekilde filtrele">
+                📅 Yıl Filtresi
+            </button>
+            <div id="yearFilterPanel" class="year-filter-panel">
+                <input type="number" id="yearFilterInput" placeholder="Örn: 2015" value="2015">
+                <select id="yearFilterModeSelect">
+                    <option value="before">Bu yıldan önce (dahil)</option>
+                    <option value="after">Bu yıldan sonra (dahil)</option>
+                </select>
+                <div class="yf-actions">
+                    <button id="yearFilterApplyBtn">Uygula</button>
+                    <button id="yearFilterClearBtn">Temizle</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <h1>⚽ TransferKolik</h1>
     <div class="dedication">Harman'a Sevgiler ❤️</div>
     <p class="subtitle">İki Kulüp Arasındaki Ortak Oyuncular veya Kulüp / Ülke Araması</p>
 
-    <!-- Ultra Modern ve Canlı Taranıyor Kutucuğu -->
     <div id="topLoader" class="top-loader">
         <div class="loader-track">
             <div class="rolling-ball">⚽</div>
@@ -367,7 +673,6 @@
         <span>Transferler Taranıyor...</span>
     </div>
 
-    <!-- Canlandırılmış, Dikkat Çekici Arama Kartı -->
     <div class="search-card">
         <div class="input-group">
             <label for="club1Input">1. Kulüp veya Ülke</label>
@@ -408,6 +713,12 @@
 
 <script>
     let allSuggestions = [];
+    let currentPlayers = [];
+    let hunterModeOn = false;
+    let yearFilterActive = false;
+    let yearFilterValue = null;
+    let yearFilterMode = 'before';
+    let soundOn = true; // 💡 Varsayılan açık
 
     async function loadSuggestions() {
         try {
@@ -420,14 +731,206 @@
         }
     }
 
-    // Türkçe karakterlere duyarlı, büyük/küçük harf duyarsız karşılaştırma için
     function normalize(str) {
         return str.toLocaleLowerCase('tr-TR');
     }
 
-    // 💡 Native <datalist> yerine kendi yazdığımız autocomplete.
-    // Sebep: iOS/mobil Safari <datalist> önerilerini göstermiyor, bu yöntem
-    // ise düz JavaScript + DOM ile çalıştığı için tüm platformlarda tutarlı çalışıyor.
+    // 💡 BİLDİRİM (TOAST)
+    function showToast(message) {
+        let toast = document.getElementById('appToast');
+        if (!toast) {
+            toast = document.createElement('div');
+            toast.id = 'appToast';
+            document.body.appendChild(toast);
+        }
+        toast.textContent = message;
+        toast.classList.add('show');
+        clearTimeout(toast._hideTimer);
+        toast._hideTimer = setTimeout(() => toast.classList.remove('show'), 2200);
+    }
+
+    // 💡 SES EFEKTİ — harici ses dosyasına gerek yok, Web Audio API ile anlık üretiliyor.
+    // Sadece kullanıcının kendi tıklamasıyla tetiklendiği için tarayıcıların otomatik
+    // ses engelleme politikalarına takılmıyor.
+    function playSearchSound() {
+        if (!soundOn) return;
+        try {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const now = ctx.currentTime;
+
+            // 🎵 Hakem düdüğü hissi: iki hafif detune edilmiş kare dalga birlikte
+            // çalınca klasik "titreşen düdük" tonu oluşuyor.
+            const osc1 = ctx.createOscillator();
+            const osc2 = ctx.createOscillator();
+            const whistleGain = ctx.createGain();
+
+            osc1.type = 'square';
+            osc2.type = 'square';
+            osc1.frequency.setValueAtTime(1200, now);
+            osc2.frequency.setValueAtTime(1215, now);
+
+            whistleGain.gain.setValueAtTime(0, now);
+            whistleGain.gain.linearRampToValueAtTime(0.10, now + 0.02);
+            whistleGain.gain.exponentialRampToValueAtTime(0.001, now + 0.26);
+
+            osc1.connect(whistleGain);
+            osc2.connect(whistleGain);
+            whistleGain.connect(ctx.destination);
+
+            osc1.start(now);
+            osc2.start(now);
+            osc1.stop(now + 0.28);
+            osc2.stop(now + 0.28);
+
+            // ⚽ Düdüğün hemen ardından kısa, alçalan bir "top vuruşu" pop sesi
+            const popOsc = ctx.createOscillator();
+            const popGain = ctx.createGain();
+
+            popOsc.type = 'sine';
+            popOsc.frequency.setValueAtTime(180, now + 0.24);
+            popOsc.frequency.exponentialRampToValueAtTime(55, now + 0.36);
+
+            popGain.gain.setValueAtTime(0.22, now + 0.24);
+            popGain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+
+            popOsc.connect(popGain);
+            popGain.connect(ctx.destination);
+
+            popOsc.start(now + 0.24);
+            popOsc.stop(now + 0.4);
+        } catch (e) {
+            console.log("Ses çalınamadı:", e);
+        }
+    }
+
+    function setupSoundToggle() {
+        const btn = document.getElementById('soundToggleBtn');
+        btn.addEventListener('click', () => {
+            soundOn = !soundOn;
+            btn.classList.toggle('active', soundOn);
+            btn.textContent = soundOn ? '🔊 Ses' : '🔇 Ses';
+        });
+    }
+
+    // 💡 PAYLAŞIM LİNKİ — aramayı URL parametresi olarak kopyalıyor, sunucuya
+    // yeni bir şey eklemiyor, sadece client-side URL oluşturma.
+    function setupShareButton() {
+        document.getElementById('shareBtn').addEventListener('click', () => {
+            const c1 = document.getElementById('club1Input').value.trim();
+            const c2 = document.getElementById('club2Input').value.trim();
+
+            const url = new URL(window.location.href);
+            url.search = '';
+            if (c1) url.searchParams.set('club1', c1);
+            if (c2) url.searchParams.set('club2', c2);
+
+            navigator.clipboard.writeText(url.toString()).then(() => {
+                showToast('Link kopyalandı! 🔗');
+            }).catch(() => {
+                showToast('Kopyalanamadı, tarayıcı izin vermedi.');
+            });
+        });
+    }
+
+    // Sayfa açılırken URL'de ?club1=...&club2=... varsa input'ları otomatik dolduruyor
+    function applyQueryParamsToInputs() {
+        const params = new URLSearchParams(window.location.search);
+        const c1 = params.get('club1');
+        const c2 = params.get('club2');
+        if (c1) document.getElementById('club1Input').value = c1;
+        if (c2) document.getElementById('club2Input').value = c2;
+    }
+
+    // 💡 ÜLKE BAYRAĞI EMOJİSİ — uyruk rozetinin yanında küçük bir görsel zenginlik.
+    // Not: İngiltere/İskoçya/Galler için ayrı resmi bayrak emojisi evrensel desteklenmediği
+    // için nötr bir bayrak simgesi kullanılıyor.
+    const countryFlags = {
+        'turkiye': '🇹🇷', 'türkiye': '🇹🇷', 'turkey': '🇹🇷',
+        'england': '🏴', 'scotland': '🏴', 'wales': '🏴',
+        'uk': '🇬🇧', 'united kingdom': '🇬🇧', 'northern ireland': '🇬🇧',
+        'germany': '🇩🇪', 'france': '🇫🇷', 'spain': '🇪🇸', 'italy': '🇮🇹',
+        'netherlands': '🇳🇱', 'portugal': '🇵🇹', 'poland': '🇵🇱', 'russia': '🇷🇺',
+        'belgium': '🇧🇪', 'switzerland': '🇨🇭', 'sweden': '🇸🇪', 'norway': '🇳🇴',
+        'denmark': '🇩🇰', 'greece': '🇬🇷', 'croatia': '🇭🇷', 'serbia': '🇷🇸',
+        'romania': '🇷🇴', 'ukraine': '🇺🇦', 'austria': '🇦🇹',
+        'czech republic': '🇨🇿', 'czechia': '🇨🇿',
+        'bosnia-herzegovina': '🇧🇦', 'canada': '🇨🇦', 'united states': '🇺🇸',
+        'brazil': '🇧🇷', 'argentina': '🇦🇷', 'colombia': '🇨🇴', 'uruguay': '🇺🇾',
+        'mexico': '🇲🇽', 'chile': '🇨🇱', 'paraguay': '🇵🇾', 'peru': '🇵🇪', 'ecuador': '🇪🇨',
+        "cote d'ivoire": '🇨🇮', 'nigeria': '🇳🇬', 'cameroon': '🇨🇲', 'senegal': '🇸🇳',
+        'morocco': '🇲🇦', 'algeria': '🇩🇿', 'ghana': '🇬🇭', 'egypt': '🇪🇬',
+        'south africa': '🇿🇦', 'dr congo': '🇨🇩', 'congo': '🇨🇬', 'japan': '🇯🇵',
+        'korea, south': '🇰🇷', 'china': '🇨🇳', 'iran': '🇮🇷', 'australia': '🇦🇺',
+        'saudi arabia': '🇸🇦', 'qatar': '🇶🇦', 'uzbekistan': '🇺🇿',
+        'ireland': '🇮🇪', 'hungary': '🇭🇺', 'slovakia': '🇸🇰', 'slovenia': '🇸🇮',
+        'bulgaria': '🇧🇬', 'finland': '🇫🇮', 'iceland': '🇮🇸', 'israel': '🇮🇱',
+        'albania': '🇦🇱', 'montenegro': '🇲🇪', 'north macedonia': '🇲🇰', 'kosovo': '🇽🇰',
+        'georgia': '🇬🇪', 'armenia': '🇦🇲', 'azerbaijan': '🇦🇿', 'lithuania': '🇱🇹',
+        'latvia': '🇱🇻', 'estonia': '🇪🇪', 'cyprus': '🇨🇾', 'malta': '🇲🇹',
+        'luxembourg': '🇱🇺', 'india': '🇮🇳', 'indonesia': '🇮🇩', 'thailand': '🇹🇭',
+        'vietnam': '🇻🇳', 'new zealand': '🇳🇿', 'tunisia': '🇹🇳', 'mali': '🇲🇱', 'guinea': '🇬🇳'
+    };
+
+    function getFlagEmoji(nationality) {
+        if (!nationality) return '';
+        const key = normalize(nationality.trim());
+        return countryFlags[key] || '';
+    }
+
+    // 💡 ŞANS MODU — sadece VERİTABANINDA GERÇEKTEN VAR OLDUĞU doğrulanmış kulüp
+    // isimleriyle sınırlı (5 büyük Avrupa ligi + Süper Lig'in 4 büyüğü), rastgele
+    // arasında "saçma sapan" küçük takımlar çıkmasın diye. Kutuları dolduruyor ama
+    // ARAMAYI BAŞLATMIYOR — kullanıcı önce tahmin etsin, sonra kendi "Ara"ya bassın.
+    const luckyClubs = [
+        'Galatasaray', 'Fenerbahçe', 'Beşiktaş', 'Trabzonspor',
+        'Manchester United', 'Manchester City', 'Liverpool', 'Chelsea', 'Arsenal', 'Tottenham',
+        'Real Madrid', 'Barcelona', 'Atlético Madrid',
+        'Juventus', 'Inter', 'AC Milan', 'Napoli', 'AS Roma',
+        'Bayern Munich', 'Borussia Dortmund',
+        'Paris SG', 'Marseille', 'Olympique Lyon'
+    ];
+
+    const luckyCountries = [
+        'Türkiye', 'İngiltere', 'Almanya', 'Fransa', 'İspanya', 'İtalya', 'Hollanda', 'Portekiz',
+        'Brezilya', 'Arjantin', 'Hırvatistan', 'Sırbistan', 'Belçika', 'İsveç', 'Norveç',
+        'Fildişi Sahili', 'Fas', 'Mısır', 'Nijerya', 'Japonya', 'Güney Kore'
+    ];
+
+    function pickRandom(arr) {
+        return arr[Math.floor(Math.random() * arr.length)];
+    }
+
+    function setupLuckyMode() {
+        document.getElementById('luckyModeBtn').addEventListener('click', () => {
+            const club1 = pickRandom(luckyClubs);
+            let secondPick;
+
+            // %60 kulüp-kulüp, %40 kulüp-ülke — asla ülke-ülke gelmiyor
+            // (backend zaten ülke-ülke aramasında hep boş sonuç döndürüyor, o yüzden
+            // bu kombinasyonu Şans Modu'nda hiç üretmiyoruz).
+            if (Math.random() < 0.6) {
+                let candidate;
+                do {
+                    candidate = pickRandom(luckyClubs);
+                } while (candidate === club1);
+                secondPick = candidate;
+            } else {
+                secondPick = pickRandom(luckyCountries);
+            }
+
+            document.getElementById('club1Input').value = club1;
+            document.getElementById('club2Input').value = secondPick;
+
+            // Eski sonuçlar ekranda kalıp kafa karıştırmasın diye temizliyoruz —
+            // yeni seçim için henüz arama yapılmadı.
+            currentPlayers = [];
+            document.getElementById('resultsTable').innerHTML =
+                "<tr><td colspan='7' style='text-align:center; padding:20px;'>🤔 Şimdi tahmin sırası! Emin olunca 'Ara' butonuna basın.</td></tr>";
+
+            showToast('🎲 Şans çekildi!');
+        });
+    }
+
     function setupAutocomplete(inputId, dropdownId) {
         const input = document.getElementById(inputId);
         const dropdown = document.getElementById(dropdownId);
@@ -464,8 +967,6 @@
                 item.className = "autocomplete-item";
                 item.textContent = match;
 
-                // mousedown kullanıyoruz ki input'un blur event'i devreye girmeden
-                // önce tıklama işlensin (aksi halde blur dropdown'ı kapatıp tıklamayı iptal eder)
                 item.addEventListener("mousedown", (e) => {
                     e.preventDefault();
                     input.value = match;
@@ -482,11 +983,9 @@
         input.addEventListener("focus", renderMatches);
 
         input.addEventListener("blur", () => {
-            // Dropdown öğesine tıklama işlenebilsin diye küçük bir gecikmeyle kapatıyoruz
             setTimeout(closeDropdown, 150);
         });
 
-        // Klavye ile yukarı/aşağı/enter desteği (masaüstünde kullanışlı, mobilde zararsız)
         input.addEventListener("keydown", (e) => {
             const items = dropdown.querySelectorAll(".autocomplete-item");
             if (items.length === 0) return;
@@ -518,6 +1017,193 @@
         });
     }
 
+    function setupThemeSwitcher() {
+        document.querySelectorAll('.theme-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.body.classList.remove('theme-sunset', 'theme-night');
+                const theme = btn.dataset.theme;
+                if (theme === 'sunset') document.body.classList.add('theme-sunset');
+                if (theme === 'night') document.body.classList.add('theme-night');
+
+                document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+            });
+        });
+    }
+
+    function maskName(name) {
+        return name.split(' ').map(word => {
+            const letters = word.split('');
+            const len = letters.length;
+
+            // Kısa kelimelerde (3 harf ve altı) sadece ortadaki tek harfi maskeliyoruz,
+            // aksi halde tamamen okunmaz hale geliyor.
+            if (len <= 3) {
+                const midIdx = Math.floor(len / 2);
+                return letters.map((ch, idx) => {
+                    if (idx === midIdx && /[a-zA-ZçÇğĞıİöÖşŞüÜ]/.test(ch)) {
+                        return '★';
+                    }
+                    return ch;
+                }).join('');
+            }
+
+            // Uzun kelimelerde ilk ve son harf her zaman açık kalıyor, aradaki
+            // harflerin sadece %35'i (öncekinden çok daha az) maskeleniyor.
+            return letters.map((ch, idx) => {
+                if (idx === 0 || idx === len - 1) return ch;
+                if (/[a-zA-ZçÇğĞıİöÖşŞüÜ]/.test(ch) && Math.random() < 0.35) {
+                    return '★';
+                }
+                return ch;
+            }).join('');
+        }).join(' ');
+    }
+
+    function setupHunterModeToggle() {
+        const btn = document.getElementById('hunterModeBtn');
+        btn.addEventListener('click', () => {
+            hunterModeOn = !hunterModeOn;
+            btn.classList.toggle('active', hunterModeOn);
+            renderPlayersTable(currentPlayers);
+        });
+    }
+
+    function seasonToYear(season) {
+        if (!season || season === '-') return null;
+        const digits = season.replace(/\D/g, '');
+        if (digits.length >= 2) {
+            const yearPrefix = parseInt(digits.substring(0, 2), 10);
+            if (isNaN(yearPrefix)) return null;
+            return yearPrefix >= 50 ? 1900 + yearPrefix : 2000 + yearPrefix;
+        }
+        return null;
+    }
+
+    function passesYearFilter(player) {
+        if (!yearFilterActive || yearFilterValue === null) return true;
+
+        const y1 = seasonToYear(player.season1);
+        const y2 = seasonToYear(player.season2);
+        const candidates = [y1, y2].filter(y => y !== null);
+
+        if (candidates.length === 0) return false;
+
+        // 💡 AND mantığı: kulüp-kulüp aramasında GEÇERLİ olan (yani "-" olmayan)
+        // her iki sezonun da koşulu sağlaması gerekiyor. Ülke tarafı zaten "-" olduğu
+        // için (null olarak candidates'ten çıkarılıyor), kulüp-ülke aramasında
+        // otomatik olarak sadece kulüp tarafı kontrol edilmiş oluyor.
+        if (yearFilterMode === 'before') {
+            return candidates.every(y => y <= yearFilterValue);
+        } else {
+            return candidates.every(y => y >= yearFilterValue);
+        }
+    }
+
+    function setupYearFilter() {
+        const filterBtn = document.getElementById('yearFilterBtn');
+        const panel = document.getElementById('yearFilterPanel');
+        const input = document.getElementById('yearFilterInput');
+        const modeSelect = document.getElementById('yearFilterModeSelect');
+
+        filterBtn.addEventListener('click', () => {
+            panel.classList.toggle('open');
+        });
+
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                document.getElementById('yearFilterApplyBtn').click();
+            }
+        });
+
+        document.getElementById('yearFilterApplyBtn').addEventListener('click', () => {
+            const val = parseInt(input.value, 10);
+            if (!isNaN(val)) {
+                yearFilterActive = true;
+                yearFilterValue = val;
+                yearFilterMode = modeSelect.value;
+                filterBtn.classList.add('active');
+                renderPlayersTable(currentPlayers);
+            }
+        });
+
+        document.getElementById('yearFilterClearBtn').addEventListener('click', () => {
+            yearFilterActive = false;
+            yearFilterValue = null;
+            input.value = '';
+            filterBtn.classList.remove('active');
+            renderPlayersTable(currentPlayers);
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.toolbar-wrapper')) {
+                panel.classList.remove('open');
+            }
+        });
+    }
+
+    function renderPlayersTable(players) {
+        const resultsTable = document.getElementById("resultsTable");
+        resultsTable.innerHTML = "";
+
+        const filtered = (players || []).filter(passesYearFilter);
+
+        if (!filtered || filtered.length === 0) {
+            resultsTable.innerHTML = "<tr><td colspan='7' style='text-align:center; padding:20px;'>Kriterlere uygun oyuncu bulunamadı.</td></tr>";
+            return;
+        }
+
+        filtered.forEach(player => {
+            const row = resultsTable.insertRow();
+
+            const idCell = row.insertCell();
+            idCell.innerHTML = `<span class="badge-id">${player.playerId || "-"}</span>`;
+
+            let cleanName = (player.name || "-").replace(/\s*\(\d+\)\s*/g, "").trim();
+            const nameCell = row.insertCell();
+            nameCell.style.fontWeight = "600";
+
+            if (hunterModeOn) {
+                const masked = maskName(cleanName);
+                const safeReal = cleanName.replace(/"/g, "&quot;");
+                const safeMasked = masked.replace(/"/g, "&quot;");
+                nameCell.innerHTML = `<div class="hunter-name-row"><span class="hunter-name" data-real="${safeReal}" data-masked="${safeMasked}">${masked}</span><button class="hunter-reveal-btn" title="Göster/Gizle">👁</button></div>`;
+            } else {
+                nameCell.textContent = cleanName;
+            }
+
+            const posCell = row.insertCell();
+            posCell.textContent = player.position || "-";
+            posCell.className = "badge-position";
+
+            const natCell = row.insertCell();
+            let rawNationality = (player.nationality || "-").trim();
+            let firstNationality = rawNationality.split(/[\s,–-]+/)[0];
+            const flag = getFlagEmoji(firstNationality);
+            natCell.innerHTML = `<span class="badge-country">${flag ? flag + ' ' : ''}${firstNationality}</span>`;
+
+            const dobCell = row.insertCell();
+            dobCell.textContent = player.birthDate || "-";
+
+            const s1Cell = row.insertCell();
+            s1Cell.innerHTML = `<span class="badge-season">${player.season1 || "-"}</span>`;
+
+            const s2Cell = row.insertCell();
+            s2Cell.innerHTML = `<span class="badge-season">${player.season2 || "-"}</span>`;
+        });
+
+        if (hunterModeOn) {
+            resultsTable.querySelectorAll('.hunter-reveal-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const span = btn.previousElementSibling;
+                    const revealed = span.classList.toggle('revealed');
+                    span.textContent = revealed ? span.dataset.real : span.dataset.masked;
+                    btn.textContent = revealed ? '🙈' : '👁';
+                });
+            });
+        }
+    }
+
     async function searchPlayers() {
         const input1 = document.getElementById("club1Input").value.trim();
         const input2 = document.getElementById("club2Input").value.trim();
@@ -530,6 +1216,7 @@
         }
 
         topLoader.style.display = "flex";
+        playSearchSound();
 
         try {
             let url = input1 && input2
@@ -539,42 +1226,8 @@
             const response = await fetch(url);
             const players = await response.json();
 
-            resultsTable.innerHTML = "";
-
-            if (!players || players.length === 0) {
-                resultsTable.innerHTML = "<tr><td colspan='7' style='text-align:center; padding:20px;'>Kriterlere uygun oyuncu bulunamadı.</td></tr>";
-                return;
-            }
-
-            players.forEach(player => {
-                const row = resultsTable.insertRow();
-
-                const idCell = row.insertCell();
-                idCell.innerHTML = `<span class="badge-id">${player.playerId || "-"}</span>`;
-
-                let cleanName = (player.name || "-").replace(/\s*\(\d+\)\s*/g, "").trim();
-                const nameCell = row.insertCell();
-                nameCell.textContent = cleanName;
-                nameCell.style.fontWeight = "600";
-
-                const posCell = row.insertCell();
-                posCell.textContent = player.position || "-";
-                posCell.className = "badge-position";
-
-                const natCell = row.insertCell();
-                let rawNationality = (player.nationality || "-").trim();
-                let firstNationality = rawNationality.split(/[\s,–-]+/)[0];
-                natCell.innerHTML = `<span class="badge-country">${firstNationality}</span>`;
-
-                const dobCell = row.insertCell();
-                dobCell.textContent = player.birthDate || "-";
-
-                const s1Cell = row.insertCell();
-                s1Cell.innerHTML = `<span class="badge-season">${player.season1 || "-"}</span>`;
-
-                const s2Cell = row.insertCell();
-                s2Cell.innerHTML = `<span class="badge-season">${player.season2 || "-"}</span>`;
-            });
+            currentPlayers = players || [];
+            renderPlayersTable(currentPlayers);
 
         } catch (error) {
             resultsTable.innerHTML = `<tr><td colspan='7' style='text-align:center; color:#ff8a80; padding:20px;'>Hata: ${error.message}</td></tr>`;
@@ -584,10 +1237,18 @@
     }
 
     document.getElementById("searchBtn").addEventListener("click", searchPlayers);
+
     window.onload = () => {
+        applyQueryParamsToInputs();
         loadSuggestions();
         setupAutocomplete("club1Input", "club1Dropdown");
         setupAutocomplete("club2Input", "club2Dropdown");
+        setupThemeSwitcher();
+        setupHunterModeToggle();
+        setupYearFilter();
+        setupShareButton();
+        setupSoundToggle();
+        setupLuckyMode();
         searchPlayers();
     };
 </script>
