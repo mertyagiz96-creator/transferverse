@@ -11,6 +11,11 @@
             --light-green: #4caf50;
             --accent-gold: #ffb300;
             --bg-gradient: linear-gradient(135deg, #0d3012 0%, #1b431c 50%, #081c0a 100%);
+            /* 💡 Şeffaf (rgba) renkler için RGB bileşenleri — input kutuları, arama
+               kartı ve öneri kutusu gibi yerlerde temaya duyarlı şeffaflık kullanabilmek için */
+            --light-green-rgb: 76, 175, 80;
+            --dark-green-rgb: 27, 94, 32;
+            --primary-green-rgb: 46, 125, 50;
         }
 
         /* 💡 TEMALAR — sadece CSS değişkenlerini değiştiriyoruz, aşağıdaki tüm
@@ -22,6 +27,9 @@
             --light-green: #ff9457;
             --accent-gold: #ffd166;
             --bg-gradient: linear-gradient(135deg, #2b0f1a 0%, #6a1b2f 45%, #c1502e 100%);
+            --light-green-rgb: 255, 148, 87;
+            --dark-green-rgb: 122, 36, 24;
+            --primary-green-rgb: 232, 93, 47;
         }
 
         body.theme-night {
@@ -30,6 +38,9 @@
             --light-green: #5c7cfa;
             --accent-gold: #64b5f6;
             --bg-gradient: linear-gradient(135deg, #02030f 0%, #0b1330 45%, #16213e 100%);
+            --light-green-rgb: 92, 124, 250;
+            --dark-green-rgb: 19, 27, 77;
+            --primary-green-rgb: 57, 73, 171;
         }
 
         * {
@@ -353,9 +364,10 @@
 
         .subtitle {
             text-align: center;
-            color: #a5d6a7;
+            color: var(--light-green);
             font-size: 0.95rem;
             margin-bottom: 20px;
+            transition: color 0.6s ease;
         }
 
         .top-loader {
@@ -418,7 +430,7 @@
 
         .top-loader span {
             font-size: 0.9rem;
-            background: linear-gradient(135deg, #ffffff, #a5d6a7, var(--accent-gold));
+            background: linear-gradient(135deg, #ffffff, var(--light-green), var(--accent-gold));
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             font-weight: 700;
@@ -430,13 +442,14 @@
             display: grid;
             grid-template-columns: 1fr 1fr auto;
             gap: 15px;
-            background: linear-gradient(135deg, rgba(27, 94, 32, 0.4), rgba(13, 48, 18, 0.6));
+            background: linear-gradient(135deg, rgba(var(--dark-green-rgb), 0.4), rgba(var(--dark-green-rgb), 0.6));
             padding: 22px;
             border-radius: 16px;
-            border: 1px solid rgba(76, 175, 80, 0.5);
+            border: 1px solid rgba(var(--light-green-rgb), 0.5);
             box-shadow: inset 0 1px 3px rgba(255, 255, 255, 0.1), 0 10px 25px rgba(0, 0, 0, 0.3);
             margin-bottom: 30px;
             overflow: visible;
+            transition: background 0.6s ease, border-color 0.6s ease;
         }
 
         .input-group {
@@ -447,22 +460,23 @@
 
         .input-group label {
             font-size: 0.88rem;
-            color: #a5d6a7;
+            color: var(--light-green);
             margin-bottom: 7px;
             font-weight: 700;
             letter-spacing: 0.5px;
+            transition: color 0.6s ease;
         }
 
         .input-group input {
             padding: 14px 18px;
             border-radius: 10px;
-            border: 1.5px solid rgba(76, 175, 80, 0.4);
-            background: rgba(10, 30, 12, 0.7);
+            border: 1.5px solid rgba(var(--light-green-rgb), 0.4);
+            background: rgba(var(--dark-green-rgb), 0.55);
             color: #ffffff;
             font-size: 1.05rem;
             font-weight: 600;
             outline: none;
-            transition: all 0.3s ease;
+            transition: all 0.3s ease, background 0.6s ease, border-color 0.6s ease;
             width: 100%;
             -webkit-appearance: none;
             appearance: none;
@@ -475,8 +489,8 @@
 
         .input-group input:focus {
             border-color: var(--light-green);
-            background: rgba(15, 45, 18, 0.95);
-            box-shadow: 0 0 15px rgba(76, 175, 80, 0.6);
+            background: rgba(var(--dark-green-rgb), 0.85);
+            box-shadow: 0 0 15px rgba(var(--light-green-rgb), 0.6);
             transform: translateY(-1px);
         }
 
@@ -488,7 +502,7 @@
             right: 0;
             margin-top: 4px;
             background: rgba(8, 26, 10, 0.98);
-            border: 1.5px solid rgba(76, 175, 80, 0.5);
+            border: 1.5px solid rgba(var(--light-green-rgb), 0.5);
             border-radius: 10px;
             max-height: 240px;
             overflow-y: auto;
@@ -510,28 +524,28 @@
 
         .autocomplete-item:hover,
         .autocomplete-item.active {
-            background: rgba(76, 175, 80, 0.25);
+            background: rgba(var(--light-green-rgb), 0.25);
         }
 
         .btn-search {
             align-self: flex-end;
             padding: 14px 32px;
-            background: linear-gradient(135deg, #66bb6a, #1b5e20);
+            background: linear-gradient(135deg, var(--light-green), var(--dark-green));
             color: white;
             border: none;
             border-radius: 10px;
             font-size: 1.05rem;
             font-weight: bold;
             cursor: pointer;
-            box-shadow: 0 6px 20px rgba(46, 125, 50, 0.5);
-            transition: all 0.3s ease;
+            box-shadow: 0 6px 20px rgba(var(--primary-green-rgb), 0.5);
+            transition: all 0.3s ease, background 0.6s ease;
             letter-spacing: 0.5px;
         }
 
         .btn-search:hover {
             transform: translateY(-3px);
-            box-shadow: 0 8px 25px rgba(76, 175, 80, 0.8);
-            background: linear-gradient(135deg, #81c784, var(--primary-green));
+            box-shadow: 0 8px 25px rgba(var(--light-green-rgb), 0.8);
+            filter: brightness(1.12);
         }
 
         .btn-search:active {
