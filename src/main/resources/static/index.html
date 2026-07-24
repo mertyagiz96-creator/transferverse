@@ -637,19 +637,55 @@
             .btn-search {
                 width: 100%;
             }
+
+            /* 💡 Mobilde eski "ortala + serbest sar" davranışı butonların gelişigüzel
+               kümelenmesine yol açıyordu. Bunun yerine düzenli, 2 sütunlu bir grid
+               kullanıyoruz — her buton kendi hücresinde, aynı boyutta, temiz sıralı. */
             .top-toolbar {
-                justify-content: center;
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 8px;
+                justify-content: stretch;
             }
+
             .theme-switcher {
+                grid-column: 1 / -1;
+                justify-content: center;
                 margin-right: 0;
+                gap: 10px;
+                padding-bottom: 4px;
             }
+
+            .toolbar-btn {
+                width: 100%;
+                justify-content: center;
+                font-size: 0.78rem;
+                padding: 9px 8px;
+            }
+
+            .toolbar-wrapper {
+                width: 100%;
+            }
+
+            .toolbar-wrapper .toolbar-btn {
+                width: 100%;
+            }
+
+            /* Paylaş, en az kullanılan ve tek kalan buton olduğu için kendi
+               satırında tam genişlik ve ortalanmış duruyor */
+            #shareBtn {
+                grid-column: 1 / -1;
+            }
+
+            .year-filter-panel {
+                left: 0;
+                right: 0;
+            }
+
             /* 💡 Mobilde dokunma hedefi küçük kalmasın diye tema noktalarını büyütüyoruz */
             .theme-btn {
                 width: 38px;
                 height: 38px;
-            }
-            .theme-switcher {
-                gap: 10px;
             }
         }
     </style>
