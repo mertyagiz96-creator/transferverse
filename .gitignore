@@ -37,3 +37,4 @@ build/
 
 ### Migration scripti (bir kerelik kullanıldı) ###
 src/main/kotlin/Migration.kt
+team_details.csv
