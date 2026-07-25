@@ -4,55 +4,82 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TransferKolik | Player Finder</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         :root {
-            --primary-green: #2e7d32;
-            --dark-green: #1b5e20;
-            --light-green: #4caf50;
-            --accent-gold: #ffb300;
-            --bg-gradient: linear-gradient(135deg, #0d3012 0%, #1b431c 50%, #081c0a 100%);
-            /* 💡 Şeffaf (rgba) renkler için RGB bileşenleri — input kutuları, arama
-               kartı ve öneri kutusu gibi yerlerde temaya duyarlı şeffaflık kullanabilmek için */
-            --light-green-rgb: 76, 175, 80;
-            --dark-green-rgb: 27, 94, 32;
-            --primary-green-rgb: 46, 125, 50;
+            /* 💡 DAHA BASTIRILMIŞ/SOYLU RENK PALETİ + AÇIK/KOYU TEMA ALTYAPISI.
+               --fg-rgb: metin/kenarlık rengi (koyu temalarda açık, açık temada koyu).
+               --surface-strong-rgb: dropdown/panel gibi dolu yüzeylerin rengi (tersi yönde).
+               Bu iki değişken sayesinde onlarca rgba(...) kuralı otomatik olarak
+               doğru kontrastta kalıyor, tema başına ayrı ayrı tanımlamaya gerek kalmıyor. */
+            --primary-green: #3e5f47;
+            --dark-green: #141d16;
+            --light-green: #8fae98;
+            --accent-gold: #c9a961;
+            --bg-gradient: linear-gradient(180deg, #14190f 0%, #1c2318 100%);
+            --light-green-rgb: 143, 174, 152;
+            --dark-green-rgb: 20, 29, 22;
+            --primary-green-rgb: 62, 95, 71;
+            --fg-rgb: 242, 240, 236;
+            --surface-strong-rgb: 20, 23, 15;
         }
 
-        /* 💡 TEMALAR — sadece CSS değişkenlerini değiştiriyoruz, aşağıdaki tüm
-           stiller zaten bu değişkenleri kullandığı için otomatik olarak yeni
-           renklere bürünüyor. Hiçbir HTML elementi ya da JS mantığı etkilenmiyor. */
+        /* 💡 TEMALAR — aynı mekanizma, sadece renk tonları daha bastırılmış */
         body.theme-sunset {
-            --primary-green: #e85d2f;
-            --dark-green: #7a2418;
-            --light-green: #ff9457;
-            --accent-gold: #ffd166;
-            --bg-gradient: linear-gradient(135deg, #2b0f1a 0%, #6a1b2f 45%, #c1502e 100%);
-            --light-green-rgb: 255, 148, 87;
-            --dark-green-rgb: 122, 36, 24;
-            --primary-green-rgb: 232, 93, 47;
+            --primary-green: #9c5a3f;
+            --dark-green: #201009;
+            --light-green: #cf9a76;
+            --accent-gold: #dcb373;
+            --bg-gradient: linear-gradient(180deg, #241209 0%, #2e180d 100%);
+            --light-green-rgb: 207, 154, 118;
+            --dark-green-rgb: 32, 16, 9;
+            --primary-green-rgb: 156, 90, 63;
+            --fg-rgb: 242, 240, 236;
+            --surface-strong-rgb: 32, 16, 9;
         }
 
         body.theme-night {
-            --primary-green: #3949ab;
-            --dark-green: #131b4d;
-            --light-green: #5c7cfa;
-            --accent-gold: #64b5f6;
-            --bg-gradient: linear-gradient(135deg, #02030f 0%, #0b1330 45%, #16213e 100%);
-            --light-green-rgb: 92, 124, 250;
-            --dark-green-rgb: 19, 27, 77;
-            --primary-green-rgb: 57, 73, 171;
+            --primary-green: #38416b;
+            --dark-green: #0c0e18;
+            --light-green: #8b98cf;
+            --accent-gold: #a3b6e6;
+            --bg-gradient: linear-gradient(180deg, #0e111c 0%, #151a2a 100%);
+            --light-green-rgb: 139, 152, 207;
+            --dark-green-rgb: 12, 14, 24;
+            --primary-green-rgb: 56, 65, 107;
+            --fg-rgb: 242, 240, 236;
+            --surface-strong-rgb: 12, 14, 24;
+        }
+
+        /* 💡 YENİ: AÇIK TEMA — aynı marka renkleri (biraz daha koyu tonlarda, beyaz
+           zeminde okunabilir olsun diye), ama arka plan ve metin tamamen ters
+           çevrilmiş. --fg-rgb ve --surface-strong-rgb sayesinde stil sayfasındaki
+           onlarca kural otomatik olarak doğru kontrasta geçiyor. */
+        body.theme-light {
+            --primary-green: #3e5f47;
+            --dark-green: #2a4030;
+            --light-green: #5f8a6c;
+            --accent-gold: #9c7a35;
+            --bg-gradient: linear-gradient(180deg, #faf9f6 0%, #f1efe9 100%);
+            --light-green-rgb: 95, 138, 108;
+            --dark-green-rgb: 42, 64, 48;
+            --primary-green-rgb: 62, 95, 71;
+            --fg-rgb: 26, 28, 24;
+            --surface-strong-rgb: 255, 255, 255;
         }
 
         * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
 
         body {
             background: var(--bg-gradient);
-            color: #ffffff;
+            color: rgb(var(--fg-rgb));
             min-height: 100vh;
             display: flex;
             flex-direction: column;
@@ -61,6 +88,8 @@
             position: relative;
             overflow-x: hidden;
             transition: background 0.6s ease;
+            font-weight: 400;
+            letter-spacing: 0.1px;
         }
 
         body::before {
@@ -72,72 +101,59 @@
             width: 900px;
             height: 900px;
             border-radius: 50%;
-            background: radial-gradient(circle, rgba(76, 175, 80, 0.18) 0%, transparent 65%);
+            background: radial-gradient(circle, rgba(var(--light-green-rgb), 0.06) 0%, transparent 65%);
             pointer-events: none;
             z-index: 0;
             transition: background 0.6s ease;
         }
 
-        body.theme-sunset::before {
-            background: radial-gradient(circle, rgba(255, 148, 87, 0.28) 0%, transparent 65%);
-        }
-
-        body.theme-night::before {
-            background: radial-gradient(circle, rgba(92, 124, 250, 0.25) 0%, transparent 65%);
-        }
-
         .container {
             width: 100%;
             max-width: 1150px;
-            background: rgba(255, 255, 255, 0.07);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            border-radius: 20px;
-            padding: 30px;
-            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
+            background: rgba(var(--fg-rgb), 0.025);
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+            border: 1px solid rgba(var(--fg-rgb), 0.09);
+            border-radius: 10px;
+            padding: 36px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
             position: relative;
             z-index: 1;
             transition: box-shadow 0.6s ease;
-        }
-
-        body.theme-sunset .container {
-            box-shadow: 0 15px 40px rgba(232, 93, 47, 0.35), 0 0 0 1px rgba(255, 209, 102, 0.12) inset;
-        }
-
-        body.theme-night .container {
-            box-shadow: 0 15px 40px rgba(57, 73, 171, 0.45), 0 0 0 1px rgba(100, 181, 246, 0.15) inset;
         }
 
         .top-toolbar {
             display: flex;
             justify-content: flex-end;
             align-items: center;
-            gap: 10px;
-            margin-bottom: 10px;
+            gap: 8px;
+            margin-bottom: 22px;
+            padding-bottom: 18px;
+            border-bottom: 1px solid rgba(var(--fg-rgb), 0.08);
             flex-wrap: wrap;
         }
 
         .theme-switcher {
             display: flex;
             align-items: center;
-            gap: 6px;
+            gap: 7px;
             margin-right: auto;
         }
 
         .theme-label {
-            font-size: 0.78rem;
-            color: rgba(255, 255, 255, 0.55);
-            font-weight: 600;
-            letter-spacing: 0.3px;
-            margin-right: 2px;
+            font-size: 0.68rem;
+            color: rgba(var(--fg-rgb), 0.4);
+            font-weight: 500;
+            letter-spacing: 1.2px;
+            text-transform: uppercase;
+            margin-right: 4px;
         }
 
         .theme-btn {
-            width: 26px;
-            height: 26px;
+            width: 20px;
+            height: 20px;
             border-radius: 50%;
-            border: 2px solid rgba(255, 255, 255, 0.25);
+            border: 1px solid rgba(var(--fg-rgb), 0.25);
             cursor: pointer;
             padding: 0;
             transition: transform 0.2s ease, border-color 0.2s ease;
@@ -149,77 +165,102 @@
 
         .theme-btn.active {
             border-color: #ffffff;
-            box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+            box-shadow: 0 0 0 1px rgba(var(--fg-rgb), 0.4);
         }
 
         .theme-btn[data-theme="green"] {
-            background: linear-gradient(135deg, #4caf50, #1b5e20);
+            background: linear-gradient(135deg, #8fae98, #141d16);
         }
 
         .theme-btn[data-theme="sunset"] {
-            background: linear-gradient(135deg, #ff9457, #7a2418);
+            background: linear-gradient(135deg, #cf9a76, #201009);
         }
 
         .theme-btn[data-theme="night"] {
-            background: linear-gradient(135deg, #5c7cfa, #131b4d);
+            background: linear-gradient(135deg, #8b98cf, #0c0e18);
+        }
+
+        .theme-btn[data-theme="light"] {
+            background: linear-gradient(135deg, #faf9f6, #5f8a6c);
+            border-color: rgba(0, 0, 0, 0.2);
         }
 
         .toolbar-btn {
             display: flex;
             align-items: center;
             gap: 6px;
-            padding: 7px 14px;
-            border-radius: 20px;
-            border: 1.5px solid rgba(255, 255, 255, 0.2);
-            background: rgba(255, 255, 255, 0.06);
-            color: #e0e0e0;
-            font-size: 0.85rem;
+            padding: 8px 14px;
+            border-radius: 3px;
+            border: 1px solid rgba(var(--fg-rgb), 0.16);
+            background: transparent;
+            color: rgba(var(--fg-rgb), 0.75);
+            font-size: 0.72rem;
             font-weight: 600;
+            letter-spacing: 0.6px;
+            text-transform: uppercase;
             cursor: pointer;
             transition: all 0.25s ease;
             white-space: nowrap;
         }
 
         .toolbar-btn:hover {
-            background: rgba(255, 255, 255, 0.14);
+            border-color: rgba(var(--fg-rgb), 0.4);
+            color: rgb(var(--fg-rgb));
         }
 
         .toolbar-btn.active {
-            background: linear-gradient(135deg, var(--light-green), var(--dark-green));
+            background: rgba(var(--light-green-rgb), 0.14);
             border-color: var(--accent-gold);
-            box-shadow: 0 0 12px rgba(255, 179, 0, 0.35);
-            color: #ffffff;
+            color: var(--accent-gold);
         }
 
-        /* 💡 Oyuncu Modu sonuç kartı */
         .player-mode-card {
             text-align: center;
             max-width: 420px;
             margin: 0 auto;
         }
 
+        .player-mode-avatar {
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            border: 1px solid rgba(var(--light-green-rgb), 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 16px auto;
+            color: var(--accent-gold);
+        }
+
+        .player-mode-avatar svg {
+            width: 26px;
+            height: 26px;
+        }
+
         .player-mode-title {
-            font-size: 1.05rem;
-            font-weight: 700;
-            color: #e0e0e0;
-            margin-bottom: 16px;
+            font-size: 0.95rem;
+            font-weight: 500;
+            color: rgba(var(--fg-rgb), 0.75);
+            margin-bottom: 20px;
+            letter-spacing: 0.2px;
         }
 
         .player-mode-clubs {
             display: flex;
             flex-direction: column;
             gap: 8px;
-            margin-bottom: 18px;
+            margin-bottom: 20px;
         }
 
         .player-mode-club {
-            background: rgba(var(--light-green-rgb), 0.15);
-            border: 1.5px solid rgba(var(--light-green-rgb), 0.4);
-            border-radius: 10px;
-            padding: 10px 16px;
-            font-weight: 700;
-            font-size: 1.05rem;
-            color: #ffffff;
+            background: rgba(var(--fg-rgb), 0.025);
+            border: 1px solid rgba(var(--light-green-rgb), 0.3);
+            border-radius: 3px;
+            padding: 11px 16px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            letter-spacing: 0.3px;
+            color: rgb(var(--fg-rgb));
             display: flex;
             justify-content: center;
             align-items: center;
@@ -227,59 +268,57 @@
         }
 
         .player-mode-answer {
-            font-size: 1.3rem;
-            font-weight: 800;
-            letter-spacing: 1px;
-            color: rgba(255, 255, 255, 0.35);
-            margin-bottom: 6px;
+            font-size: 1.15rem;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            color: rgba(var(--fg-rgb), 0.3);
+            margin-bottom: 8px;
         }
 
         .player-mode-answer.revealed {
             color: var(--accent-gold);
-            letter-spacing: normal;
+            letter-spacing: 0.4px;
+            text-transform: none;
         }
 
-        /* 💡 Mevki ipucu — cevaptan biraz daha soluk/küçük, ipucu hissi versin */
         .player-mode-position {
-            font-size: 1rem;
-            font-weight: 700;
-            color: rgba(255, 255, 255, 0.4);
-            margin-bottom: 10px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            letter-spacing: 0.3px;
+            color: rgba(var(--fg-rgb), 0.35);
+            margin-bottom: 12px;
         }
 
         .player-mode-position.revealed {
             color: var(--light-green);
         }
 
-        /* 💡 Maskeli gösterim — tam açık altın ile hâlâ gizli soluk gri arası bir ton */
         .player-mode-answer.masked-revealed {
             color: var(--light-green);
             letter-spacing: 1px;
+            text-transform: none;
         }
 
-        /* 💡 Üç buton simetrik, yan yana — mobilde sığmazsa şık şekilde iki satıra sarıyor */
         .player-mode-hint-row {
             display: flex;
             flex-wrap: wrap;
             gap: 8px;
-            margin-bottom: 12px;
+            margin-bottom: 14px;
         }
 
         .player-mode-hint-row button {
             flex: 1 1 30%;
             min-width: 100px;
             padding: 12px 10px;
-            font-size: 0.85rem;
+            font-size: 0.68rem;
             white-space: normal;
         }
 
-        /* 💡 Ses butonu için ayrı stil: varsayılan (açık) hâli normal buton gibi
-           görünsün, sadece kapatılınca soluk/gri bir "sessiz" görünümü alsın —
-           diğer özelliklerin "aktif" altın parlamasıyla karışmasın. */
         .toolbar-btn.muted {
-            opacity: 0.5;
-            background: rgba(255, 255, 255, 0.03);
-            border-color: rgba(255, 255, 255, 0.12);
+            opacity: 0.4;
+            background: transparent;
+            border-color: rgba(var(--fg-rgb), 0.12);
         }
 
         .year-filter-panel {
@@ -288,14 +327,14 @@
             top: 100%;
             right: 0;
             margin-top: 8px;
-            background: rgba(8, 26, 10, 0.98);
-            border: 1.5px solid rgba(76, 175, 80, 0.5);
-            border-radius: 12px;
+            background: rgb(var(--surface-strong-rgb));
+            border: 1px solid rgba(var(--light-green-rgb), 0.35);
+            border-radius: 4px;
             padding: 14px;
             gap: 8px;
             flex-direction: column;
             z-index: 60;
-            box-shadow: 0 12px 28px rgba(0, 0, 0, 0.55);
+            box-shadow: 0 16px 32px rgba(0, 0, 0, 0.5);
             min-width: 220px;
         }
 
@@ -305,17 +344,14 @@
 
         .year-filter-panel input,
         .year-filter-panel select {
-            padding: 8px 10px;
-            border-radius: 8px;
-            border: 1px solid rgba(76, 175, 80, 0.4);
-            background: rgba(10, 30, 12, 0.7);
-            color: #ffffff;
-            font-size: 0.9rem;
+            padding: 9px 10px;
+            border-radius: 3px;
+            border: 1px solid rgba(var(--fg-rgb), 0.15);
+            background: rgba(var(--fg-rgb), 0.03);
+            color: rgb(var(--fg-rgb));
+            font-size: 0.85rem;
         }
 
-        /* 💡 Tarayıcının varsayılan artı/eksi ok butonlarını (number spinner) gizliyoruz
-           — garip davranıyordu (tıklayınca değeri rastgele artırıyordu), kullanıcı
-           sadece elle yazsın istiyoruz. */
         .year-filter-panel input[type="number"]::-webkit-inner-spin-button,
         .year-filter-panel input[type="number"]::-webkit-outer-spin-button {
             -webkit-appearance: none;
@@ -333,26 +369,27 @@
 
         .year-filter-panel .yf-actions button {
             flex: 1;
-            padding: 8px;
-            border-radius: 8px;
-            border: none;
+            padding: 9px;
+            border-radius: 3px;
+            border: 1px solid transparent;
             cursor: pointer;
             font-weight: 600;
-            font-size: 0.85rem;
+            font-size: 0.72rem;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
         }
 
         #yearFilterApplyBtn {
-            background: linear-gradient(135deg, #66bb6a, #1b5e20);
-            color: white;
+            background: var(--accent-gold);
+            color: rgb(var(--surface-strong-rgb));
         }
 
         #yearFilterClearBtn {
-            background: rgba(255, 255, 255, 0.1);
-            color: #e0e0e0;
+            background: transparent;
+            border-color: rgba(var(--fg-rgb), 0.2);
+            color: rgba(var(--fg-rgb), 0.7);
         }
 
-        /* 💡 Hunter Mode zorluk seviyesi seçici — yıl filtresi paneliyle aynı
-           görsel dilde, sadece iki seçenekli buton listesi. */
         .level-option-btn {
             display: flex;
             flex-direction: column;
@@ -360,32 +397,31 @@
             gap: 2px;
             width: 100%;
             padding: 10px 12px;
-            border-radius: 8px;
-            border: 1.5px solid rgba(var(--light-green-rgb), 0.3);
-            background: rgba(255, 255, 255, 0.04);
-            color: #e0e0e0;
+            border-radius: 3px;
+            border: 1px solid rgba(var(--fg-rgb), 0.14);
+            background: transparent;
+            color: rgba(var(--fg-rgb), 0.75);
             cursor: pointer;
-            font-weight: 700;
-            font-size: 0.9rem;
+            font-weight: 600;
+            font-size: 0.82rem;
             text-align: left;
             transition: all 0.2s ease;
         }
 
         .level-option-btn:hover {
-            background: rgba(var(--light-green-rgb), 0.15);
+            border-color: rgba(var(--light-green-rgb), 0.5);
         }
 
         .level-option-btn.active {
-            background: linear-gradient(135deg, var(--light-green), var(--dark-green));
+            background: rgba(var(--light-green-rgb), 0.12);
             border-color: var(--accent-gold);
-            box-shadow: 0 0 10px rgba(255, 179, 0, 0.3);
-            color: #ffffff;
+            color: var(--accent-gold);
         }
 
         .level-option-btn .level-desc {
-            font-size: 0.75rem;
+            font-size: 0.7rem;
             font-weight: 400;
-            color: rgba(255, 255, 255, 0.65);
+            color: rgba(var(--fg-rgb), 0.5);
         }
 
         .level-option-btn + .level-option-btn {
@@ -396,19 +432,13 @@
             position: relative;
         }
 
-        /* 💡 ÜST LOGO BARI — TransferKolik'in kendi özgün marka barı. Herhangi bir
-           üçüncü taraf sitenin logosu/tasarımı kopyalanmadı; bu tamamen orijinal,
-           genel bir "üstte yatay bar + logo" deseni (bu deseni hemen her site kullanır,
-           kimseye ait değildir). Renkler mevcut tema sistemine bağlı, tema değişince
-           logo barı da otomatik uyum sağlıyor.
-        */
         .site-header {
             width: calc(100% + 40px);
-            margin: -40px -20px 26px -20px;
-            background: rgba(0, 0, 0, 0.38);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            margin: -40px -20px 30px -20px;
+            background: rgba(0, 0, 0, 0.55);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border-bottom: 1px solid rgba(var(--fg-rgb), 0.07);
             position: sticky;
             top: 0;
             z-index: 300;
@@ -417,7 +447,7 @@
         .site-header-inner {
             max-width: 1150px;
             margin: 0 auto;
-            padding: 12px 20px;
+            padding: 16px 20px;
             display: flex;
             align-items: center;
         }
@@ -425,71 +455,53 @@
         .logo-mark {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 11px;
             text-decoration: none;
         }
 
         .logo-badge {
-            width: 40px;
-            height: 40px;
+            width: 34px;
+            height: 34px;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.2rem;
-            background: radial-gradient(circle at 32% 28%, var(--light-green), var(--dark-green) 75%);
-            border: 1.5px solid rgba(255, 255, 255, 0.28);
-            box-shadow:
-                    0 4px 16px rgba(0, 0, 0, 0.45),
-                    0 0 10px var(--accent-gold),
-                    inset 0 1px 3px rgba(255, 255, 255, 0.4),
-                    inset 0 -3px 6px rgba(0, 0, 0, 0.3);
-            transition: background 0.6s ease;
-            animation: badgePulse 3s ease-in-out infinite;
-        }
-
-        @keyframes badgePulse {
-            0%, 100% {
-                box-shadow:
-                        0 4px 16px rgba(0, 0, 0, 0.45),
-                        0 0 10px var(--accent-gold),
-                        inset 0 1px 3px rgba(255, 255, 255, 0.4),
-                        inset 0 -3px 6px rgba(0, 0, 0, 0.3);
-            }
-            50% {
-                box-shadow:
-                        0 4px 20px rgba(0, 0, 0, 0.45),
-                        0 0 20px var(--accent-gold),
-                        inset 0 1px 3px rgba(255, 255, 255, 0.45),
-                        inset 0 -3px 6px rgba(0, 0, 0, 0.3);
-            }
+            font-size: 1rem;
+            background: transparent;
+            border: 1px solid rgba(var(--light-green-rgb), 0.55);
+            transition: border-color 0.6s ease;
         }
 
         .logo-text {
-            font-size: 1.35rem;
-            font-weight: 800;
-            letter-spacing: 0.3px;
-            color: #ffffff;
+            font-size: 1.05rem;
+            font-weight: 600;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            color: rgb(var(--fg-rgb));
         }
 
         .logo-text-accent {
-            color: #ffc233;
+            color: #c9a961;
+            font-weight: 700;
         }
 
         .dedication {
             text-align: center;
-            font-size: 0.85rem;
-            color: var(--light-green);
-            font-weight: 600;
+            font-size: 0.72rem;
+            color: rgba(var(--fg-rgb), 0.4);
+            font-weight: 500;
             letter-spacing: 1px;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
+            text-transform: uppercase;
         }
 
         .subtitle {
             text-align: center;
-            color: var(--light-green);
-            font-size: 0.95rem;
-            margin-bottom: 20px;
+            color: rgba(var(--fg-rgb), 0.5);
+            font-size: 0.85rem;
+            font-weight: 400;
+            margin-bottom: 30px;
+            letter-spacing: 0.2px;
             transition: color 0.6s ease;
         }
 
@@ -497,37 +509,28 @@
             display: none;
             align-items: center;
             justify-content: center;
-            background: linear-gradient(135deg, rgba(27, 94, 32, 0.8), rgba(10, 40, 15, 0.9));
-            border: 1.5px solid var(--accent-gold);
-            border-radius: 14px;
+            background: rgba(var(--fg-rgb), 0.03);
+            border: 1px solid rgba(var(--light-green-rgb), 0.35);
+            border-radius: 4px;
             padding: 10px 22px;
             margin: 0 auto 20px auto;
             max-width: 440px;
             gap: 15px;
-            box-shadow: 0 0 20px rgba(255, 179, 0, 0.25), inset 0 1px 4px rgba(255, 255, 255, 0.2);
-            animation: loaderGlow 2s infinite alternate;
-        }
-
-        @keyframes loaderGlow {
-            0% { box-shadow: 0 0 10px rgba(255, 179, 0, 0.2), inset 0 1px 4px rgba(255, 255, 255, 0.2); }
-            100% { box-shadow: 0 0 25px rgba(76, 175, 80, 0.5), inset 0 1px 6px rgba(255, 255, 255, 0.4); }
         }
 
         .loader-track {
             position: relative;
             width: 190px;
-            height: 24px;
-            background: rgba(0, 0, 0, 0.3);
-            border-radius: 12px;
+            height: 2px;
+            background: rgba(var(--fg-rgb), 0.1);
             overflow: hidden;
-            border: 1px solid rgba(255, 255, 255, 0.15);
         }
 
         .loader-track::before {
             content: '';
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(76, 175, 80, 0.3), transparent);
+            background: linear-gradient(90deg, transparent, rgba(var(--light-green-rgb), 0.9), transparent);
             animation: shimmer 1.5s infinite;
         }
 
@@ -537,42 +540,29 @@
         }
 
         .rolling-ball {
-            position: absolute;
-            font-size: 20px;
-            top: -1px;
-            left: 0px;
-            animation: rollAcrossModern 1.1s infinite cubic-bezier(0.4, 0, 0.2, 1);
-            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
-        }
-
-        @keyframes rollAcrossModern {
-            0% { left: -2px; transform: rotate(0deg) scale(0.9); }
-            50% { transform: rotate(180deg) scale(1.1); }
-            100% { left: 165px; transform: rotate(360deg) scale(0.9); }
+            display: none;
         }
 
         .top-loader span {
-            font-size: 0.9rem;
-            background: linear-gradient(135deg, #ffffff, var(--light-green), var(--accent-gold));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            font-weight: 700;
-            letter-spacing: 0.8px;
+            font-size: 0.72rem;
+            color: rgba(var(--fg-rgb), 0.6);
+            font-weight: 500;
+            letter-spacing: 1.2px;
+            text-transform: uppercase;
             white-space: nowrap;
         }
 
         .search-card {
             display: grid;
             grid-template-columns: 1fr 1fr auto;
-            gap: 15px;
-            background: linear-gradient(135deg, rgba(var(--dark-green-rgb), 0.4), rgba(var(--dark-green-rgb), 0.6));
-            padding: 22px;
-            border-radius: 16px;
-            border: 1px solid rgba(var(--light-green-rgb), 0.5);
-            box-shadow: inset 0 1px 3px rgba(255, 255, 255, 0.1), 0 10px 25px rgba(0, 0, 0, 0.3);
-            margin-bottom: 30px;
+            gap: 16px;
+            background: rgba(var(--fg-rgb), 0.02);
+            padding: 26px;
+            border-radius: 4px;
+            border: 1px solid rgba(var(--fg-rgb), 0.1);
+            margin-bottom: 34px;
             overflow: visible;
-            transition: background 0.6s ease, border-color 0.6s ease;
+            transition: border-color 0.6s ease;
         }
 
         .input-group {
@@ -582,39 +572,38 @@
         }
 
         .input-group label {
-            font-size: 0.88rem;
-            color: var(--light-green);
-            margin-bottom: 7px;
-            font-weight: 700;
-            letter-spacing: 0.5px;
+            font-size: 0.68rem;
+            color: rgba(var(--fg-rgb), 0.5);
+            margin-bottom: 8px;
+            font-weight: 600;
+            letter-spacing: 1px;
+            text-transform: uppercase;
             transition: color 0.6s ease;
         }
 
         .input-group input {
-            padding: 14px 18px;
-            border-radius: 10px;
-            border: 1.5px solid rgba(var(--light-green-rgb), 0.4);
-            background: rgba(var(--dark-green-rgb), 0.55);
-            color: #ffffff;
-            font-size: 1.05rem;
-            font-weight: 600;
+            padding: 13px 16px;
+            border-radius: 3px;
+            border: 1px solid rgba(var(--fg-rgb), 0.18);
+            background: rgba(var(--fg-rgb), 0.02);
+            color: rgb(var(--fg-rgb));
+            font-size: 0.95rem;
+            font-weight: 500;
             outline: none;
-            transition: all 0.3s ease, background 0.6s ease, border-color 0.6s ease;
+            transition: all 0.25s ease, border-color 0.6s ease;
             width: 100%;
             -webkit-appearance: none;
             appearance: none;
         }
 
         .input-group input::placeholder {
-            color: rgba(255, 255, 255, 0.4);
+            color: rgba(var(--fg-rgb), 0.3);
             font-weight: 400;
         }
 
         .input-group input:focus {
-            border-color: var(--light-green);
-            background: rgba(var(--dark-green-rgb), 0.85);
-            box-shadow: 0 0 15px rgba(var(--light-green-rgb), 0.6);
-            transform: translateY(-1px);
+            border-color: var(--accent-gold);
+            background: rgba(var(--fg-rgb), 0.035);
         }
 
         .autocomplete-dropdown {
@@ -624,21 +613,21 @@
             left: 0;
             right: 0;
             margin-top: 4px;
-            background: rgba(8, 26, 10, 0.98);
-            border: 1.5px solid rgba(var(--light-green-rgb), 0.5);
-            border-radius: 10px;
+            background: rgb(var(--surface-strong-rgb));
+            border: 1px solid rgba(var(--light-green-rgb), 0.35);
+            border-radius: 4px;
             max-height: 240px;
             overflow-y: auto;
             z-index: 100;
-            box-shadow: 0 12px 28px rgba(0, 0, 0, 0.55);
+            box-shadow: 0 16px 32px rgba(0, 0, 0, 0.5);
         }
 
         .autocomplete-item {
-            padding: 12px 18px;
-            color: #e0e0e0;
+            padding: 11px 16px;
+            color: rgba(var(--fg-rgb), 0.8);
             cursor: pointer;
-            font-size: 0.98rem;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            font-size: 0.9rem;
+            border-bottom: 1px solid rgba(var(--fg-rgb), 0.05);
         }
 
         .autocomplete-item:last-child {
@@ -647,82 +636,86 @@
 
         .autocomplete-item:hover,
         .autocomplete-item.active {
-            background: rgba(var(--light-green-rgb), 0.25);
+            background: rgba(var(--light-green-rgb), 0.12);
+            color: rgb(var(--fg-rgb));
         }
 
         .btn-search {
             align-self: flex-end;
-            padding: 14px 32px;
-            background: linear-gradient(135deg, var(--light-green), var(--dark-green));
-            color: white;
+            padding: 13px 30px;
+            background: rgb(var(--fg-rgb));
+            color: rgb(var(--surface-strong-rgb));
             border: none;
-            border-radius: 10px;
-            font-size: 1.05rem;
-            font-weight: bold;
+            border-radius: 3px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            letter-spacing: 1.2px;
+            text-transform: uppercase;
             cursor: pointer;
-            box-shadow: 0 6px 20px rgba(var(--primary-green-rgb), 0.5);
-            transition: all 0.3s ease, background 0.6s ease;
-            letter-spacing: 0.5px;
+            transition: all 0.25s ease;
         }
 
         .btn-search:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 8px 25px rgba(var(--light-green-rgb), 0.8);
-            filter: brightness(1.12);
+            background: var(--accent-gold);
+            transform: translateY(-1px);
         }
 
         .btn-search:active {
-            transform: translateY(-1px);
+            transform: translateY(0);
         }
 
         .table-wrapper {
             overflow-x: auto;
-            border-radius: 12px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            border: 1px solid rgba(var(--fg-rgb), 0.09);
         }
 
         table {
             width: 100%;
             border-collapse: collapse;
-            background: rgba(0, 0, 0, 0.3);
+            background: rgba(0, 0, 0, 0.15);
             text-align: left;
         }
 
         th {
-            background: var(--dark-green);
-            color: #e8f5e9;
+            background: transparent;
+            color: rgba(var(--fg-rgb), 0.45);
             padding: 14px 18px;
-            font-size: 0.95rem;
+            font-size: 0.68rem;
+            font-weight: 600;
+            letter-spacing: 1.2px;
             text-transform: uppercase;
-            border-bottom: 2px solid var(--light-green);
+            border-bottom: 1px solid rgba(var(--fg-rgb), 0.14);
         }
 
         td {
-            padding: 14px 18px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-            font-size: 0.95rem;
-            color: #e0e0e0;
+            padding: 15px 18px;
+            border-bottom: 1px solid rgba(var(--fg-rgb), 0.05);
+            font-size: 0.9rem;
+            color: rgba(var(--fg-rgb), 0.85);
         }
 
         tbody tr:hover {
-            background: rgba(76, 175, 80, 0.15);
+            background: rgba(var(--fg-rgb), 0.025);
         }
 
         .badge-id {
-            background: rgba(255, 255, 255, 0.1);
-            color: #90caf9;
-            padding: 4px 8px;
-            border-radius: 6px;
-            font-size: 0.8rem;
-            font-family: monospace;
-            font-weight: bold;
+            background: transparent;
+            border: 1px solid rgba(var(--fg-rgb), 0.15);
+            color: rgba(var(--fg-rgb), 0.55);
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-size: 0.72rem;
+            font-family: 'Inter', monospace;
+            font-weight: 500;
         }
 
         .badge-country {
-            background: rgba(255, 255, 255, 0.15);
+            background: transparent;
+            border: 1px solid rgba(var(--fg-rgb), 0.15);
             padding: 4px 10px;
             border-radius: 20px;
-            font-size: 0.85rem;
+            font-size: 0.78rem;
             display: inline-flex;
             align-items: center;
             gap: 5px;
@@ -732,14 +725,16 @@
         .badge-position {
             color: var(--accent-gold);
             font-weight: 500;
+            font-size: 0.85rem;
         }
 
         .badge-season {
-            background: rgba(76, 175, 80, 0.2);
-            color: #c8e6c9;
-            padding: 4px 8px;
-            border-radius: 6px;
-            font-size: 0.85rem;
+            background: transparent;
+            border: 1px solid rgba(var(--light-green-rgb), 0.4);
+            color: var(--light-green);
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-size: 0.78rem;
             font-weight: 600;
         }
 
@@ -756,56 +751,56 @@
         }
 
         .hunter-name.revealed {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Inter', sans-serif;
             letter-spacing: normal;
         }
 
         .hunter-reveal-btn {
             margin-left: 8px;
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 6px;
+            background: transparent;
+            border: 1px solid rgba(var(--fg-rgb), 0.18);
+            border-radius: 3px;
             cursor: pointer;
             padding: 2px 7px;
-            font-size: 0.85rem;
+            font-size: 0.8rem;
         }
 
         .hunter-reveal-btn:hover {
-            background: rgba(255, 255, 255, 0.2);
+            border-color: rgba(var(--fg-rgb), 0.4);
         }
 
         .footer-signature {
-            margin-top: 40px;
+            margin-top: 44px;
             text-align: right;
             width: 100%;
             max-width: 1150px;
-            font-size: 0.85rem;
-            color: rgba(255, 255, 255, 0.5);
-            letter-spacing: 1px;
+            font-size: 0.72rem;
+            color: rgba(var(--fg-rgb), 0.35);
+            letter-spacing: 0.8px;
         }
 
         .footer-signature span {
             color: var(--light-green);
-            font-weight: bold;
+            font-weight: 600;
         }
 
-        /* 💡 Kısa bildirim (toast) — "Link kopyalandı" gibi geri bildirimler için */
         #appToast {
             position: fixed;
             bottom: 24px;
             left: 50%;
             transform: translateX(-50%) translateY(20px);
-            background: rgba(20, 20, 20, 0.95);
-            color: #ffffff;
+            background: rgb(var(--surface-strong-rgb));
+            border: 1px solid rgba(var(--light-green-rgb), 0.4);
+            color: rgb(var(--fg-rgb));
             padding: 12px 22px;
-            border-radius: 10px;
-            font-size: 0.9rem;
-            font-weight: 600;
+            border-radius: 4px;
+            font-size: 0.82rem;
+            font-weight: 500;
             opacity: 0;
             pointer-events: none;
             transition: opacity 0.3s ease, transform 0.3s ease;
             z-index: 500;
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+            box-shadow: 0 12px 28px rgba(0, 0, 0, 0.5);
         }
 
         #appToast.show {
@@ -821,9 +816,6 @@
                 width: 100%;
             }
 
-            /* 💡 Mobilde eski "ortala + serbest sar" davranışı butonların gelişigüzel
-               kümelenmesine yol açıyordu. Bunun yerine düzenli, 2 sütunlu bir grid
-               kullanıyoruz — her buton kendi hücresinde, aynı boyutta, temiz sıralı. */
             .top-toolbar {
                 display: grid;
                 grid-template-columns: 1fr 1fr;
@@ -842,8 +834,8 @@
             .toolbar-btn {
                 width: 100%;
                 justify-content: center;
-                font-size: 0.78rem;
-                padding: 9px 8px;
+                font-size: 0.68rem;
+                padding: 10px 8px;
             }
 
             .toolbar-wrapper {
@@ -859,20 +851,20 @@
                 right: 0;
             }
 
-            /* 💡 Mobilde dokunma hedefi küçük kalmasın diye tema noktalarını büyütüyoruz */
             .theme-btn {
-                width: 38px;
-                height: 38px;
+                width: 30px;
+                height: 30px;
             }
 
             .logo-text {
-                font-size: 1.15rem;
+                font-size: 0.88rem;
+                letter-spacing: 2px;
             }
 
             .logo-badge {
-                width: 32px;
-                height: 32px;
-                font-size: 1rem;
+                width: 28px;
+                height: 28px;
+                font-size: 0.85rem;
             }
         }
     </style>
@@ -906,6 +898,7 @@
             <button class="theme-btn active" data-theme="green" title="Yeşil (Varsayılan)"></button>
             <button class="theme-btn" data-theme="sunset" title="Gün Batımı"></button>
             <button class="theme-btn" data-theme="night" title="Gece Mavisi"></button>
+            <button class="theme-btn" data-theme="light" title="Açık"></button>
         </div>
 
         <button id="luckyModeBtn" class="toolbar-btn" title="Rastgele iki takım/ülke seçer, aramayı siz başlatırsınız — tahmin oyunu için ideal">
@@ -1058,8 +1051,6 @@
             const ctx = new (window.AudioContext || window.webkitAudioContext)();
             const now = ctx.currentTime;
 
-            // 🎵 Hakem düdüğü hissi: iki hafif detune edilmiş kare dalga birlikte
-            // çalınca klasik "titreşen düdük" tonu oluşuyor.
             const osc1 = ctx.createOscillator();
             const osc2 = ctx.createOscillator();
             const whistleGain = ctx.createGain();
@@ -1082,7 +1073,6 @@
             osc1.stop(now + 0.28);
             osc2.stop(now + 0.28);
 
-            // ⚽ Düdüğün hemen ardından kısa, alçalan bir "top vuruşu" pop sesi
             const popOsc = ctx.createOscillator();
             const popGain = ctx.createGain();
 
@@ -1112,8 +1102,6 @@
         });
     }
 
-    // 💡 PAYLAŞIM LİNKİ — aramayı URL parametresi olarak kopyalıyor, sunucuya
-    // yeni bir şey eklemiyor, sadece client-side URL oluşturma.
     function setupShareButton() {
         document.getElementById('shareBtn').addEventListener('click', () => {
             const c1 = document.getElementById('club1Input').value.trim();
@@ -1132,7 +1120,6 @@
         });
     }
 
-    // Sayfa açılırken URL'de ?club1=...&club2=... varsa input'ları otomatik dolduruyor
     function applyQueryParamsToInputs() {
         const params = new URLSearchParams(window.location.search);
         const c1 = params.get('club1');
@@ -1141,9 +1128,6 @@
         if (c2) document.getElementById('club2Input').value = c2;
     }
 
-    // 💡 ÜLKE BAYRAĞI EMOJİSİ — uyruk rozetinin yanında küçük bir görsel zenginlik.
-    // Not: İngiltere/İskoçya/Galler için ayrı resmi bayrak emojisi evrensel desteklenmediği
-    // için nötr bir bayrak simgesi kullanılıyor.
     const countryFlags = {
         'turkiye': '🇹🇷', 'türkiye': '🇹🇷', 'turkey': '🇹🇷',
         'england': '🏴', 'scotland': '🏴', 'wales': '🏴',
@@ -1177,10 +1161,6 @@
         return countryFlags[key] || '';
     }
 
-    // 💡 ŞANS MODU — sadece VERİTABANINDA GERÇEKTEN VAR OLDUĞU doğrulanmış kulüp
-    // isimleriyle sınırlı (5 büyük Avrupa ligi + Süper Lig'in 4 büyüğü), rastgele
-    // arasında "saçma sapan" küçük takımlar çıkmasın diye. Kutuları dolduruyor ama
-    // ARAMAYI BAŞLATMIYOR — kullanıcı önce tahmin etsin, sonra kendi "Ara"ya bassın.
     const luckyClubs = [
         'Galatasaray', 'Fenerbahçe', 'Beşiktaş', 'Trabzonspor',
         'Manchester United', 'Manchester City', 'Liverpool', 'Chelsea', 'Arsenal', 'Tottenham',
@@ -1207,9 +1187,6 @@
             const club1 = pickRandom(luckyClubs);
             let secondPick;
 
-            // %60 kulüp-kulüp, %40 kulüp-ülke — asla ülke-ülke gelmiyor
-            // (backend zaten ülke-ülke aramasında hep boş sonuç döndürüyor, o yüzden
-            // bu kombinasyonu Şans Modu'nda hiç üretmiyoruz).
             if (Math.random() < 0.6) {
                 let candidate;
                 do {
@@ -1223,8 +1200,6 @@
             document.getElementById('club1Input').value = club1;
             document.getElementById('club2Input').value = secondPick;
 
-            // Eski sonuçlar ekranda kalıp kafa karıştırmasın diye temizliyoruz —
-            // yeni seçim için henüz arama yapılmadı.
             currentPlayers = [];
             document.getElementById('resultsTable').innerHTML =
                 "<tr><td colspan='7' style='text-align:center; padding:20px;'>🤔 Şimdi tahmin sırası! Emin olunca 'Ara' butonuna basın.</td></tr>";
@@ -1233,10 +1208,6 @@
         });
     }
 
-    // 💡 OYUNCU MODU — Şans Modu'ndaki aynı bilindik kulüp listesinden rastgele 2
-    // tanesini seçip, bu iki kulübün GERÇEKTEN İKİSİNDE DE oynamış bir oyuncu olup
-    // olmadığını sunucuya soruyor. Her rastgele çift eşleşme garantili değil, o yüzden
-    // birkaç deneme yapıyoruz (hızlı, indexli sorgular olduğu için sorun değil).
     let playerModeActive = false;
 
     async function startPlayerMode() {
@@ -1264,7 +1235,7 @@
         }
 
         topLoader.style.display = "none";
-        currentPlayers = []; // normal arama sonuçlarıyla karışmasın
+        currentPlayers = [];
 
         let bodyHtml;
         if (!found) {
@@ -1272,7 +1243,7 @@
         } else {
             const cleanFullName = found.playerName.replace(/\s*\(\d+\)\s*/g, "").trim();
             const safeName = cleanFullName.replace(/"/g, "&quot;");
-            const safeMasked = maskNameEasy(cleanFullName).replace(/"/g, "&quot;");
+            const safeMasked = maskNamePlayerModeHint(cleanFullName).replace(/"/g, "&quot;");
             const safePosition = (found.position && found.position.trim())
                 ? found.position.trim().replace(/"/g, "&quot;")
                 : "Bilinmiyor";
@@ -1284,8 +1255,18 @@
                 return `<div class="player-mode-club">${c.club} ${seasonBadge}</div>`;
             }).join('');
 
+            const avatarHtml = `
+                <div class="player-mode-avatar">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="1.4"/>
+                        <path d="M4 20c0-4.4 3.6-7 8-7s8 2.6 8 7" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+                    </svg>
+                </div>
+            `;
+
             bodyHtml = `
-                <div class="player-mode-title">🎮 Bu takımlar arasında gidip gelen reis kim?</div>
+                ${avatarHtml}
+                <div class="player-mode-title">🎮 Her iki takımda da oynamış reis kimdir?</div>
                 <div class="player-mode-clubs">${clubListHtml}</div>
                 <div class="player-mode-position" id="playerModePosition" data-real="${safePosition}">Mevki: ???</div>
                 <div class="player-mode-answer" id="playerModeAnswer" data-real="${safeName}" data-masked="${safeMasked}">???</div>
@@ -1321,7 +1302,6 @@
         if (revealMaskedBtn) {
             revealMaskedBtn.addEventListener('click', () => {
                 const answerEl = document.getElementById('playerModeAnswer');
-                // Tam isim zaten açıldıysa maskeli haline geri döndürmeyelim
                 if (!answerEl.classList.contains('revealed')) {
                     answerEl.textContent = answerEl.dataset.masked;
                     answerEl.classList.add('masked-revealed');
@@ -1342,10 +1322,6 @@
         document.getElementById('newPlayerModeBtn').addEventListener('click', startPlayerMode);
     }
 
-    // 💡 Oyuncu Modu bir AÇ/KAPA anahtarı gibi çalışıyor: açılınca normal arama
-    // kutuları (search-card) tamamen gizleniyor (kafa karışıklığı olmasın diye),
-    // buton altın renkte "aktif" görünüyor. Tekrar basılınca kutular geri gelip
-    // normal aramaya (mevcut takım-takım oyununa hiç dokunmadan) dönülüyor.
     function setupPlayerMode() {
         const btn = document.getElementById('playerModeBtn');
         const searchCard = document.querySelector('.search-card');
@@ -1462,10 +1438,11 @@
     function setupThemeSwitcher() {
         document.querySelectorAll('.theme-btn').forEach(btn => {
             btn.addEventListener('click', () => {
-                document.body.classList.remove('theme-sunset', 'theme-night');
+                document.body.classList.remove('theme-sunset', 'theme-night', 'theme-light');
                 const theme = btn.dataset.theme;
                 if (theme === 'sunset') document.body.classList.add('theme-sunset');
                 if (theme === 'night') document.body.classList.add('theme-night');
+                if (theme === 'light') document.body.classList.add('theme-light');
 
                 document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
@@ -1473,9 +1450,6 @@
         });
     }
 
-    // 🟢 ÇAYLAK maskeleme mantığı — ayrı bir fonksiyona çıkarıldı ki hem
-    // Maskeleme özelliği hem Oyuncu Modu'ndaki "Maskeli Göster" ipucu aynı,
-    // tutarlı mantığı kullansın. Davranış birebir öncekiyle aynı.
     function maskNameEasy(name) {
         return name.split(' ').map(word => {
             const letters = word.split('');
@@ -1485,7 +1459,7 @@
                 const midIdx = Math.floor(len / 2);
                 return letters.map((ch, idx) => {
                     if (idx === midIdx && /[a-zA-ZçÇğĞıİöÖşŞüÜ]/.test(ch)) {
-                        return '★';
+                        return '✦';
                     }
                     return ch;
                 }).join('');
@@ -1494,7 +1468,32 @@
             return letters.map((ch, idx) => {
                 if (idx === 0 || idx === len - 1) return ch;
                 if (/[a-zA-ZçÇğĞıİöÖşŞüÜ]/.test(ch) && Math.random() < 0.35) {
-                    return '★';
+                    return '✦';
+                }
+                return ch;
+            }).join('');
+        }).join(' ');
+    }
+
+    // 🎮 Oyuncu Modu'nun "Maskeli Göster" ipucuna özel, daha zorlu maskeleme —
+    // her kelimede (ad/soyad) SADECE ilk ve son harf açık, aradaki HER harf
+    // (rastgelelik olmadan, tamamen) maskeli. Ana Maskeleme özelliğine (Çaylak/Usta)
+    // hiç dokunmuyor, ayrı bir fonksiyon.
+    function maskNamePlayerModeHint(name) {
+        return name.split(' ').map(word => {
+            const letters = word.split('');
+            const len = letters.length;
+
+            // 1-2 harflik çok kısa kelimelerde ilk=son harf çakışacağından
+            // olduğu gibi bırakıyoruz, aksi halde kelime tamamen kayboluyor.
+            if (len <= 2) {
+                return word;
+            }
+
+            return letters.map((ch, idx) => {
+                if (idx === 0 || idx === len - 1) return ch;
+                if (/[a-zA-ZçÇğĞıİöÖşŞüÜ]/.test(ch)) {
+                    return '✦';
                 }
                 return ch;
             }).join('');
@@ -1502,21 +1501,18 @@
     }
 
     function maskName(name) {
-        // 🔴 USTA seviyesi: sadece her kelimenin (ad/soyad) ilk harfi açık,
-        // geri kalan her şey maskeli — mevcut ÇAYLAK mantığına hiç dokunmuyor.
         if (hunterLevel === 'hard') {
             return name.split(' ').map(word => {
                 return word.split('').map((ch, idx) => {
                     if (idx === 0) return ch;
                     if (/[a-zA-ZçÇğĞıİöÖşŞüÜ]/.test(ch)) {
-                        return '★';
+                        return '✦';
                     }
                     return ch;
                 }).join('');
             }).join(' ');
         }
 
-        // 🟢 ÇAYLAK seviyesi (varsayılan) — ortak fonksiyona devrediyoruz.
         return maskNameEasy(name);
     }
 
@@ -1590,10 +1586,6 @@
 
         if (candidates.length === 0) return false;
 
-        // 💡 AND mantığı: kulüp-kulüp aramasında GEÇERLİ olan (yani "-" olmayan)
-        // her iki sezonun da koşulu sağlaması gerekiyor. Ülke tarafı zaten "-" olduğu
-        // için (null olarak candidates'ten çıkarılıyor), kulüp-ülke aramasında
-        // otomatik olarak sadece kulüp tarafı kontrol edilmiş oluyor.
         if (yearFilterMode === 'before') {
             return candidates.every(y => y <= yearFilterValue);
         } else {
