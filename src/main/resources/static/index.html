@@ -983,9 +983,8 @@
 
     <div class="table-wrapper">
         <table>
-            <thead>
+            <thead id="resultsTableHead">
             <tr>
-                <th>ID</th>
                 <th>Oyuncu Adı</th>
                 <th>Mevki</th>
                 <th>Uyruk</th>
@@ -1202,7 +1201,7 @@
 
             currentPlayers = [];
             document.getElementById('resultsTable').innerHTML =
-                "<tr><td colspan='7' style='text-align:center; padding:20px;'>🤔 Şimdi tahmin sırası! Emin olunca 'Ara' butonuna basın.</td></tr>";
+                "<tr><td colspan='6' style='text-align:center; padding:20px;'>🤔 Şimdi tahmin sırası! Emin olunca 'Ara' butonuna basın.</td></tr>";
 
             showToast('🎲 Şans çekildi!');
         });
@@ -1280,7 +1279,7 @@
 
         resultsTable.innerHTML = `
             <tr>
-                <td colspan="7" style="padding: 24px;">
+                <td colspan="6" style="padding: 24px;">
                     <div class="player-mode-card">
                         ${bodyHtml}
                         <button id="newPlayerModeBtn" class="toolbar-btn">🔄 Yeni Oyuncu</button>
@@ -1328,6 +1327,7 @@
         const luckyBtn = document.getElementById('luckyModeBtn');
         const hunterWrapper = document.getElementById('hunterModeWrapper');
         const yearWrapper = document.getElementById('yearFilterWrapper');
+        const tableHead = document.getElementById('resultsTableHead');
 
         btn.addEventListener('click', () => {
             playerModeActive = !playerModeActive;
@@ -1338,12 +1338,14 @@
                 luckyBtn.style.display = 'none';
                 hunterWrapper.style.display = 'none';
                 yearWrapper.style.display = 'none';
+                tableHead.style.display = 'none';
                 startPlayerMode();
             } else {
                 searchCard.style.display = '';
                 luckyBtn.style.display = '';
                 hunterWrapper.style.display = '';
                 yearWrapper.style.display = '';
+                tableHead.style.display = '';
                 searchPlayers();
             }
         });
@@ -1642,15 +1644,12 @@
         const filtered = (players || []).filter(passesYearFilter);
 
         if (!filtered || filtered.length === 0) {
-            resultsTable.innerHTML = "<tr><td colspan='7' style='text-align:center; padding:20px;'>Kriterlere uygun oyuncu bulunamadı.</td></tr>";
+            resultsTable.innerHTML = "<tr><td colspan='6' style='text-align:center; padding:20px;'>Kriterlere uygun oyuncu bulunamadı.</td></tr>";
             return;
         }
 
         filtered.forEach(player => {
             const row = resultsTable.insertRow();
-
-            const idCell = row.insertCell();
-            idCell.innerHTML = `<span class="badge-id">${player.playerId || "-"}</span>`;
 
             let cleanName = (player.name || "-").replace(/\s*\(\d+\)\s*/g, "").trim();
             const nameCell = row.insertCell();
@@ -1704,7 +1703,7 @@
         const topLoader = document.getElementById("topLoader");
 
         if (!input1 && !input2) {
-            resultsTable.innerHTML = "<tr><td colspan='7' style='text-align:center; padding:20px;'>Lütfen en az bir alan doldurunuz.</td></tr>";
+            resultsTable.innerHTML = "<tr><td colspan='6' style='text-align:center; padding:20px;'>Lütfen en az bir alan doldurunuz.</td></tr>";
             return;
         }
 
@@ -1723,7 +1722,7 @@
             renderPlayersTable(currentPlayers);
 
         } catch (error) {
-            resultsTable.innerHTML = `<tr><td colspan='7' style='text-align:center; color:#ff8a80; padding:20px;'>Hata: ${error.message}</td></tr>`;
+            resultsTable.innerHTML = `<tr><td colspan='6' style='text-align:center; color:#ff8a80; padding:20px;'>Hata: ${error.message}</td></tr>`;
         } finally {
             topLoader.style.display = "none";
         }
