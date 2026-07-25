@@ -324,14 +324,14 @@ object DatabaseClient {
 
         val sql = if (isCountry) {
             """
-            SELECT p.id, p.name, p.position, p.nationality, p.birthdate, t.from_club, t.to_club, t.season 
+            SELECT p.id, p.name, p.position, p.nationality, p.birthdate, p.slug, t.from_club, t.to_club, t.season 
             FROM players p 
             JOIN transfers t ON p.id = t.transfer_id
             WHERE p.nationality_std LIKE ?
             """.trimIndent()
         } else {
             """
-            SELECT p.id, p.name, p.position, p.nationality, p.birthdate, t.from_club, t.to_club, t.season 
+            SELECT p.id, p.name, p.position, p.nationality, p.birthdate, p.slug, t.from_club, t.to_club, t.season 
             FROM players p 
             JOIN transfers t ON p.id = t.transfer_id
             WHERE t.from_club_std LIKE ? OR t.to_club_std LIKE ?
@@ -375,7 +375,8 @@ object DatabaseClient {
                                     birthDate = rs.getString("birthdate"),
                                     season1 = null,
                                     season2 = null,
-                                    transferId = pId
+                                    transferId = pId,
+                                    slug = rs.getString("slug")
                                 )
                             }
                         }
@@ -445,7 +446,7 @@ object DatabaseClient {
         val sql = buildString {
             append(
                 """
-                SELECT p.id, p.name, p.position, p.nationality, p.birthdate, t.from_club, t.to_club, t.season 
+                SELECT p.id, p.name, p.position, p.nationality, p.birthdate, p.slug, t.from_club, t.to_club, t.season 
                 FROM players p 
                 JOIN transfers t ON p.id = t.transfer_id
                 WHERE 
@@ -505,7 +506,8 @@ object DatabaseClient {
                                     birthDate = rs.getString("birthdate"),
                                     season1 = null,
                                     season2 = null,
-                                    transferId = pId
+                                    transferId = pId,
+                                    slug = rs.getString("slug")
                                 )
                             }
                         }

@@ -10,5 +10,6 @@ data class Player(
         val birthDate: String?,
         val season1: String?,
         val season2: String?,
-        val transferId: Int         // Dahili takip için kalabilir
+        val transferId: Int,        // Dahili takip için kalabilir
+        val slug: String? = null    // 💡 YENİ: Transfermarkt profil linki oluşturmak için (varsa)
 )
