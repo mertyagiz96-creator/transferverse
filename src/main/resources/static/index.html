@@ -1203,7 +1203,9 @@
             document.getElementById('resultsTable').innerHTML =
                 "<tr><td colspan='6' style='text-align:center; padding:20px;'>🤔 Şimdi tahmin sırası! Emin olunca 'Ara' butonuna basın.</td></tr>";
 
-            showToast('🎲 Şans çekildi!');
+            // 💡 Not: burada bilerek bir bildirim (toast) göstermiyoruz — kutulardaki
+            // isimlerin anında değişmesi zaten yeterli geri bildirim, bir popup
+            // takım isimlerinin önüne geçip bir anlığına görünmesini engelliyordu.
         });
     }
 
