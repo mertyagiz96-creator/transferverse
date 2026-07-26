@@ -1163,8 +1163,20 @@
         }
     }
 
+    // 💡 Türkçe karakterleri (ş→s, ç→c, ğ→g, ü→u, ö→o, ı→i) düz harfe çeviriyoruz —
+    // veritabanındaki kulüp isimleri genelde Türkçe karaktersiz kayıtlı (örn.
+    // "Besiktas", "Fenerbahce"), bu dönüşüm olmadan "Beşiktaş" yazınca öneri
+    // bulunamıyordu. Backend'deki toStandardSearch() ile aynı mantık.
     function normalize(str) {
-        return str.toLocaleLowerCase('tr-TR');
+        return str
+            .toLocaleLowerCase('tr-TR')
+            .replace(/ı/g, 'i')
+            .replace(/ğ/g, 'g')
+            .replace(/ü/g, 'u')
+            .replace(/ş/g, 's')
+            .replace(/ö/g, 'o')
+            .replace(/ç/g, 'c')
+            .trim();
     }
 
     // 💡 BİLDİRİM (TOAST)
