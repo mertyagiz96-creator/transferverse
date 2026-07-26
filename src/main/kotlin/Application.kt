@@ -24,6 +24,13 @@ fun main() {
                 call.respond(suggestions)
             }
 
+            // 🖼️ YENİ: Kulüp logoları — frontend sayfa yüklenirken bir kez çekip
+            // hafızada tutuyor, her istek için tekrar tekrar sormuyor.
+            get("/clubLogos") {
+                val logos = DatabaseClient.fetchAllClubLogos()
+                call.respond(logos)
+            }
+
             get("/players") {
                 val clubParam = call.request.queryParameters["club"]
                 if (clubParam.isNullOrBlank()) {

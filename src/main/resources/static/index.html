@@ -255,8 +255,8 @@
         }
 
         .player-mode-avatar {
-            width: 56px;
-            height: 56px;
+            width: 110px;
+            height: 110px;
             border-radius: 50%;
             border: 1px solid rgba(var(--light-green-rgb), 0.5);
             display: flex;
@@ -267,8 +267,8 @@
         }
 
         .player-mode-avatar svg {
-            width: 26px;
-            height: 26px;
+            width: 48px;
+            height: 48px;
         }
 
         .player-mode-avatar img {
@@ -306,6 +306,29 @@
             justify-content: center;
             align-items: center;
             gap: 8px;
+        }
+
+        .club-logo-icon {
+            width: 32px;
+            height: 32px;
+            object-fit: contain;
+        }
+
+        .input-logo-icon {
+            display: inline-flex;
+            vertical-align: middle;
+        }
+
+        .input-logo-icon img {
+            width: 24px;
+            height: 24px;
+            object-fit: contain;
+            vertical-align: middle;
+        }
+
+        .input-flag-icon {
+            font-size: 1.2rem;
+            vertical-align: middle;
         }
 
         .player-mode-answer {
@@ -844,7 +867,7 @@
         }
 
         td {
-            padding: 15px 18px;
+            padding: 18px 18px;
             border-bottom: 1px solid rgba(var(--fg-rgb), 0.05);
             font-size: 0.9rem;
             color: rgba(var(--fg-rgb), 0.85);
@@ -901,8 +924,8 @@
         }
 
         .player-avatar {
-            width: 32px;
-            height: 32px;
+            width: 44px;
+            height: 44px;
             border-radius: 50%;
             object-fit: cover;
             border: 1px solid rgba(var(--fg-rgb), 0.18);
@@ -914,7 +937,7 @@
             align-items: center;
             justify-content: center;
             background: rgba(var(--fg-rgb), 0.06);
-            font-size: 1rem;
+            font-size: 1.3rem;
         }
 
         .hunter-name-row {
@@ -1171,13 +1194,13 @@
 
     <div class="search-card">
         <div class="input-group">
-            <label for="club1Input">1. Kulüp veya Ülke</label>
+            <label for="club1Input">1. Kulüp veya Ülke <span id="club1LogoIcon" class="input-logo-icon"></span></label>
             <input id="club1Input" type="text" autocomplete="off" placeholder="Örn: Galatasaray veya Türkiye" value="Galatasaray">
             <div id="club1Dropdown" class="autocomplete-dropdown"></div>
         </div>
 
         <div class="input-group">
-            <label for="club2Input">2. Kulüp veya Ülke</label>
+            <label for="club2Input">2. Kulüp veya Ülke <span id="club2LogoIcon" class="input-logo-icon"></span></label>
             <input id="club2Input" type="text" autocomplete="off" placeholder="Örn: Kocaelispor veya Almanya" value="Kocaelispor">
             <div id="club2Dropdown" class="autocomplete-dropdown"></div>
         </div>
@@ -1220,6 +1243,70 @@
     let yearFilterValue = null;
     let yearFilterMode = 'before';
     let soundOn = true; // 💡 Varsayılan açık
+
+    let clubLogos = {}; // 🖼️ club_name_std -> logo_url, sayfa yüklenirken bir kere çekiliyor
+    let refreshClubLogoIcons = () => {};
+
+    async function loadClubLogos() {
+        try {
+            const response = await fetch('/clubLogos');
+            if (response.ok) {
+                clubLogos = await response.json();
+                refreshClubLogoIcons();
+            }
+        } catch (e) {
+            console.log("Kulüp logoları yüklenirken pas geçildi.");
+        }
+    }
+
+    function getClubLogo(clubName) {
+        if (!clubName) return null;
+        const key = normalize(clubName);
+
+        if (clubLogos[key]) return clubLogos[key]; // tam eşleşme öncelikli
+
+        // Tam eşleşme yoksa, "Barcelona" ↔ "FC Barcelona" gibi yazım farklarını
+        // yakalamak için esnek (substring) eşleşme deniyoruz.
+        for (const k in clubLogos) {
+            if (k.includes(key) || key.includes(k)) {
+                return clubLogos[k];
+            }
+        }
+        return null;
+    }
+
+    // 🖼️ Arama kutularının yanında, geçerli bir kulüp yazıldıkça/seçildikçe küçük logo gösteriyor
+    function setupClubLogoIcons() {
+        const pairs = [
+            { inputId: 'club1Input', iconId: 'club1LogoIcon' },
+            { inputId: 'club2Input', iconId: 'club2LogoIcon' }
+        ];
+        const updaters = [];
+
+        pairs.forEach(({ inputId, iconId }) => {
+            const input = document.getElementById(inputId);
+            const icon = document.getElementById(iconId);
+            if (!input || !icon) return;
+
+            function updateIcon() {
+                const value = input.value.trim();
+
+                const flag = getFlagEmoji(value);
+                if (flag) {
+                    icon.innerHTML = `<span class="input-flag-icon">${flag}</span>`;
+                    return;
+                }
+
+                const logoUrl = getClubLogo(value);
+                icon.innerHTML = logoUrl ? `<img src="${logoUrl}" alt="" onerror="this.parentElement.innerHTML=''">` : '';
+            }
+
+            input.addEventListener('input', updateIcon);
+            updaters.push(updateIcon);
+        });
+
+        refreshClubLogoIcons = () => updaters.forEach(fn => fn());
+    }
 
     async function loadSuggestions() {
         try {
@@ -1423,7 +1510,14 @@
         'georgia': '🇬🇪', 'armenia': '🇦🇲', 'azerbaijan': '🇦🇿', 'lithuania': '🇱🇹',
         'latvia': '🇱🇻', 'estonia': '🇪🇪', 'cyprus': '🇨🇾', 'malta': '🇲🇹',
         'luxembourg': '🇱🇺', 'india': '🇮🇳', 'indonesia': '🇮🇩', 'thailand': '🇹🇭',
-        'vietnam': '🇻🇳', 'new zealand': '🇳🇿', 'tunisia': '🇹🇳', 'mali': '🇲🇱', 'guinea': '🇬🇳'
+        'vietnam': '🇻🇳', 'new zealand': '🇳🇿', 'tunisia': '🇹🇳', 'mali': '🇲🇱', 'guinea': '🇬🇳',
+
+        // 💡 luckyCountries listesindeki Türkçe isimler için aynı bayraklara ek anahtarlar
+        'ingiltere': '🏴', 'almanya': '🇩🇪', 'fransa': '🇫🇷', 'ispanya': '🇪🇸', 'italya': '🇮🇹',
+        'hollanda': '🇳🇱', 'portekiz': '🇵🇹', 'brezilya': '🇧🇷', 'arjantin': '🇦🇷',
+        'hirvatistan': '🇭🇷', 'sirbistan': '🇷🇸', 'belcika': '🇧🇪', 'isvec': '🇸🇪', 'norvec': '🇳🇴',
+        'fildisi sahili': '🇨🇮', 'fas': '🇲🇦', 'misir': '🇪🇬', 'nijerya': '🇳🇬',
+        'japonya': '🇯🇵', 'guney kore': '🇰🇷'
     };
 
     // 💡 Öneri kutusunda "Besiktas" yerine "Beşiktaş" gibi Türkçe karakterli
@@ -1539,6 +1633,7 @@
             guessRevealedIndices.clear();
             document.getElementById('mainGuessRow').style.display = 'flex';
             document.getElementById('mainGuessInput').value = '';
+            refreshClubLogoIcons();
 
             currentPlayers = [];
             document.getElementById('resultsTable').innerHTML =
@@ -1650,7 +1745,11 @@
                 const seasonBadge = (c.season && c.season !== '-')
                     ? `<span class="badge-season">${c.season}</span>`
                     : '';
-                return `<div class="player-mode-club">${c.club} ${seasonBadge}</div>`;
+                const logoUrl = getClubLogo(c.club);
+                const logoHtml = logoUrl
+                    ? `<img src="${logoUrl}" alt="" class="club-logo-icon" onerror="this.style.display='none'">`
+                    : '';
+                return `<div class="player-mode-club">${logoHtml}${c.club} ${seasonBadge}</div>`;
             }).join('');
 
             const hasRealPhoto = found.imageUrl && !found.imageUrl.includes('default.jpg');
@@ -2375,7 +2474,9 @@
 
     window.onload = () => {
         applyQueryParamsToInputs();
+        setupClubLogoIcons();
         loadSuggestions();
+        loadClubLogos();
         setupAutocomplete("club1Input", "club1Dropdown");
         setupAutocomplete("club2Input", "club2Dropdown");
         setupThemeSwitcher();

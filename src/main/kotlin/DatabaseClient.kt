@@ -258,6 +258,27 @@ object DatabaseClient {
         return 0
     }
 
+    // 🖼️ Kulüp logoları — club_logos tablosundan tek seferde tüm eşlemeyi çekiyor
+    fun fetchAllClubLogos(): Map<String, String> {
+        val result = mutableMapOf<String, String>()
+        try {
+            withConnection { conn ->
+                conn.prepareStatement("SELECT club_name_std, logo_url FROM club_logos").use { stmt ->
+                    stmt.executeQuery().use { rs ->
+                        while (rs.next()) {
+                            val key = rs.getString("club_name_std") ?: continue
+                            val url = rs.getString("logo_url") ?: continue
+                            result[key] = url
+                        }
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            println("🔥 fetchAllClubLogos HATASI: ${e.message}")
+        }
+        return result
+    }
+
     fun fetchAllUniqueSuggestions(): List<String> {
         val suggestions = mutableSetOf<String>()
         val sql = """
