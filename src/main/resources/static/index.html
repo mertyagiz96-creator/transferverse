@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TransferKolik | Player Finder</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚽</text></svg>">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -248,10 +249,52 @@
             color: var(--accent-gold);
         }
 
+        /* 🎯 Quiz skor + kronometre rozeti */
+
         .player-mode-card {
             text-align: center;
             max-width: 420px;
             margin: 0 auto;
+        }
+
+        /* 🎯 Quiz'in skor/pas/süre çubuğu — net görünsün diye büyük ve belirgin */
+        .quiz-stats-bar {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+
+        .quiz-win-title {
+            font-size: 1.6rem;
+            font-weight: 800;
+            color: var(--accent-gold);
+            margin-bottom: 20px;
+        }
+
+        .quiz-stat-box {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+            padding: 10px 6px;
+            border-radius: 4px;
+            border: 1px solid var(--accent-gold);
+            background: rgba(var(--light-green-rgb), 0.1);
+        }
+
+        .quiz-stat-label {
+            font-size: 0.62rem;
+            font-weight: 600;
+            letter-spacing: 0.8px;
+            text-transform: uppercase;
+            color: rgba(var(--fg-rgb), 0.55);
+        }
+
+        .quiz-stat-value {
+            font-size: 1.3rem;
+            font-weight: 800;
+            color: var(--accent-gold);
         }
 
         .player-mode-avatar {
@@ -1029,6 +1072,20 @@
             .search-card {
                 grid-template-columns: 1fr;
             }
+
+            .quiz-stat-box {
+                padding: 8px 2px;
+            }
+
+            .quiz-stat-label {
+                font-size: 0.56rem;
+                letter-spacing: 0.3px;
+            }
+
+            .quiz-stat-value {
+                font-size: 1.1rem;
+            }
+
             .btn-search {
                 width: 100%;
             }
@@ -1124,62 +1181,62 @@
             </div>
 
             <div class="toolbar-wrapper" id="utilityMenuWrapper">
-                <button id="utilityMenuBtn" class="icon-btn" title="Diğer seçenekler (Ses, Paylaş)">⚙️</button>
+                <button id="utilityMenuBtn" class="icon-btn" title="Diğer seçenekler (Ses, Paylaş, Maskeleme, Yıl Filtresi)">⚙️</button>
                 <div id="utilityMenuPanel" class="year-filter-panel">
                     <button id="soundToggleBtn" class="level-option-btn">🔊 Ses</button>
                     <button id="shareBtn" class="level-option-btn">🔗 Paylaş</button>
+
+                    <div class="toolbar-wrapper" id="hunterModeWrapper">
+                        <button id="hunterModeBtn" class="level-option-btn" title="Oyuncu isimlerini gizleyip eğlenceli bir tahmin oyununa çevirir">
+                            🎭 Maskeleme
+                        </button>
+                        <div id="hunterModePanel" class="year-filter-panel">
+                            <button id="hunterOffBtn" class="level-option-btn active">
+                                ⚪ Kapalı
+                                <span class="level-desc">İsimler normal görünür</span>
+                            </button>
+                            <button id="levelEasyBtn" class="level-option-btn">
+                                🟢 Çaylak
+                                <span class="level-desc">Harflerin çoğu görünür</span>
+                            </button>
+                            <button id="levelHardBtn" class="level-option-btn">
+                                🔴 Usta
+                                <span class="level-desc">Sadece ad/soyadın ilk harfi görünür</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="toolbar-wrapper" id="yearFilterWrapper">
+                        <button id="yearFilterBtn" class="level-option-btn" title="Sonuçları belirli bir yıldan önce/sonra olacak şekilde filtrele">
+                            📅 Yıl Filtresi
+                        </button>
+                        <div id="yearFilterPanel" class="year-filter-panel">
+                            <input type="number" id="yearFilterInput" placeholder="Örn: 2015" value="2015">
+                            <select id="yearFilterModeSelect">
+                                <option value="before">Bu yıldan önce (dahil)</option>
+                                <option value="after">Bu yıldan sonra (dahil)</option>
+                            </select>
+                            <div class="yf-actions">
+                                <button id="yearFilterApplyBtn">Uygula</button>
+                                <button id="yearFilterClearBtn">Temizle</button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
 
         <button id="luckyModeBtn" class="toolbar-btn" title="Rastgele iki takım/ülke seçer, aramayı siz başlatırsınız — tahmin oyunu için ideal">
-            🎲 Şans Modu
+            🎲 Rastgele Eşleşme
         </button>
 
         <button id="playerModeBtn" class="toolbar-btn" title="İki büyük kulüpte birden oynamış gizemli bir oyuncuyu tahmin etmeye çalışın">
-            🎮 Quiz Modu
+            🎮 Quiz
         </button>
 
-        <button id="homeMenuBtn" class="toolbar-btn" title="Quiz Modu'ndan çıkıp normal arama ekranına dön" style="display: none;">
+        <button id="homeMenuBtn" class="toolbar-btn" title="Quiz'ndan çıkıp normal arama ekranına dön" style="display: none;">
             🏠 Ana Menü
         </button>
-
-        <div class="toolbar-wrapper" id="hunterModeWrapper">
-            <button id="hunterModeBtn" class="toolbar-btn" title="Oyuncu isimlerini gizleyip eğlenceli bir tahmin oyununa çevirir">
-                🎭 Maskeleme
-            </button>
-            <div id="hunterModePanel" class="year-filter-panel">
-                <button id="hunterOffBtn" class="level-option-btn active">
-                    ⚪ Kapalı
-                    <span class="level-desc">İsimler normal görünür</span>
-                </button>
-                <button id="levelEasyBtn" class="level-option-btn">
-                    🟢 Çaylak
-                    <span class="level-desc">Harflerin çoğu görünür</span>
-                </button>
-                <button id="levelHardBtn" class="level-option-btn">
-                    🔴 Usta
-                    <span class="level-desc">Sadece ad/soyadın ilk harfi görünür</span>
-                </button>
-            </div>
-        </div>
-
-        <div class="toolbar-wrapper" id="yearFilterWrapper">
-            <button id="yearFilterBtn" class="toolbar-btn" title="Sonuçları belirli bir yıldan önce/sonra olacak şekilde filtrele">
-                📅 Yıl Filtresi
-            </button>
-            <div id="yearFilterPanel" class="year-filter-panel">
-                <input type="number" id="yearFilterInput" placeholder="Örn: 2015" value="2015">
-                <select id="yearFilterModeSelect">
-                    <option value="before">Bu yıldan önce (dahil)</option>
-                    <option value="after">Bu yıldan sonra (dahil)</option>
-                </select>
-                <div class="yf-actions">
-                    <button id="yearFilterApplyBtn">Uygula</button>
-                    <button id="yearFilterClearBtn">Temizle</button>
-                </div>
-            </div>
-        </div>
     </div>
 
     <div class="dedication">⚽ Harman'a Sevgiler ❤️</div>
@@ -1253,10 +1310,25 @@
             if (response.ok) {
                 clubLogos = await response.json();
                 refreshClubLogoIcons();
+                preloadLuckyClubLogos();
             }
         } catch (e) {
             console.log("Kulüp logoları yüklenirken pas geçildi.");
         }
+    }
+
+    // 💡 Rastgele Eşleşme'nun havuzu sabit ve küçük (~49 kulüp) — bu logoları sayfa
+    // yüklenirken arka planda önceden indirip tarayıcı önbelleğine koyuyoruz,
+    // böylece Rastgele Eşleşme'na her basışta logo, isimle neredeyse aynı anda görünüyor.
+    function preloadLuckyClubLogos() {
+        const pool = [...luckyClubs, ...superLigClubs];
+        pool.forEach(club => {
+            const url = getClubLogo(club);
+            if (url) {
+                const img = new Image();
+                img.src = url;
+            }
+        });
     }
 
     function getClubLogo(clubName) {
@@ -1336,7 +1408,7 @@
     }
 
     // 💡 BİLDİRİM (TOAST)
-    function showToast(message) {
+    function showToast(message, duration = 2200) {
         let toast = document.getElementById('appToast');
         if (!toast) {
             toast = document.createElement('div');
@@ -1346,7 +1418,7 @@
         toast.textContent = message;
         toast.classList.add('show');
         clearTimeout(toast._hideTimer);
-        toast._hideTimer = setTimeout(() => toast.classList.remove('show'), 2200);
+        toast._hideTimer = setTimeout(() => toast.classList.remove('show'), duration);
     }
 
     // 💡 SES EFEKTİ — harici ses dosyasına gerek yok, Web Audio API ile anlık üretiliyor.
@@ -1579,11 +1651,11 @@
     ];
 
     // 💡 Süper Lig'in büyük 4'ü (GS/FB/BJK/TS) zaten luckyClubs içinde — bu liste
-    // GERİ KALAN bilinen Süper Lig kulüpleri. Şans Modu'nda %10 ihtimalle bu
+    // GERİ KALAN bilinen Süper Lig kulüpleri. Rastgele Eşleşme'nda %10 ihtimalle bu
     // havuzdan bir kulüp seçiliyor, ama İKİNCİ taraf her zaman mevcut Avrupa/
     // uluslararası havuzdan geliyor — yani asla "Süper Lig vs Süper Lig" gibi
     // yorucu bir eşleşme çıkmıyor.
-    // 💡 Şans Modu'nda (%10 ihtimalle) VE Quiz Modu'nda kendi aralarında
+    // 💡 Rastgele Eşleşme'nda (%10 ihtimalle) VE Quiz'nda kendi aralarında
     // eşleşecek, bağımsız bir Süper Lig havuzu — büyük 4 dahil, toplam ~19 kulüp.
     const superLigClubs = [
         'Galatasaray', 'Fenerbahçe', 'Beşiktaş', 'Trabzonspor',
@@ -1648,13 +1720,154 @@
     let playerModeActive = false;
     let photoVisibleByDefault = true; // 🖼️ Kullanıcının son tercihi — yeni sorularda da bu geçerli olacak
 
+    // 🎯 Quiz skor + kronometre — sadece Quiz'na TAZE girişte sıfırlanır,
+    // "Yeni Oyuncu" ile artmaya devam eder (aynı oturum sayılır).
+    let quizScore = 0;
+    let quizPassesRemaining = 3;
+    let quizStartTime = null;
+    let quizTimerInterval = null;
+    let currentQuestionSolved = false; // 🎫 "Yeni Oyuncu" pas hakkı tüketsin mi diye takip ediyor
+
+    function formatElapsedTime(ms) {
+        const totalSeconds = Math.floor(ms / 1000);
+        const minutes = Math.floor(totalSeconds / 60);
+        const seconds = totalSeconds % 60;
+        return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+    }
+
+    function startQuizScoreTimer() {
+        quizScore = 0;
+        quizPassesRemaining = 3;
+        quizStartTime = Date.now();
+
+        clearInterval(quizTimerInterval);
+        quizTimerInterval = setInterval(() => {
+            const timerEl = document.getElementById('quizTimerValue');
+            if (timerEl) timerEl.textContent = formatElapsedTime(Date.now() - quizStartTime);
+        }, 1000);
+    }
+
+    function stopQuizScoreTimer() {
+        clearInterval(quizTimerInterval);
+        quizTimerInterval = null;
+    }
+
+    function incrementQuizScore() {
+        quizScore++;
+        const scoreEl = document.getElementById('quizScoreValue');
+        if (scoreEl) scoreEl.textContent = String(quizScore);
+
+        // 🎉 Seviye atlama kutlaması — uzun süre görünüp kayboluyor
+        if (quizScore === 3) showToast("🎉 Bravo! Level 2'ye geçtin!", 4500);
+        else if (quizScore === 6) showToast("🎉 Bravo! Level 3'e geçtin!", 4500);
+        else if (quizScore === 9) {
+            showToast('🏆 Efsane seviyesindesin! Kazandınız!', 4500);
+            setTimeout(showQuizWinScreen, 1600); // kutlama animasyonu/sesi bitsin diye kısa bekleme
+        }
+    }
+
+    // 🏆 9 doğru bilince oyunu bitirip son skoru/süreyi net gösteren ekran —
+    // "Yeni Oyun" ile her şey sıfırdan başlıyor.
+    function showQuizWinScreen() {
+        clearInterval(quizTimerInterval);
+        quizTimerInterval = null;
+
+        const finalScore = quizScore;
+        const finalTime = quizStartTime ? formatElapsedTime(Date.now() - quizStartTime) : '00:00';
+
+        const resultsTable = document.getElementById("resultsTable");
+        resultsTable.innerHTML = `
+            <tr>
+                <td colspan="5" style="padding: 40px 24px;">
+                    <div class="player-mode-card">
+                        <div class="quiz-win-title">🏆 Kazandınız!</div>
+                        <div class="quiz-stats-bar">
+                            <div class="quiz-stat-box">
+                                <span class="quiz-stat-label">Skor</span>
+                                <span class="quiz-stat-value">${finalScore}</span>
+                            </div>
+                            <div class="quiz-stat-box">
+                                <span class="quiz-stat-label">Süre</span>
+                                <span class="quiz-stat-value">${finalTime}</span>
+                            </div>
+                        </div>
+                        <button id="newQuizGameBtn" class="btn-search">🔄 Yeni Oyun</button>
+                    </div>
+                </td>
+            </tr>
+        `;
+
+        const newGameBtn = document.getElementById('newQuizGameBtn');
+        if (newGameBtn) {
+            newGameBtn.addEventListener('click', () => {
+                startQuizScoreTimer();
+                startPlayerMode();
+            });
+        }
+    }
+
+    // 🎫 Pas hakkı tüketen aksiyon — "Oyuncuyu Göster"e basınca ya da
+    // soruyu çözmeden "Yeni Oyuncu" deyince çağrılıyor. Pas biterse skor
+    // sıfırlanıp yeni oyun başlıyor, kısa bir uyarıyla bildiriliyor.
+    function useQuizPass() {
+        quizPassesRemaining--;
+        const passesEl = document.getElementById('quizPassesValue');
+        if (passesEl) passesEl.textContent = String(Math.max(quizPassesRemaining, 0));
+
+        if (quizPassesRemaining <= 0) {
+            showQuizGameOverScreen();
+            return true; // pas bitti, çağıran taraf kendi başına tekrar startPlayerMode() çağırmasın
+        }
+        return false;
+    }
+
+    // ❌ Pas hakkı bitince gösterilen ekran — "Kazandınız!" ekranıyla aynı mantık:
+    // kullanıcı "Yeni Oyun"a bilerek basana kadar hiçbir şey otomatik başlamıyor.
+    function showQuizGameOverScreen() {
+        clearInterval(quizTimerInterval);
+        quizTimerInterval = null;
+
+        const finalScore = quizScore;
+        const finalTime = quizStartTime ? formatElapsedTime(Date.now() - quizStartTime) : '00:00';
+
+        const resultsTable = document.getElementById("resultsTable");
+        resultsTable.innerHTML = `
+            <tr>
+                <td colspan="5" style="padding: 40px 24px;">
+                    <div class="player-mode-card">
+                        <div class="quiz-win-title">❌ Pas Hakkın Bitti!</div>
+                        <div class="quiz-stats-bar">
+                            <div class="quiz-stat-box">
+                                <span class="quiz-stat-label">Skor</span>
+                                <span class="quiz-stat-value">${finalScore}</span>
+                            </div>
+                            <div class="quiz-stat-box">
+                                <span class="quiz-stat-label">Süre</span>
+                                <span class="quiz-stat-value">${finalTime}</span>
+                            </div>
+                        </div>
+                        <button id="newQuizGameBtn" class="btn-search">🔄 Yeni Oyun</button>
+                    </div>
+                </td>
+            </tr>
+        `;
+
+        const newGameBtn = document.getElementById('newQuizGameBtn');
+        if (newGameBtn) {
+            newGameBtn.addEventListener('click', () => {
+                startQuizScoreTimer();
+                startPlayerMode();
+            });
+        }
+    }
+
     // 🎯 Adam asmaca tarzı: her harfi çizgiyle gösterip yazma özgürlüğü veriyoruz —
     // sesli oynayanlar için mevcut butonlar (Mevki/Maskeli/Göster) aynen duruyor,
     // bu sadece yazarak oynamak isteyenler için EK bir yol.
     function nameToDashPattern(name) {
         return name.split(' ').map(word => {
             return word.split('').map(ch => {
-                if (/[a-zA-ZçÇğĞıİöÖşŞüÜÀ-ÿ]/.test(ch)) return '_';
+                if (/[a-zA-ZçÇğĞıİöÖşŞüÜÀ-ſ]/.test(ch)) return '_';
                 return ch;
             }).join(' ');
         }).join('\u00A0\u00A0\u00A0'); // kırılmaz boşluk — tarayıcı bunu tek boşluğa sıkıştırmıyor
@@ -1662,18 +1875,20 @@
 
     // 💡 Mbappé, Álvaro gibi Türkçe klavyede kolayca yazılamayan aksanlı Latin
     // harfleri için — sadece TAHMİN kontrolünde (kulüp/ülke aramasını etkilemez).
+    // 💡 Mbappé, Álvaro, Modrić, Szczęsny gibi Türkçe klavyede kolayca yazılamayan
+    // aksanlı/özel Latin harfleri için — standart Unicode NFD ayrıştırma tekniğiyle
+    // neredeyse tüm aksanları otomatik temizliyoruz (tek tek harf listelemek yerine).
+    // Sadece TAHMİN kontrolünde kullanılıyor, kulüp/ülke aramasını etkilemez.
     function normalizeGuess(str) {
         return normalize(str.replace(/\s+/g, ' ').trim())
-            .replace(/[áàâãä]/g, 'a')
-            .replace(/[éèêë]/g, 'e')
-            .replace(/[íìîï]/g, 'i')
-            .replace(/[óòôõö]/g, 'o')
-            .replace(/[úùûü]/g, 'u')
-            .replace(/[ñ]/g, 'n')
-            .replace(/[ý]/g, 'y');
+            .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // é,á,ć,š,ž,ę vb. çoğu aksanı temizler
+            .replace(/ł/g, 'l')  // NFD ile ayrışmayan özel harfler
+            .replace(/đ/g, 'd')
+            .replace(/ø/g, 'o')
+            .replace(/ß/g, 'ss');
     }
 
-    // 🖼️ Quiz Modu'nda gerçek fotoğrafı SADECE cevap açıldıktan sonra gösteren
+    // 🖼️ Quiz'nda gerçek fotoğrafı SADECE cevap açıldıktan sonra gösteren
     // yardımcı fonksiyon — önceden çağrılırsa oyunun cevabını ele verir, o yüzden
     // sadece "Oyuncuyu Göster" ve doğru tahmin anlarında çağrılıyor.
     // 🖼️ Genel (fotoğrafsız) avatar ikonu — hem ilk render'da hem "gizle" işleminde kullanılıyor
@@ -1704,8 +1919,11 @@
         const resultsTable = document.getElementById("resultsTable");
         const topLoader = document.getElementById("topLoader");
         resultsTable.innerHTML = ""; // 💡 eski içerik (liste ya da önceki quiz kartı) anında kaybolsun
+        const tableWrapperEl = document.querySelector('.table-wrapper');
+        if (tableWrapperEl) tableWrapperEl.scrollLeft = 0;
         topLoader.style.display = "flex";
         playSearchSound();
+        currentQuestionSolved = false; // 🎫 her yeni soru için sıfırdan başlıyor
 
         const maxAttempts = 8;
         let found = null;
@@ -1792,6 +2010,20 @@
             <tr>
                 <td colspan="5" style="padding: 24px;">
                     <div class="player-mode-card">
+                        <div class="quiz-stats-bar">
+                            <div class="quiz-stat-box">
+                                <span class="quiz-stat-label">Skor</span>
+                                <span class="quiz-stat-value" id="quizScoreValue">${quizScore}</span>
+                            </div>
+                            <div class="quiz-stat-box">
+                                <span class="quiz-stat-label">Pas Hakkı</span>
+                                <span class="quiz-stat-value" id="quizPassesValue">${quizPassesRemaining}</span>
+                            </div>
+                            <div class="quiz-stat-box">
+                                <span class="quiz-stat-label">Süre</span>
+                                <span class="quiz-stat-value" id="quizTimerValue">00:00</span>
+                            </div>
+                        </div>
                         ${bodyHtml}
                         <div class="player-mode-hint-row">
                             <button id="newPlayerModeBtn" class="toolbar-btn">🔄 Yeni Oyuncu</button>
@@ -1847,6 +2079,9 @@
 
                 const guessInputEl = document.getElementById('playerModeGuessInput');
                 if (guessInputEl) guessInputEl.disabled = true;
+
+                useQuizPass(); // 🎫 pes edip cevabı görmek pas hakkı tüketiyor
+                currentQuestionSolved = true; // 💡 "Yeni Oyuncu" bir daha pas düşürmesin diye
             });
         }
 
@@ -1875,6 +2110,8 @@
                     answerEl.classList.remove('masked-revealed');
                     guessInput.disabled = true;
                     playCorrectSound();
+                    incrementQuizScore();
+                    currentQuestionSolved = true;
 
                     const celebration = document.getElementById('playerModeCelebration');
                     if (celebration) celebration.classList.add('play');
@@ -1886,11 +2123,17 @@
             });
         }
 
-        document.getElementById('newPlayerModeBtn').addEventListener('click', startPlayerMode);
+        document.getElementById('newPlayerModeBtn').addEventListener('click', () => {
+            if (!currentQuestionSolved) {
+                const depleted = useQuizPass(); // 🎫 çözülmeden atlanan soru pas hakkı tüketiyor
+                if (depleted) return; // useQuizPass zaten yeni soruyu getirecek, tekrar çağırmıyoruz
+            }
+            startPlayerMode();
+        });
     }
 
-    // 💡 Quiz Modu'ndan çıkma mantığı — tek bir yerden yönetiliyor, hem karttaki
-    // "Normal Aramaya Dön" butonu hem üstteki "Ana Menü" butonu hem de "Quiz Modu"
+    // 💡 Quiz'ndan çıkma mantığı — tek bir yerden yönetiliyor, hem karttaki
+    // "Normal Aramaya Dön" butonu hem üstteki "Ana Menü" butonu hem de "Quiz"
     // butonuna tekrar basma, hepsi bu fonksiyonu çağırıyor. Zaten normal moddaysa
     // (playerModeActive false ise) sessizce hiçbir şey yapmıyor.
     function exitPlayerMode() {
@@ -1899,6 +2142,7 @@
         playerModeActive = false;
         document.getElementById('playerModeBtn').classList.remove('active');
         document.getElementById('homeMenuBtn').style.display = 'none';
+        stopQuizScoreTimer();
         document.querySelector('.search-card').style.display = '';
         document.getElementById('luckyModeBtn').style.display = '';
         document.getElementById('hunterModeWrapper').style.display = '';
@@ -1933,7 +2177,10 @@
             luckyBtn.style.display = 'none';
             hunterWrapper.style.display = 'none';
             yearWrapper.style.display = 'none';
+            document.getElementById('mainGuessRow').style.display = 'none';
+            document.getElementById('mainGuessInput').value = '';
             tableHead.style.display = 'none';
+            startQuizScoreTimer();
             startPlayerMode();
         });
     }
@@ -2048,7 +2295,7 @@
             if (len <= 3) {
                 const midIdx = Math.floor(len / 2);
                 return letters.map((ch, idx) => {
-                    if (idx === midIdx && /[a-zA-ZçÇğĞıİöÖşŞüÜÀ-ÿ]/.test(ch)) {
+                    if (idx === midIdx && /[a-zA-ZçÇğĞıİöÖşŞüÜÀ-ſ]/.test(ch)) {
                         return '✦';
                     }
                     return ch;
@@ -2057,7 +2304,7 @@
 
             return letters.map((ch, idx) => {
                 if (idx === 0 || idx === len - 1) return ch;
-                if (/[a-zA-ZçÇğĞıİöÖşŞüÜÀ-ÿ]/.test(ch) && Math.random() < 0.35) {
+                if (/[a-zA-ZçÇğĞıİöÖşŞüÜÀ-ſ]/.test(ch) && Math.random() < 0.35) {
                     return '✦';
                 }
                 return ch;
@@ -2065,7 +2312,7 @@
         }).join(' ');
     }
 
-    // 🎮 Quiz Modu'nun "Maskeli Göster" ipucuna özel, daha zorlu maskeleme —
+    // 🎮 Quiz'nun "Maskeli Göster" ipucuna özel, daha zorlu maskeleme —
     // her kelimede (ad/soyad) SADECE ilk ve son harf açık, aradaki HER harf
     // (rastgelelik olmadan, tamamen) maskeli. Ana Maskeleme özelliğine (Çaylak/Usta)
     // hiç dokunmuyor, ayrı bir fonksiyon.
@@ -2082,7 +2329,7 @@
 
             return letters.map((ch, idx) => {
                 if (idx === 0 || idx === len - 1) return ch;
-                if (/[a-zA-ZçÇğĞıİöÖşŞüÜÀ-ÿ]/.test(ch)) {
+                if (/[a-zA-ZçÇğĞıİöÖşŞüÜÀ-ſ]/.test(ch)) {
                     return '✦';
                 }
                 return ch;
@@ -2095,7 +2342,7 @@
             return name.split(' ').map(word => {
                 return word.split('').map((ch, idx) => {
                     if (idx === 0) return ch;
-                    if (/[a-zA-ZçÇğĞıİöÖşŞüÜÀ-ÿ]/.test(ch)) {
+                    if (/[a-zA-ZçÇğĞıİöÖşŞüÜÀ-ſ]/.test(ch)) {
                         return '✦';
                     }
                     return ch;
@@ -2221,7 +2468,7 @@
         });
 
         document.addEventListener('click', (e) => {
-            if (!e.target.closest('.toolbar-wrapper')) {
+            if (!e.target.closest('#yearFilterWrapper')) {
                 panel.classList.remove('open');
             }
         });
@@ -2243,6 +2490,8 @@
 
         const resultsTable = document.getElementById("resultsTable");
         resultsTable.innerHTML = "<tr><td colspan='5' style='text-align:center; padding:20px;'>🕵️ Tahmin etmeye başlayın, doğru yazdıkça oyuncular burada belirecek...</td></tr>";
+        const tableWrapperEl = document.querySelector('.table-wrapper');
+        if (tableWrapperEl) tableWrapperEl.scrollLeft = 0;
 
         try {
             let url = input1 && input2
@@ -2410,6 +2659,11 @@
     function renderPlayersTable(players) {
         const resultsTable = document.getElementById("resultsTable");
         resultsTable.innerHTML = "";
+
+        // 💡 Yeni her aramada tablo sola dayalı başlasın — önceki aramadan kalan
+        // yatay kaydırma konumu (örn. tarihleri görmek için sağa kaydırılmışsa) miras kalmasın.
+        const tableWrapperEl = document.querySelector('.table-wrapper');
+        if (tableWrapperEl) tableWrapperEl.scrollLeft = 0;
 
         const filtered = (players || []).filter(passesYearFilter);
         currentFilteredPlayers = filtered; // 🕵️ tahmin kutusunun bakacağı liste
