@@ -11,5 +11,6 @@ data class Player(
         val season1: String?,
         val season2: String?,
         val transferId: Int,        // Dahili takip için kalabilir
-        val slug: String? = null    // 💡 YENİ: Transfermarkt profil linki oluşturmak için (varsa)
+        val slug: String? = null,   // 💡 Transfermarkt profil linki oluşturmak için (varsa)
+        val imageUrl: String? = null // 💡 YENİ: Oyuncu fotoğrafı (varsa, 'default.jpg' ise yok sayılır)
 )

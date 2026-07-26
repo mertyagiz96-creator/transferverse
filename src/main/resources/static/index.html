@@ -271,6 +271,13 @@
             height: 26px;
         }
 
+        .player-mode-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 50%;
+        }
+
         .player-mode-title {
             font-size: 0.95rem;
             font-weight: 500;
@@ -779,6 +786,39 @@
             transform: translateY(0);
         }
 
+        /* 🕵️ Ana modda (Maskeleme açıkken) solo oynayanlar için tahmin kutusu */
+        .main-guess-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 14px;
+        }
+
+        .main-guess-row input {
+            flex: 1;
+            padding: 12px 16px;
+            border-radius: 4px;
+            border: 1px solid rgba(var(--light-green-rgb), 0.35);
+            background: rgba(var(--fg-rgb), 0.02);
+            color: rgb(var(--fg-rgb));
+            font-size: 0.9rem;
+            outline: none;
+            transition: border-color 0.2s ease;
+        }
+
+        .main-guess-row input:focus {
+            border-color: var(--accent-gold);
+        }
+
+        tbody tr.guess-highlight {
+            background: rgba(var(--light-green-rgb), 0.18);
+            animation: guessRowFlash 0.6s ease;
+        }
+
+        @keyframes guessRowFlash {
+            0% { background: rgba(var(--light-green-rgb), 0.4); }
+            100% { background: rgba(var(--light-green-rgb), 0.18); }
+        }
+
         .table-wrapper {
             overflow-x: auto;
             border-radius: 4px;
@@ -851,6 +891,30 @@
             border-radius: 3px;
             font-size: 0.78rem;
             font-weight: 600;
+        }
+
+        /* 🖼️ Tablodaki oyuncu fotoğrafı/avatarı */
+        .player-name-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .player-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 1px solid rgba(var(--fg-rgb), 0.18);
+            flex-shrink: 0;
+        }
+
+        .player-avatar-placeholder {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(var(--fg-rgb), 0.06);
+            font-size: 1rem;
         }
 
         .hunter-name-row {
@@ -1050,10 +1114,10 @@
         </button>
 
         <button id="playerModeBtn" class="toolbar-btn" title="İki büyük kulüpte birden oynamış gizemli bir oyuncuyu tahmin etmeye çalışın">
-            🎮 Oyuncu Modu
+            🎮 Quiz Modu
         </button>
 
-        <button id="homeMenuBtn" class="toolbar-btn" title="Oyuncu Modu'ndan çıkıp normal arama ekranına dön" style="display: none;">
+        <button id="homeMenuBtn" class="toolbar-btn" title="Quiz Modu'ndan çıkıp normal arama ekranına dön" style="display: none;">
             🏠 Ana Menü
         </button>
 
@@ -1121,6 +1185,11 @@
         <button id="searchBtn" class="btn-search">Ara</button>
     </div>
 
+    <div class="main-guess-row" id="mainGuessRow" style="display: none;">
+        <input type="text" id="mainGuessInput" placeholder="🕵️ Bir oyuncunun ad/soyadını tahmin et..." autocomplete="off">
+        <button id="mainGuessCheckBtn" class="toolbar-btn" title="Yazdığın tahmini kontrol et">🔍 Tahmin Et</button>
+    </div>
+
     <div class="table-wrapper">
         <table>
             <thead id="resultsTableHead">
@@ -1128,7 +1197,6 @@
                 <th>Oyuncu Adı</th>
                 <th>Mevki</th>
                 <th>Uyruk</th>
-                <th>Doğum Tarihi</th>
                 <th>1. Kulüp / Ülke Sezonu</th>
                 <th>2. Kulüp / Ülke Sezonu</th>
             </tr>
@@ -1145,6 +1213,7 @@
 <script>
     let allSuggestions = [];
     let currentPlayers = [];
+    let currentFilteredPlayers = []; // 🕵️ Ana moddaki tahmin kutusu bu listeye bakıyor
     let hunterModeOn = false;
     let hunterLevel = 'hard'; // 'easy' = Çaylak, 'hard' = Usta (varsayılan) — Hunter Mode kapalıyken etkisiz
     let yearFilterActive = false;
@@ -1357,6 +1426,41 @@
         'vietnam': '🇻🇳', 'new zealand': '🇳🇿', 'tunisia': '🇹🇳', 'mali': '🇲🇱', 'guinea': '🇬🇳'
     };
 
+    // 💡 Öneri kutusunda "Besiktas" yerine "Beşiktaş" gibi Türkçe karakterli
+    // gösterim için — sadece GÖRÜNTÜ amaçlı, arama zaten her iki yazımla da
+    // aynı şekilde çalışıyor (normalize() ikisini de aynı forma indiriyor).
+    // Not: bazı yazımlar doğrulanmadı, tutmazsa sadece o kulüp için Türkçe
+    // gösterim çalışmaz, aramayı etkilemez.
+    const turkishClubDisplayNames = {
+        'besiktas': 'Beşiktaş',
+        'fenerbahce': 'Fenerbahçe',
+        'basaksehir': 'Başakşehir',
+        'istanbul basaksehir': 'İstanbul Başakşehir',
+        'adana demirspor': 'Adana Demirspor',
+        'alanyaspor': 'Alanyaspor',
+        'antalyaspor': 'Antalyaspor',
+        'caykur rizespor': 'Çaykur Rizespor',
+        'rizespor': 'Çaykur Rizespor',
+        'gaziantep fk': 'Gaziantep FK',
+        'gaziantep': 'Gaziantep FK',
+        'goztepe': 'Göztepe',
+        'hatayspor': 'Hatayspor',
+        'kasimpasa': 'Kasımpaşa',
+        'kayserispor': 'Kayserispor',
+        'konyaspor': 'Konyaspor',
+        'samsunspor': 'Samsunspor',
+        'sivasspor': 'Sivasspor',
+        'eyupspor': 'Eyüpspor',
+        'kocaelispor': 'Kocaelispor',
+        'bodrumspor': 'Bodrumspor',
+        'bodrum fk': 'Bodrum FK'
+    };
+
+    function getDisplayName(rawName) {
+        const key = normalize(rawName);
+        return turkishClubDisplayNames[key] || rawName;
+    }
+
     function getFlagEmoji(nationality) {
         if (!nationality) return '';
         const key = normalize(nationality.trim());
@@ -1380,31 +1484,65 @@
         'Fildişi Sahili', 'Fas', 'Mısır', 'Nijerya', 'Japonya', 'Güney Kore'
     ];
 
+    // 💡 Süper Lig'in büyük 4'ü (GS/FB/BJK/TS) zaten luckyClubs içinde — bu liste
+    // GERİ KALAN bilinen Süper Lig kulüpleri. Şans Modu'nda %10 ihtimalle bu
+    // havuzdan bir kulüp seçiliyor, ama İKİNCİ taraf her zaman mevcut Avrupa/
+    // uluslararası havuzdan geliyor — yani asla "Süper Lig vs Süper Lig" gibi
+    // yorucu bir eşleşme çıkmıyor.
+    // 💡 Şans Modu'nda (%10 ihtimalle) VE Quiz Modu'nda kendi aralarında
+    // eşleşecek, bağımsız bir Süper Lig havuzu — büyük 4 dahil, toplam ~19 kulüp.
+    const superLigClubs = [
+        'Galatasaray', 'Fenerbahçe', 'Beşiktaş', 'Trabzonspor',
+        'Başakşehir', 'Adana Demirspor', 'Alanyaspor', 'Antalyaspor',
+        'Çaykur Rizespor', 'Gaziantep FK', 'Göztepe', 'Hatayspor',
+        'Kasımpaşa', 'Kayserispor', 'Konyaspor', 'Samsunspor',
+        'Sivasspor', 'Eyüpspor', 'Kocaelispor'
+    ];
+
     function pickRandom(arr) {
         return arr[Math.floor(Math.random() * arr.length)];
     }
 
     function setupLuckyMode() {
         document.getElementById('luckyModeBtn').addEventListener('click', () => {
-            const club1 = pickRandom(luckyClubs);
-            let secondPick;
+            let club1, secondPick;
 
-            if (Math.random() < 0.6) {
+            // 💡 %10 ihtimalle: İKİ taraf da Süper Lig havuzundan, birbirleriyle
+            // eşleşiyor. %90 ihtimalle: mevcut Avrupa/uluslararası mantık aynen devam.
+            if (Math.random() < 0.1) {
+                club1 = pickRandom(superLigClubs);
                 let candidate;
                 do {
-                    candidate = pickRandom(luckyClubs);
+                    candidate = pickRandom(superLigClubs);
                 } while (candidate === club1);
                 secondPick = candidate;
             } else {
-                secondPick = pickRandom(luckyCountries);
+                club1 = pickRandom(luckyClubs);
+
+                if (Math.random() < 0.6) {
+                    let candidate;
+                    do {
+                        candidate = pickRandom(luckyClubs);
+                    } while (candidate === club1);
+                    secondPick = candidate;
+                } else {
+                    secondPick = pickRandom(luckyCountries);
+                }
             }
 
             document.getElementById('club1Input').value = club1;
             document.getElementById('club2Input').value = secondPick;
 
+            // 💡 .value ataması native 'input' olayını tetiklemiyor, o yüzden
+            // tahmin kutusunun görünürlük/sıfırlama mantığını burada elle çalıştırıyoruz.
+            hasSearchedCurrentPair = false;
+            guessRevealedIndices.clear();
+            document.getElementById('mainGuessRow').style.display = 'flex';
+            document.getElementById('mainGuessInput').value = '';
+
             currentPlayers = [];
             document.getElementById('resultsTable').innerHTML =
-                "<tr><td colspan='6' style='text-align:center; padding:20px;'>🤔 Şimdi tahmin sırası! Emin olunca 'Ara' butonuna basın.</td></tr>";
+                "<tr><td colspan='5' style='text-align:center; padding:20px;'>🤔 Şimdi tahmin sırası! Emin olunca 'Ara' butonuna basın.</td></tr>";
 
             // 💡 Not: burada bilerek bir bildirim (toast) göstermiyoruz — kutulardaki
             // isimlerin anında değişmesi zaten yeterli geri bildirim, bir popup
@@ -1413,6 +1551,7 @@
     }
 
     let playerModeActive = false;
+    let photoVisibleByDefault = true; // 🖼️ Kullanıcının son tercihi — yeni sorularda da bu geçerli olacak
 
     // 🎯 Adam asmaca tarzı: her harfi çizgiyle gösterip yazma özgürlüğü veriyoruz —
     // sesli oynayanlar için mevcut butonlar (Mevki/Maskeli/Göster) aynen duruyor,
@@ -1420,14 +1559,50 @@
     function nameToDashPattern(name) {
         return name.split(' ').map(word => {
             return word.split('').map(ch => {
-                if (/[a-zA-ZçÇğĞıİöÖşŞüÜ]/.test(ch)) return '_';
+                if (/[a-zA-ZçÇğĞıİöÖşŞüÜÀ-ÿ]/.test(ch)) return '_';
                 return ch;
             }).join(' ');
         }).join('\u00A0\u00A0\u00A0'); // kırılmaz boşluk — tarayıcı bunu tek boşluğa sıkıştırmıyor
     }
 
+    // 💡 Mbappé, Álvaro gibi Türkçe klavyede kolayca yazılamayan aksanlı Latin
+    // harfleri için — sadece TAHMİN kontrolünde (kulüp/ülke aramasını etkilemez).
     function normalizeGuess(str) {
-        return normalize(str.replace(/\s+/g, ' ').trim());
+        return normalize(str.replace(/\s+/g, ' ').trim())
+            .replace(/[áàâãä]/g, 'a')
+            .replace(/[éèêë]/g, 'e')
+            .replace(/[íìîï]/g, 'i')
+            .replace(/[óòôõö]/g, 'o')
+            .replace(/[úùûü]/g, 'u')
+            .replace(/[ñ]/g, 'n')
+            .replace(/[ý]/g, 'y');
+    }
+
+    // 🖼️ Quiz Modu'nda gerçek fotoğrafı SADECE cevap açıldıktan sonra gösteren
+    // yardımcı fonksiyon — önceden çağrılırsa oyunun cevabını ele verir, o yüzden
+    // sadece "Oyuncuyu Göster" ve doğru tahmin anlarında çağrılıyor.
+    // 🖼️ Genel (fotoğrafsız) avatar ikonu — hem ilk render'da hem "gizle" işleminde kullanılıyor
+    const genericAvatarSvg = `
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="1.4"/>
+            <path d="M4 20c0-4.4 3.6-7 8-7s8 2.6 8 7" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+        </svg>
+    `;
+
+    function revealPlayerModeAvatar() {
+        const avatarEl = document.getElementById('playerModeAvatar');
+        if (!avatarEl) return;
+
+        const photoUrl = avatarEl.dataset.photo;
+        if (photoUrl) {
+            avatarEl.innerHTML = `<img src="${photoUrl}" alt="" onerror="this.style.display='none'">`;
+        }
+    }
+
+    function hidePlayerModeAvatar() {
+        const avatarEl = document.getElementById('playerModeAvatar');
+        if (!avatarEl) return;
+        avatarEl.innerHTML = genericAvatarSvg;
     }
 
     async function startPlayerMode() {
@@ -1440,7 +1615,10 @@
         let found = null;
 
         for (let i = 0; i < maxAttempts; i++) {
-            const shuffled = [...luckyClubs].sort(() => Math.random() - 0.5);
+            // 💡 %10 ihtimalle bu deneme Süper Lig havuzundan (kendi aralarında),
+            // %90 ihtimalle mevcut Avrupa/uluslararası havuzdan.
+            const pool = Math.random() < 0.1 ? superLigClubs : luckyClubs;
+            const shuffled = [...pool].sort(() => Math.random() - 0.5);
             const pick = shuffled.slice(0, 2);
 
             try {
@@ -1475,12 +1653,14 @@
                 return `<div class="player-mode-club">${c.club} ${seasonBadge}</div>`;
             }).join('');
 
+            const hasRealPhoto = found.imageUrl && !found.imageUrl.includes('default.jpg');
+            const showPhotoNow = hasRealPhoto && photoVisibleByDefault;
+            const initialAvatarInner = showPhotoNow
+                ? `<img src="${found.imageUrl}" alt="" onerror="this.style.display='none'">`
+                : genericAvatarSvg;
             const avatarHtml = `
-                <div class="player-mode-avatar">
-                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="1.4"/>
-                        <path d="M4 20c0-4.4 3.6-7 8-7s8 2.6 8 7" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
-                    </svg>
+                <div class="player-mode-avatar" id="playerModeAvatar" data-photo="${hasRealPhoto ? found.imageUrl : ''}">
+                    ${initialAvatarInner}
                 </div>
             `;
 
@@ -1502,6 +1682,7 @@
                 <div class="player-mode-hint-row">
                     <button id="revealPositionBtn" class="toolbar-btn">🧭 Mevkisini Göster</button>
                     <button id="revealMaskedBtn" class="toolbar-btn">🎭 Maskeli Göster</button>
+                    ${hasRealPhoto ? `<button id="togglePhotoBtn" class="toolbar-btn">${showPhotoNow ? '🙈 Fotoğrafı Gizle' : '🖼️ Fotoğrafı Göster'}</button>` : ''}
                     <button id="revealPlayerModeBtn" class="btn-search">Oyuncuyu Göster</button>
                 </div>
             `;
@@ -1509,7 +1690,7 @@
 
         resultsTable.innerHTML = `
             <tr>
-                <td colspan="6" style="padding: 24px;">
+                <td colspan="5" style="padding: 24px;">
                     <div class="player-mode-card">
                         ${bodyHtml}
                         <div class="player-mode-hint-row">
@@ -1540,6 +1721,21 @@
             });
         }
 
+        const togglePhotoBtn = document.getElementById('togglePhotoBtn');
+        if (togglePhotoBtn) {
+            togglePhotoBtn.addEventListener('click', () => {
+                photoVisibleByDefault = !photoVisibleByDefault;
+
+                if (photoVisibleByDefault) {
+                    revealPlayerModeAvatar();
+                    togglePhotoBtn.textContent = '🙈 Fotoğrafı Gizle';
+                } else {
+                    hidePlayerModeAvatar();
+                    togglePhotoBtn.textContent = '🖼️ Fotoğrafı Göster';
+                }
+            });
+        }
+
         const revealBtn = document.getElementById('revealPlayerModeBtn');
         if (revealBtn) {
             revealBtn.addEventListener('click', () => {
@@ -1547,6 +1743,7 @@
                 answerEl.textContent = answerEl.dataset.real;
                 answerEl.classList.add('revealed');
                 answerEl.classList.remove('masked-revealed');
+                revealPlayerModeAvatar();
 
                 const guessInputEl = document.getElementById('playerModeGuessInput');
                 if (guessInputEl) guessInputEl.disabled = true;
@@ -1581,6 +1778,7 @@
 
                     const celebration = document.getElementById('playerModeCelebration');
                     if (celebration) celebration.classList.add('play');
+                    revealPlayerModeAvatar();
                 } else {
                     guessCheck.style.display = 'none';
                     guessInput.classList.remove('correct');
@@ -1591,8 +1789,8 @@
         document.getElementById('newPlayerModeBtn').addEventListener('click', startPlayerMode);
     }
 
-    // 💡 Oyuncu Modu'ndan çıkma mantığı — tek bir yerden yönetiliyor, hem karttaki
-    // "Normal Aramaya Dön" butonu hem üstteki "Ana Menü" butonu hem de "Oyuncu Modu"
+    // 💡 Quiz Modu'ndan çıkma mantığı — tek bir yerden yönetiliyor, hem karttaki
+    // "Normal Aramaya Dön" butonu hem üstteki "Ana Menü" butonu hem de "Quiz Modu"
     // butonuna tekrar basma, hepsi bu fonksiyonu çağırıyor. Zaten normal moddaysa
     // (playerModeActive false ise) sessizce hiçbir şey yapmıyor.
     function exitPlayerMode() {
@@ -1673,11 +1871,12 @@
             matches.forEach(match => {
                 const item = document.createElement("div");
                 item.className = "autocomplete-item";
-                item.textContent = match;
+                const displayName = getDisplayName(match);
+                item.textContent = displayName;
 
                 item.addEventListener("mousedown", (e) => {
                     e.preventDefault();
-                    input.value = match;
+                    input.value = displayName;
                     closeDropdown();
                 });
 
@@ -1748,7 +1947,7 @@
             if (len <= 3) {
                 const midIdx = Math.floor(len / 2);
                 return letters.map((ch, idx) => {
-                    if (idx === midIdx && /[a-zA-ZçÇğĞıİöÖşŞüÜ]/.test(ch)) {
+                    if (idx === midIdx && /[a-zA-ZçÇğĞıİöÖşŞüÜÀ-ÿ]/.test(ch)) {
                         return '✦';
                     }
                     return ch;
@@ -1757,7 +1956,7 @@
 
             return letters.map((ch, idx) => {
                 if (idx === 0 || idx === len - 1) return ch;
-                if (/[a-zA-ZçÇğĞıİöÖşŞüÜ]/.test(ch) && Math.random() < 0.35) {
+                if (/[a-zA-ZçÇğĞıİöÖşŞüÜÀ-ÿ]/.test(ch) && Math.random() < 0.35) {
                     return '✦';
                 }
                 return ch;
@@ -1765,7 +1964,7 @@
         }).join(' ');
     }
 
-    // 🎮 Oyuncu Modu'nun "Maskeli Göster" ipucuna özel, daha zorlu maskeleme —
+    // 🎮 Quiz Modu'nun "Maskeli Göster" ipucuna özel, daha zorlu maskeleme —
     // her kelimede (ad/soyad) SADECE ilk ve son harf açık, aradaki HER harf
     // (rastgelelik olmadan, tamamen) maskeli. Ana Maskeleme özelliğine (Çaylak/Usta)
     // hiç dokunmuyor, ayrı bir fonksiyon.
@@ -1782,7 +1981,7 @@
 
             return letters.map((ch, idx) => {
                 if (idx === 0 || idx === len - 1) return ch;
-                if (/[a-zA-ZçÇğĞıİöÖşŞüÜ]/.test(ch)) {
+                if (/[a-zA-ZçÇğĞıİöÖşŞüÜÀ-ÿ]/.test(ch)) {
                     return '✦';
                 }
                 return ch;
@@ -1795,7 +1994,7 @@
             return name.split(' ').map(word => {
                 return word.split('').map((ch, idx) => {
                     if (idx === 0) return ch;
-                    if (/[a-zA-ZçÇğĞıİöÖşŞüÜ]/.test(ch)) {
+                    if (/[a-zA-ZçÇğĞıİöÖşŞüÜÀ-ÿ]/.test(ch)) {
                         return '✦';
                     }
                     return ch;
@@ -1927,56 +2126,202 @@
         });
     }
 
+    // 🕵️ Ana moddaki (Maskeleme açıkken) tahmin kutusu — ekrandaki oyunculardan
+    // birinin ad-soyadını ya da sadece soyadını doğru yazınca o satırı açıp
+    // vurguluyor, kutuyu temizleyip bir sonraki tahmine hazır hâle getiriyor.
+    let hasSearchedCurrentPair = false; // 🕵️ mevcut kulüp çifti için veri çekildi mi (Ara ile ya da sessizce)
+    let guessRevealedIndices = new Set(); // 🕵️ tahmin modunda hangi oyuncular zaten satır olarak eklendi
+
+    // 🕵️ "Ara"ya hiç basılmadan, tahmin kutusuna yazmaya başlayınca arka planda
+    // sessizce arama yapıyoruz — kullanıcı sonuçları görmüyor, sadece doğru
+    // tahminlerle tek tek açılıyor. "Ara"ya basarsa mevcut akış (tam liste) aynen çalışır.
+    async function fetchForGuessMode() {
+        const input1 = document.getElementById("club1Input").value.trim();
+        const input2 = document.getElementById("club2Input").value.trim();
+        if (!input1 || !input2) return; // 💡 tahmin modu sadece İKİ kulüp de doluyken anlamlı
+
+        const resultsTable = document.getElementById("resultsTable");
+        resultsTable.innerHTML = "<tr><td colspan='5' style='text-align:center; padding:20px;'>🕵️ Tahmin etmeye başlayın, doğru yazdıkça oyuncular burada belirecek...</td></tr>";
+
+        try {
+            let url = input1 && input2
+                ? `/commonPlayers?club1=${encodeURIComponent(input1)}&club2=${encodeURIComponent(input2)}`
+                : `/players?club=${encodeURIComponent(input1 || input2)}`;
+
+            const response = await fetch(url);
+            const players = await response.json();
+
+            currentPlayers = players || [];
+            currentFilteredPlayers = currentPlayers.filter(passesYearFilter);
+
+            if (currentFilteredPlayers.length === 0) {
+                resultsTable.innerHTML = "<tr><td colspan='5' style='text-align:center; padding:20px;'>Kriterlere uygun oyuncu bulunamadı.</td></tr>";
+            }
+        } catch (error) {
+            resultsTable.innerHTML = `<tr><td colspan='5' style='text-align:center; color:#ff8a80; padding:20px;'>Hata: ${error.message}</td></tr>`;
+        }
+
+        hasSearchedCurrentPair = true;
+    }
+
+    function setupMainGuessInput() {
+        const input = document.getElementById('mainGuessInput');
+        if (!input) return;
+
+        function checkGuess(showFeedbackOnFail) {
+            if (!hasSearchedCurrentPair) return; // henüz aranmadı
+            if (!input.value.trim()) return;
+
+            const guess = normalizeGuess(input.value);
+            if (!guess) return;
+
+            const resultsTable = document.getElementById("resultsTable");
+            let matchedAny = false;
+
+            currentFilteredPlayers.forEach((player, idx) => {
+                const cleanName = (player.name || "").replace(/\s*\(\d+\)\s*/g, "").trim();
+                if (!cleanName) return;
+
+                const words = cleanName.split(/\s+/);
+                const surname = words[words.length - 1];
+                const fullNormalized = normalizeGuess(cleanName);
+                const surnameNormalized = normalizeGuess(surname);
+
+                if (guess !== fullNormalized && guess !== surnameNormalized) return;
+
+                matchedAny = true;
+                const existingRow = document.querySelector(`#resultsTable tr[data-player-idx="${idx}"]`);
+
+                if (existingRow) {
+                    // Satır zaten tabloda (Ara ile tam liste gösterilmiş) — sadece aç/vurgula
+                    existingRow.classList.add('guess-highlight');
+                    const nameSpan = existingRow.querySelector('.hunter-name');
+                    const revealBtn = existingRow.querySelector('.hunter-reveal-btn');
+                    if (nameSpan && !nameSpan.classList.contains('revealed')) {
+                        nameSpan.textContent = nameSpan.dataset.real;
+                        nameSpan.classList.add('revealed');
+                        if (revealBtn) revealBtn.textContent = '🙈';
+                    }
+                    existingRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                } else if (!guessRevealedIndices.has(idx)) {
+                    // Satır henüz yok (tahmin modu) — yeni satır olarak ekliyoruz
+                    guessRevealedIndices.add(idx);
+                    if (guessRevealedIndices.size === 1) {
+                        resultsTable.innerHTML = ""; // "tahmin etmeye başlayın" mesajını temizle
+                    }
+                    const newRow = resultsTable.insertRow();
+                    newRow.dataset.playerIdx = idx;
+                    newRow.classList.add('guess-highlight');
+                    buildPlayerRowCells(newRow, player, true); // forceReveal: doğru bilindi, düz göster
+                }
+            });
+
+            if (matchedAny) {
+                input.value = '';
+            } else if (showFeedbackOnFail) {
+                showToast('❌ Böyle biri yok, tekrar dene!');
+            }
+        }
+
+        // 💡 Yazmaya başlayınca, bu kulüp çifti için henüz arama yapılmadıysa
+        // otomatik olarak (sessizce) arka planda arıyoruz — kullanıcı her
+        // denemesinde ayrıca bir butona basmak zorunda kalmasın diye.
+        async function handleGuessAttempt(showFeedbackOnFail) {
+            if (!input.value.trim()) return;
+
+            if (!hasSearchedCurrentPair) {
+                await fetchForGuessMode();
+            }
+
+            checkGuess(showFeedbackOnFail);
+        }
+
+        input.addEventListener('input', () => handleGuessAttempt(false));
+
+        const checkBtn = document.getElementById('mainGuessCheckBtn');
+        if (checkBtn) {
+            checkBtn.addEventListener('click', () => handleGuessAttempt(true));
+        }
+
+        // Kulüp/ülke kutuları değişirse, yeni çift için tekrar (sessizce) arama gerekiyor
+        // ve tahmin kutusu tekrar anlamlı hale geldiği için gösteriliyor.
+        ['club1Input', 'club2Input'].forEach(id => {
+            document.getElementById(id).addEventListener('input', () => {
+                hasSearchedCurrentPair = false;
+                guessRevealedIndices.clear();
+                document.getElementById('mainGuessRow').style.display = 'flex';
+                input.value = '';
+            });
+        });
+    }
+
+    // 💡 Bir oyuncunun tablo satırı hücrelerini oluşturan ortak fonksiyon —
+    // hem normal render (renderPlayersTable) hem de tahmin modunda tek tek
+    // satır ekleme (setupMainGuessInput) bunu kullanıyor, kod tekrarı yok.
+    // forceReveal=true ise (doğru tahminle açılan satırlarda), Maskeleme
+    // açık olsa bile isim düz metin gösteriliyor — zaten doğru bilindi.
+    function buildPlayerRowCells(row, player, forceReveal) {
+        let cleanName = (player.name || "-").replace(/\s*\(\d+\)\s*/g, "").trim();
+        const nameCell = row.insertCell();
+        nameCell.style.fontWeight = "600";
+
+        // 🖼️ Fotoğraf sadece isim GİZLİ DEĞİLKEN gösteriliyor — Maskeleme açıkken
+        // fotoğraf da isim gibi gizli kalmalı, yoksa oyunu anında ele verir.
+        const nameIsVisible = !hunterModeOn || forceReveal;
+        const hasRealPhoto = player.imageUrl && !player.imageUrl.includes('default.jpg');
+        const avatarHtml = nameIsVisible
+            ? (hasRealPhoto
+                ? `<img src="${player.imageUrl}" alt="" class="player-avatar" loading="lazy" onerror="this.outerHTML='<span class=\\'player-avatar player-avatar-placeholder\\'>👤</span>'">`
+                : `<span class="player-avatar player-avatar-placeholder">👤</span>`)
+            : `<span class="player-avatar player-avatar-placeholder">❓</span>`;
+
+        if (hunterModeOn && !forceReveal) {
+            const masked = maskName(cleanName);
+            const safeReal = cleanName.replace(/"/g, "&quot;");
+            const safeMasked = masked.replace(/"/g, "&quot;");
+            nameCell.innerHTML = `<div class="player-name-row">${avatarHtml}<div class="hunter-name-row"><span class="hunter-name" data-real="${safeReal}" data-masked="${safeMasked}">${masked}</span><button class="hunter-reveal-btn" title="Göster/Gizle">👁</button></div></div>`;
+        } else {
+            if (player.slug && player.playerId) {
+                const profileUrl = `https://www.transfermarkt.com/${player.slug}/profil/spieler/${player.playerId}`;
+                nameCell.innerHTML = `<div class="player-name-row">${avatarHtml}<a href="${profileUrl}" target="_blank" rel="noopener noreferrer" class="player-name-link">${cleanName}</a></div>`;
+            } else {
+                nameCell.innerHTML = `<div class="player-name-row">${avatarHtml}<span>${cleanName}</span></div>`;
+            }
+        }
+
+        const posCell = row.insertCell();
+        posCell.textContent = player.position || "-";
+        posCell.className = "badge-position";
+
+        const natCell = row.insertCell();
+        let rawNationality = (player.nationality || "-").trim();
+        let firstNationality = rawNationality.split(/[\s,–-]+/)[0];
+        const flag = getFlagEmoji(firstNationality);
+        natCell.innerHTML = `<span class="badge-country">${flag ? flag + ' ' : ''}${firstNationality}</span>`;
+
+        const s1Cell = row.insertCell();
+        s1Cell.innerHTML = `<span class="badge-season">${player.season1 || "-"}</span>`;
+
+        const s2Cell = row.insertCell();
+        s2Cell.innerHTML = `<span class="badge-season">${player.season2 || "-"}</span>`;
+    }
+
     function renderPlayersTable(players) {
         const resultsTable = document.getElementById("resultsTable");
         resultsTable.innerHTML = "";
 
         const filtered = (players || []).filter(passesYearFilter);
+        currentFilteredPlayers = filtered; // 🕵️ tahmin kutusunun bakacağı liste
 
         if (!filtered || filtered.length === 0) {
-            resultsTable.innerHTML = "<tr><td colspan='6' style='text-align:center; padding:20px;'>Kriterlere uygun oyuncu bulunamadı.</td></tr>";
+            resultsTable.innerHTML = "<tr><td colspan='5' style='text-align:center; padding:20px;'>Kriterlere uygun oyuncu bulunamadı.</td></tr>";
             return;
         }
 
-        filtered.forEach(player => {
+        filtered.forEach((player, playerIdx) => {
             const row = resultsTable.insertRow();
-
-            let cleanName = (player.name || "-").replace(/\s*\(\d+\)\s*/g, "").trim();
-            const nameCell = row.insertCell();
-            nameCell.style.fontWeight = "600";
-
-            if (hunterModeOn) {
-                const masked = maskName(cleanName);
-                const safeReal = cleanName.replace(/"/g, "&quot;");
-                const safeMasked = masked.replace(/"/g, "&quot;");
-                nameCell.innerHTML = `<div class="hunter-name-row"><span class="hunter-name" data-real="${safeReal}" data-masked="${safeMasked}">${masked}</span><button class="hunter-reveal-btn" title="Göster/Gizle">👁</button></div>`;
-            } else {
-                if (player.slug && player.playerId) {
-                    const profileUrl = `https://www.transfermarkt.com/${player.slug}/profil/spieler/${player.playerId}`;
-                    nameCell.innerHTML = `<a href="${profileUrl}" target="_blank" rel="noopener noreferrer" class="player-name-link">${cleanName}</a>`;
-                } else {
-                    nameCell.textContent = cleanName;
-                }
-            }
-
-            const posCell = row.insertCell();
-            posCell.textContent = player.position || "-";
-            posCell.className = "badge-position";
-
-            const natCell = row.insertCell();
-            let rawNationality = (player.nationality || "-").trim();
-            let firstNationality = rawNationality.split(/[\s,–-]+/)[0];
-            const flag = getFlagEmoji(firstNationality);
-            natCell.innerHTML = `<span class="badge-country">${flag ? flag + ' ' : ''}${firstNationality}</span>`;
-
-            const dobCell = row.insertCell();
-            dobCell.textContent = player.birthDate || "-";
-
-            const s1Cell = row.insertCell();
-            s1Cell.innerHTML = `<span class="badge-season">${player.season1 || "-"}</span>`;
-
-            const s2Cell = row.insertCell();
-            s2Cell.innerHTML = `<span class="badge-season">${player.season2 || "-"}</span>`;
+            row.dataset.playerIdx = playerIdx;
+            buildPlayerRowCells(row, player, false);
         });
 
         if (hunterModeOn) {
@@ -1998,7 +2343,7 @@
         const topLoader = document.getElementById("topLoader");
 
         if (!input1 && !input2) {
-            resultsTable.innerHTML = "<tr><td colspan='6' style='text-align:center; padding:20px;'>Lütfen en az bir alan doldurunuz.</td></tr>";
+            resultsTable.innerHTML = "<tr><td colspan='5' style='text-align:center; padding:20px;'>Lütfen en az bir alan doldurunuz.</td></tr>";
             return;
         }
 
@@ -2015,9 +2360,12 @@
 
             currentPlayers = players || [];
             renderPlayersTable(currentPlayers);
+            hasSearchedCurrentPair = true;
+            guessRevealedIndices.clear();
+            document.getElementById('mainGuessRow').style.display = 'none';
 
         } catch (error) {
-            resultsTable.innerHTML = `<tr><td colspan='6' style='text-align:center; color:#ff8a80; padding:20px;'>Hata: ${error.message}</td></tr>`;
+            resultsTable.innerHTML = `<tr><td colspan='5' style='text-align:center; color:#ff8a80; padding:20px;'>Hata: ${error.message}</td></tr>`;
         } finally {
             topLoader.style.display = "none";
         }
@@ -2039,6 +2387,7 @@
         setupLuckyMode();
         setupPlayerMode();
         setupHomeMenuButton();
+        setupMainGuessInput();
         searchPlayers();
     };
 </script>
