@@ -1862,12 +1862,13 @@
         const scoreEl = document.getElementById('quizScoreValue');
         if (scoreEl) scoreEl.textContent = String(quizScore);
 
-        // 🎉 Seviye atlama kutlaması — uzun süre görünüp kayboluyor
-        if (quizScore === 3) showToast("🎉 Bravo! Level 2'ye geçtin!", 4500);
-        else if (quizScore === 6) showToast("🎉 Bravo! Level 3'e geçtin!", 4500);
-        else if (quizScore === 9) {
+        // 🎉 Seviye atlama kutlaması — her 3 doğruda bir, uzun süre görünüp kayboluyor
+        if (quizScore === 21) {
             showToast('🏆 Efsane seviyesindesin! Kazandınız!', 4500);
             setTimeout(showQuizWinScreen, 1600); // kutlama animasyonu/sesi bitsin diye kısa bekleme
+        } else if (quizScore % 3 === 0) {
+            const level = quizScore / 3 + 1;
+            showToast(`🎉 Bravo! Level ${level}'e geçtin!`, 4500);
         }
     }
 
@@ -2226,7 +2227,7 @@
                     // 🔄 Doğru bilince otomatik yeni soru — kutlamayı görsün diye kısa
                     // bir bekleme sonra. 9'a ulaşıldıysa (kazanma ekranı) burada değil,
                     // incrementQuizScore() kendi geçişini zaten yönetiyor.
-                    if (quizScore < 9) {
+                    if (quizScore < 21) {
                         // 💡 Otomatik geçiş beklerken "Yeni Oyuncu"/"Yeni Oyun" butonlarına
                         // basılırsa çifte geçiş (ve olası pas karışıklığı) olabilir — o yüzden
                         // bekleme süresince kilitliyoruz. Yeni soru render olunca zaten
