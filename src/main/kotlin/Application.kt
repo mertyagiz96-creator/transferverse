@@ -5,8 +5,15 @@ import io.ktor.server.engine.*
 import io.ktor.server.http.content.*
 import io.ktor.server.netty.*
 import io.ktor.server.plugins.contentnegotiation.*
+import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import kotlinx.serialization.Serializable
+
+@Serializable data class CreateRoomRequest(val playerName: String, val winTarget: Int = 5)
+@Serializable data class JoinRoomRequest(val roomCode: String, val playerName: String)
+@Serializable data class DuelAnswerRequest(val roomCode: String, val playerName: String, val guess: String)
+@Serializable data class NextRoundRequest(val roomCode: String)
 
 fun main() {
     val port = System.getenv("PORT")?.toIntOrNull() ?: 8080
@@ -74,6 +81,54 @@ fun main() {
                     call.respond(HttpStatusCode.NotFound)
                 } else {
                     call.respond(result)
+                }
+            }
+
+            // 🏆 YENİ: Arkadaşla Yarış (Duel) modu — tamamen ayrı, mevcut hiçbir
+            // endpoint'e dokunmuyor. Polling tabanlı basit gerçek-zamanlı yarışma.
+            post("/duel/create") {
+                val body = call.receive<CreateRoomRequest>()
+                val room = DuelManager.createRoom(body.playerName, body.winTarget)
+                call.respond(DuelManager.toState(room))
+            }
+
+            post("/duel/join") {
+                val body = call.receive<JoinRoomRequest>()
+                when (val result = DuelManager.joinRoom(body.roomCode, body.playerName)) {
+                    is JoinResult.Success -> call.respond(DuelManager.toState(result.room))
+                    is JoinResult.RoomFull -> call.respond(HttpStatusCode.Conflict, mapOf("error" to "Bu oda dolu"))
+                    is JoinResult.RoomNotFound -> call.respond(HttpStatusCode.NotFound, mapOf("error" to "Oda bulunamadı"))
+                }
+            }
+
+            get("/duel/state") {
+                val code = call.request.queryParameters["roomCode"] ?: ""
+                val playerName = call.request.queryParameters["playerName"]
+                val room = DuelManager.getRoom(code, playerName)
+                if (room == null) {
+                    call.respond(HttpStatusCode.NotFound, mapOf("error" to "Oda bulunamadı"))
+                } else {
+                    call.respond(DuelManager.toState(room))
+                }
+            }
+
+            post("/duel/answer") {
+                val body = call.receive<DuelAnswerRequest>()
+                val result = DuelManager.submitAnswer(body.roomCode, body.playerName, body.guess)
+                if (result == null) {
+                    call.respond(HttpStatusCode.NotFound, mapOf("error" to "Oda bulunamadı"))
+                } else {
+                    call.respond(result)
+                }
+            }
+
+            post("/duel/next") {
+                val body = call.receive<NextRoundRequest>()
+                val room = DuelManager.nextRound(body.roomCode)
+                if (room == null) {
+                    call.respond(HttpStatusCode.NotFound, mapOf("error" to "Oda bulunamadı"))
+                } else {
+                    call.respond(DuelManager.toState(room))
                 }
             }
         }

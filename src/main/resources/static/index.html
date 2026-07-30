@@ -31,6 +31,7 @@
             --light-green-rgb: 143, 174, 152;
             --dark-green-rgb: 20, 29, 22;
             --primary-green-rgb: 62, 95, 71;
+            --accent-gold-rgb: 201, 169, 97;
             --fg-rgb: 242, 240, 236;
             --surface-strong-rgb: 20, 23, 15;
         }
@@ -45,6 +46,7 @@
             --light-green-rgb: 207, 154, 118;
             --dark-green-rgb: 32, 16, 9;
             --primary-green-rgb: 156, 90, 63;
+            --accent-gold-rgb: 220, 179, 115;
             --fg-rgb: 242, 240, 236;
             --surface-strong-rgb: 32, 16, 9;
         }
@@ -58,6 +60,7 @@
             --light-green-rgb: 139, 152, 207;
             --dark-green-rgb: 12, 14, 24;
             --primary-green-rgb: 56, 65, 107;
+            --accent-gold-rgb: 163, 182, 230;
             --fg-rgb: 242, 240, 236;
             --surface-strong-rgb: 12, 14, 24;
         }
@@ -75,6 +78,7 @@
             --light-green-rgb: 95, 138, 108;
             --dark-green-rgb: 42, 64, 48;
             --primary-green-rgb: 62, 95, 71;
+            --accent-gold-rgb: 156, 122, 53;
             --fg-rgb: 26, 28, 24;
             --surface-strong-rgb: 255, 255, 255;
         }
@@ -263,7 +267,7 @@
 
         .toolbar-btn.active {
             background: rgba(var(--light-green-rgb), 0.14);
-            border-color: var(--accent-gold);
+            border-color: rgba(var(--accent-gold-rgb), 0.55);
             color: var(--accent-gold);
         }
 
@@ -309,7 +313,7 @@
             gap: 2px;
             padding: 10px 6px;
             border-radius: 4px;
-            border: 1px solid var(--accent-gold);
+            border: 1px solid rgba(var(--accent-gold-rgb), 0.45);
             background: rgba(var(--light-green-rgb), 0.1);
         }
 
@@ -457,6 +461,10 @@
             transition: border-color 0.2s ease;
         }
 
+        .input-error {
+            border-color: #dc5a5a !important;
+        }
+
         .player-mode-guess-row input:focus {
             border-color: var(--accent-gold);
         }
@@ -556,6 +564,15 @@
             right: auto;
         }
 
+        #themeSwitcherPanel {
+            left: 0;
+            right: auto;
+            flex-direction: row !important;
+            gap: 10px;
+            min-width: unset !important;
+            padding: 10px !important;
+        }
+
         .year-filter-panel.open {
             display: flex;
         }
@@ -632,7 +649,7 @@
 
         .level-option-btn.active {
             background: rgba(var(--light-green-rgb), 0.12);
-            border-color: var(--accent-gold);
+            border-color: rgba(var(--accent-gold-rgb), 0.55);
             color: var(--accent-gold);
         }
 
@@ -1191,6 +1208,10 @@
                 grid-template-columns: 1fr;
             }
 
+            #duelModeBtn {
+                grid-column: 1 / -1;
+            }
+
             .quiz-stat-box {
                 padding: 8px 2px;
             }
@@ -1290,17 +1311,21 @@
 
     <div class="top-toolbar">
         <div class="toolbar-left-group">
-            <div class="theme-switcher">
-                <span class="theme-label">Tema:</span>
-                <button class="theme-btn active" data-theme="green" title="Yeşil (Varsayılan)"></button>
-                <button class="theme-btn" data-theme="sunset" title="Gün Batımı"></button>
-                <button class="theme-btn" data-theme="night" title="Gece Mavisi"></button>
-                <button class="theme-btn" data-theme="light" title="Açık"></button>
-            </div>
-
             <div class="toolbar-wrapper" id="utilityMenuWrapper">
-                <button id="utilityMenuBtn" class="icon-btn" title="Diğer seçenekler (Ses, Paylaş, Maskeleme, Yıl Filtresi)">⚙️</button>
+                <button id="utilityMenuBtn" class="icon-btn" title="Diğer seçenekler (Tema, Ses, Paylaş, Maskeleme, Yıl Filtresi)">⚙️</button>
                 <div id="utilityMenuPanel" class="year-filter-panel">
+                    <div class="toolbar-wrapper" id="themeSwitcherWrapper">
+                        <button id="themeSwitcherBtn" class="level-option-btn" title="Renk temasını değiştir">
+                            🎨 Tema
+                        </button>
+                        <div id="themeSwitcherPanel" class="year-filter-panel theme-switcher-panel">
+                            <button class="theme-btn active" data-theme="green" title="Yeşil (Varsayılan)"></button>
+                            <button class="theme-btn" data-theme="sunset" title="Gün Batımı"></button>
+                            <button class="theme-btn" data-theme="night" title="Gece Mavisi"></button>
+                            <button class="theme-btn" data-theme="light" title="Açık"></button>
+                        </div>
+                    </div>
+
                     <button id="soundToggleBtn" class="level-option-btn">🔊 Ses</button>
                     <button id="shareBtn" class="level-option-btn">🔗 Paylaş</button>
 
@@ -1353,11 +1378,14 @@
         </button>
 
         <button id="playerModeBtn" class="toolbar-btn" title="İki büyük kulüpte birden oynamış gizemli bir oyuncuyu tahmin etmeye çalışın" disabled>
-            🎮 Quiz
+            🎮 Bil Bakalım
+        </button>
+
+        <button id="duelModeBtn" class="toolbar-btn" title="Bir arkadaşınla aynı soruyu aynı anda çöz, kim önce bilirse kazanır" disabled>
+            🏆 Arkadaşla Yarış
         </button>
     </div>
 
-    <div class="dedication">⚽ Harman'a Sevgiler ❤️</div>
     <p class="subtitle">İki Kulüp Arasındaki Ortak Oyuncular veya Kulüp / Ülke Araması</p>
 
     <div id="topLoader" class="top-loader">
@@ -1376,7 +1404,7 @@
 
         <div class="input-group">
             <label for="club2Input">2. Kulüp veya Ülke <span id="club2LogoIcon" class="input-logo-icon"></span></label>
-            <input id="club2Input" type="text" autocomplete="off" placeholder="Örn: Kocaelispor veya Almanya" value="Kocaelispor">
+            <input id="club2Input" type="text" autocomplete="off" placeholder="Örn: Kocaelispor veya Almanya" value="Chelsea">
             <div id="club2Dropdown" class="autocomplete-dropdown"></div>
         </div>
 
@@ -1687,43 +1715,22 @@
             const ctx = getAudioContext();
             const now = ctx.currentTime;
 
-            const osc1 = ctx.createOscillator();
-            const osc2 = ctx.createOscillator();
-            const whistleGain = ctx.createGain();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
 
-            osc1.type = 'square';
-            osc2.type = 'square';
-            osc1.frequency.setValueAtTime(1200, now);
-            osc2.frequency.setValueAtTime(1215, now);
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(660, now);
+            osc.frequency.exponentialRampToValueAtTime(880, now + 0.1);
 
-            whistleGain.gain.setValueAtTime(0, now);
-            whistleGain.gain.linearRampToValueAtTime(0.10, now + 0.02);
-            whistleGain.gain.exponentialRampToValueAtTime(0.001, now + 0.26);
+            gain.gain.setValueAtTime(0, now);
+            gain.gain.linearRampToValueAtTime(0.12, now + 0.02);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
 
-            osc1.connect(whistleGain);
-            osc2.connect(whistleGain);
-            whistleGain.connect(ctx.destination);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
 
-            osc1.start(now);
-            osc2.start(now);
-            osc1.stop(now + 0.28);
-            osc2.stop(now + 0.28);
-
-            const popOsc = ctx.createOscillator();
-            const popGain = ctx.createGain();
-
-            popOsc.type = 'sine';
-            popOsc.frequency.setValueAtTime(180, now + 0.24);
-            popOsc.frequency.exponentialRampToValueAtTime(55, now + 0.36);
-
-            popGain.gain.setValueAtTime(0.22, now + 0.24);
-            popGain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
-
-            popOsc.connect(popGain);
-            popGain.connect(ctx.destination);
-
-            popOsc.start(now + 0.24);
-            popOsc.stop(now + 0.4);
+            osc.start(now);
+            osc.stop(now + 0.25);
         } catch (e) {
             console.log("Ses çalınamadı:", e);
         }
@@ -2140,14 +2147,14 @@
         avatarEl.innerHTML = genericAvatarSvg;
     }
 
-    async function startPlayerMode() {
+    async function startPlayerMode(playSound = true) {
         const resultsTable = document.getElementById("resultsTable");
         const topLoader = document.getElementById("topLoader");
         resultsTable.innerHTML = ""; // 💡 eski içerik (liste ya da önceki quiz kartı) anında kaybolsun
         const tableWrapperEl = document.querySelector('.table-wrapper');
         if (tableWrapperEl) tableWrapperEl.scrollLeft = 0;
         topLoader.style.display = "flex";
-        playSearchSound();
+        if (playSound) playSearchSound();
         currentQuestionSolved = false; // 🎫 her yeni soru için sıfırdan başlıyor
 
         const maxAttempts = 8;
@@ -2357,7 +2364,7 @@
                         if (restartBtnEl) restartBtnEl.disabled = true;
 
                         setTimeout(() => {
-                            if (playerModeActive) startPlayerMode();
+                            if (playerModeActive) startPlayerMode(false); // otomatik geçiş, ses yok
                         }, 2000);
                     }
                 } else {
@@ -2405,12 +2412,479 @@
         document.getElementById('hunterModeWrapper').style.display = '';
         document.getElementById('yearFilterWrapper').style.display = '';
         document.getElementById('resultsTableHead').style.display = '';
+        document.getElementById('duelModeBtn').style.display = '';
         document.getElementById('resultsTable').innerHTML = ''; // 💡 quiz kartı anında kaybolsun
-        searchPlayers();
+        searchPlayers(false); // menü geçişi, ses yok
     }
 
     function setupHomeMenuButton() {
-        document.getElementById('homeMenuBtn').addEventListener('click', exitPlayerMode);
+        document.getElementById('homeMenuBtn').addEventListener('click', () => {
+            if (duelActive) {
+                exitDuelMode();
+            } else {
+                exitPlayerMode();
+            }
+        });
+    }
+
+    // 🏆 Arkadaşla Yarış (Duel) Modu — polling tabanlı, tamamen ayrı bir mod.
+    // Quiz Modu'nun hiçbir fonksiyonuna/değişkenine dokunmuyor, kendi bağımsız
+    // durum değişkenleriyle çalışıyor.
+    let duelActive = false;
+    let duelRoomCode = null;
+    let duelPlayerName = null;
+    let duelPollInterval = null;
+    let duelLocalTimerInterval = null;
+    let duelLastState = null;
+    let duelGuessLocked = false;
+
+    function escapeHtml(str) {
+        return (str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    function setupDuelMode() {
+        const btn = document.getElementById('duelModeBtn');
+        btn.addEventListener('click', () => {
+            if (duelActive) {
+                exitDuelMode();
+            } else {
+                enterDuelMode();
+            }
+        });
+    }
+
+    function enterDuelMode() {
+        duelActive = true;
+        document.getElementById('duelModeBtn').classList.add('active');
+        document.querySelector('.search-card').style.display = 'none';
+        document.getElementById('luckyModeBtn').style.display = 'none';
+        document.getElementById('hunterModeWrapper').style.display = 'none';
+        document.getElementById('yearFilterWrapper').style.display = 'none';
+        document.getElementById('mainGuessRow').style.display = 'none';
+        document.getElementById('resultsTableHead').style.display = 'none';
+        document.getElementById('playerModeBtn').style.display = 'none';
+        document.getElementById('homeMenuBtn').style.display = '';
+
+        renderDuelSetupScreen();
+    }
+
+    function exitDuelMode() {
+        stopDuelPolling();
+        clearInterval(duelLocalTimerInterval);
+        duelActive = false;
+        duelRoomCode = null;
+        duelPlayerName = null;
+        duelLastState = null;
+
+        document.getElementById('duelModeBtn').classList.remove('active');
+        document.querySelector('.search-card').style.display = '';
+        document.getElementById('luckyModeBtn').style.display = '';
+        document.getElementById('hunterModeWrapper').style.display = '';
+        document.getElementById('yearFilterWrapper').style.display = '';
+        document.getElementById('resultsTableHead').style.display = '';
+        document.getElementById('playerModeBtn').style.display = '';
+        document.getElementById('homeMenuBtn').style.display = 'none';
+
+        searchPlayers(false); // menü geçişi, ses yok
+    }
+
+    function renderDuelSetupScreen() {
+        const resultsTable = document.getElementById("resultsTable");
+        resultsTable.innerHTML = `
+            <tr>
+                <td colspan="5" style="padding: 24px;">
+                    <div class="player-mode-card">
+                        <div class="quiz-win-title">🏆 Arkadaşla Yarış</div>
+                        <div class="player-mode-guess-row">
+                            <input type="text" id="duelNameInput" placeholder="Adını yaz..." autocomplete="off">
+                        </div>
+                        <div style="font-size: 0.68rem; text-transform: uppercase; letter-spacing: 1px; color: rgba(var(--fg-rgb), 0.5); margin-bottom: 8px;">
+                            Kim önce kaç doğru bilirse kazanır?
+                        </div>
+                        <div class="player-mode-hint-row" style="margin-bottom: 16px;">
+                            <button id="duelTarget5Btn" class="toolbar-btn active" data-target="5">İlk 5'e Yarış</button>
+                            <button id="duelTarget10Btn" class="toolbar-btn" data-target="10">İlk 10'a Yarış</button>
+                        </div>
+                        <button id="duelCreateBtn" class="btn-search" style="width: 100%; margin-bottom: 20px;">Yeni Oda Kur</button>
+                        <div class="player-mode-guess-row">
+                            <input type="text" id="duelJoinCodeInput" placeholder="Oda kodu (örn: A3F9)" autocomplete="off">
+                        </div>
+                        <button id="duelJoinBtn" class="toolbar-btn" style="width: 100%;">Odaya Katıl</button>
+                        <div style="font-size: 0.72rem; color: rgba(var(--fg-rgb), 0.5); margin-top: 8px;">
+                            (Odaya katılırken hedef skoru seçmenize gerek yok, odayı kuran belirledi)
+                        </div>
+                    </div>
+                </td>
+            </tr>
+        `;
+
+        let selectedWinTarget = 5;
+        const target5Btn = document.getElementById('duelTarget5Btn');
+        const target10Btn = document.getElementById('duelTarget10Btn');
+        target5Btn.addEventListener('click', () => {
+            selectedWinTarget = 5;
+            target5Btn.classList.add('active');
+            target10Btn.classList.remove('active');
+        });
+        target10Btn.addEventListener('click', () => {
+            selectedWinTarget = 10;
+            target10Btn.classList.add('active');
+            target5Btn.classList.remove('active');
+        });
+
+        function flashInputError(inputEl) {
+            inputEl.classList.add('input-error');
+            inputEl.focus();
+            setTimeout(() => inputEl.classList.remove('input-error'), 2500);
+        }
+
+        document.getElementById('duelCreateBtn').addEventListener('click', async () => {
+            const nameInput = document.getElementById('duelNameInput');
+            const name = nameInput.value.trim();
+            if (!name) { showToast('❌ Önce adını yaz'); flashInputError(nameInput); return; }
+            duelPlayerName = name;
+
+            try {
+                const res = await fetch('/duel/create', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ playerName: name, winTarget: selectedWinTarget })
+                });
+                const state = await res.json();
+                duelRoomCode = state.roomCode;
+                duelLastState = null;
+                renderDuelStateScreen(state);
+                startDuelPolling();
+            } catch (e) {
+                showToast('❌ Oda kurulamadı, tekrar deneyin');
+            }
+        });
+
+        document.getElementById('duelJoinBtn').addEventListener('click', async () => {
+            const nameInput = document.getElementById('duelNameInput');
+            const codeInput = document.getElementById('duelJoinCodeInput');
+            const name = nameInput.value.trim();
+            const code = codeInput.value.trim().toUpperCase();
+            if (!name) { showToast('❌ Önce adını yaz'); flashInputError(nameInput); return; }
+            if (!code) { showToast('❌ Oda kodunu yaz'); flashInputError(codeInput); return; }
+            duelPlayerName = name;
+
+            try {
+                const res = await fetch('/duel/join', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ roomCode: code, playerName: name })
+                });
+                if (res.status === 409) { showToast('❌ Bu oda dolu, başka bir kod dene'); return; }
+                if (!res.ok) { showToast('❌ Oda bulunamadı, kodu kontrol et'); return; }
+                const state = await res.json();
+                duelRoomCode = state.roomCode;
+                duelLastState = null;
+                renderDuelStateScreen(state);
+                startDuelPolling();
+            } catch (e) {
+                showToast('❌ Odaya katılamadı, tekrar deneyin');
+            }
+        });
+
+    }
+
+    function renderDuelWaitingScreen(state) {
+        const resultsTable = document.getElementById("resultsTable");
+        resultsTable.innerHTML = `
+            <tr>
+                <td colspan="5" style="padding: 40px 24px; text-align: center;">
+                    <div class="player-mode-card">
+                        <div class="quiz-win-title">⏳ Rakip bekleniyor...</div>
+                        <div style="font-size: 1.6rem; font-weight: 800; color: var(--accent-gold); letter-spacing: 4px; margin-bottom: 14px;">
+                            ${escapeHtml(state.roomCode)}
+                        </div>
+                        <div style="font-size: 0.85rem; color: rgba(var(--fg-rgb), 0.6); margin-bottom: 10px;">
+                            Bu kodu arkadaşına gönder — "Arkadaşla Yarış" menüsünden bu kodla katılsın.
+                        </div>
+                        <div style="font-size: 0.78rem; color: var(--light-green); margin-bottom: 10px;">
+                            🎯 İlk ${state.winTarget}'e yarışıyorsunuz
+                        </div>
+                    </div>
+                </td>
+            </tr>
+        `;
+    }
+
+    function startDuelPolling() {
+        clearInterval(duelPollInterval);
+        duelPollInterval = setInterval(async () => {
+            if (!duelRoomCode) return;
+            try {
+                const res = await fetch(`/duel/state?roomCode=${duelRoomCode}&playerName=${encodeURIComponent(duelPlayerName || '')}`);
+                if (!res.ok) return;
+                const state = await res.json();
+                renderDuelStateScreen(state);
+            } catch (e) {
+                // sessizce bir sonraki denemeye geç
+            }
+        }, 1500);
+    }
+
+    function stopDuelPolling() {
+        clearInterval(duelPollInterval);
+        duelPollInterval = null;
+    }
+
+    function renderDuelStateScreen(state) {
+        const prevWaiting = duelLastState ? duelLastState.waitingForOpponent : true;
+        const prevRound = duelLastState ? duelLastState.roundNumber : -1;
+        duelLastState = state;
+
+        if (state.waitingForOpponent) {
+            renderDuelWaitingScreen(state);
+            return;
+        }
+
+        // Rakip yeni katıldıysa ya da yeni tur başladıysa ekranı YENİDEN kuruyoruz.
+        // Aksi halde sadece skoru güncelliyoruz — kullanıcı yazarken input'a dokunmuyoruz.
+        if (prevWaiting || prevRound !== state.roundNumber) {
+            showDuelCountdownThenQuestion(state);
+            return;
+        }
+
+        updateDuelScoreDisplay(state);
+        checkOpponentLeft(state);
+
+        if (state.roundOver && !document.getElementById('duelRoundResultBox')) {
+            showDuelRoundResult(state);
+        }
+    }
+
+    // ⚠️ Rakip birkaç saniyedir "görülmediyse" (sekmesini kapatmış/bağlantısı
+    // kopmuş olabilir), kullanıcıya nazikçe haber veriyoruz.
+    function checkOpponentLeft(state) {
+        if (!state.player2Name) return;
+
+        const amIPlayer1 = duelPlayerName === state.player1Name;
+        const opponentSeconds = amIPlayer1 ? state.player2SecondsSinceSeen : state.player1SecondsSinceSeen;
+
+        const warningEl = document.getElementById('duelOpponentWarning');
+        if (!warningEl) return;
+
+        warningEl.style.display = (opponentSeconds > 8) ? 'block' : 'none';
+    }
+
+    // ⏳ Yeni soru gelmeden önce kısa bir "3, 2, 1" göstergesi — kimse hazırlıksız
+    // yakalanmasın diye. Sunucudaki 60 saniyelik süre bu sırada zaten işlemeye
+    // başlıyor (~2 saniyelik makul bir pay), ama bu, iki tarafa da net bir
+    // "şimdi başlıyor" hissi veriyor.
+    function showDuelCountdownThenQuestion(state) {
+        const resultsTable = document.getElementById("resultsTable");
+        let count = 3;
+
+        resultsTable.innerHTML = `
+            <tr>
+                <td colspan="5" style="padding: 60px 24px; text-align: center;">
+                    <div class="player-mode-card">
+                        <div class="quiz-win-title" id="duelCountdownText" style="font-size: 2.6rem;">${count}</div>
+                        <div style="font-size: 0.85rem; color: rgba(var(--fg-rgb), 0.6);">Hazır ol, soru geliyor!</div>
+                    </div>
+                </td>
+            </tr>
+        `;
+
+        const countdownInterval = setInterval(() => {
+            count--;
+            const el = document.getElementById('duelCountdownText');
+            if (count > 0) {
+                if (el) el.textContent = String(count);
+            } else {
+                clearInterval(countdownInterval);
+                buildDuelQuestionScreen(state);
+            }
+        }, 700);
+    }
+
+    function buildDuelQuestionScreen(state) {
+        duelGuessLocked = false;
+        clearInterval(duelLocalTimerInterval);
+        const resultsTable = document.getElementById("resultsTable");
+
+        const clubsHtml = state.clubs.map(c => {
+            const logoUrl = getClubLogo(c.club);
+            const logoHtml = logoUrl ? `<img src="${logoUrl}" class="club-logo-icon" alt="" onerror="this.style.display='none'">` : '';
+            const seasonBadge = (c.season && c.season !== '-') ? `<span class="badge-season">${escapeHtml(c.season)}</span>` : '';
+            return `<div class="player-mode-club">${logoHtml}${escapeHtml(c.club)} ${seasonBadge}</div>`;
+        }).join('');
+
+        resultsTable.innerHTML = `
+            <tr>
+                <td colspan="5" style="padding: 24px;">
+                    <div class="player-mode-card">
+                        <div class="quiz-stats-bar">
+                            <div class="quiz-stat-box">
+                                <span class="quiz-stat-label">${escapeHtml(state.player1Name)}</span>
+                                <span class="quiz-stat-value" id="duelScore1">${state.player1Score}</span>
+                            </div>
+                            <div class="quiz-stat-box">
+                                <span class="quiz-stat-label">${escapeHtml(state.player2Name || '')}</span>
+                                <span class="quiz-stat-value" id="duelScore2">${state.player2Score}</span>
+                            </div>
+                            <div class="quiz-stat-box">
+                                <span class="quiz-stat-label">Süre</span>
+                                <span class="quiz-stat-value" id="duelTimer">${state.remainingSeconds}</span>
+                            </div>
+                        </div>
+                        <div class="player-mode-title">🏆 Her iki takımda da oynamış oyuncu kimdir? Kim önce bilirse kazanır!</div>
+                        <div id="duelOpponentWarning" style="display: none; font-size: 0.78rem; color: rgba(220, 90, 90, 0.9); margin-bottom: 12px;">
+                            ⚠️ Rakibinin bağlantısı kesilmiş gibi görünüyor...
+                        </div>
+                        <div class="player-mode-clubs">${clubsHtml}</div>
+                        <div class="player-mode-avatar" id="duelAvatar">
+                            ${(state.imageUrl && !state.imageUrl.includes('default.jpg'))
+            ? `<img src="${state.imageUrl}" alt="" onerror="this.style.display='none'">`
+            : `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="1.4"/>
+                                    <path d="M4 20c0-4.4 3.6-7 8-7s8 2.6 8 7" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+                                   </svg>`}
+                        </div>
+                        <div class="player-mode-guess-row">
+                            <input type="text" id="duelGuessInput" placeholder="Tahminini yaz..." autocomplete="off">
+                        </div>
+                        <div class="player-mode-hint-row">
+                            <button id="duelRevealPositionBtn" class="toolbar-btn">🧭 Mevkisini Göster</button>
+                        </div>
+                        <div id="duelRoundStatus"></div>
+                    </div>
+                </td>
+            </tr>
+        `;
+
+        checkOpponentLeft(state);
+
+        // ⏱️ Yerel geri sayım — sunucudan gelen remainingSeconds'tan başlayıp
+        // her saniye azalıyor, tur bitince (round-result ekranı gelince) duruyor.
+        let localSecondsLeft = state.remainingSeconds;
+        clearInterval(duelLocalTimerInterval);
+        duelLocalTimerInterval = setInterval(() => {
+            localSecondsLeft = Math.max(0, localSecondsLeft - 1);
+            const timerEl = document.getElementById('duelTimer');
+            if (timerEl) {
+                timerEl.textContent = String(localSecondsLeft);
+            } else {
+                clearInterval(duelLocalTimerInterval);
+            }
+        }, 1000);
+
+        const revealPositionBtn = document.getElementById('duelRevealPositionBtn');
+        if (revealPositionBtn) {
+            revealPositionBtn.addEventListener('click', () => {
+                revealPositionBtn.textContent = `🧭 ${state.position || 'Bilinmiyor'}`;
+                revealPositionBtn.disabled = true;
+            });
+        }
+
+        const guessInput = document.getElementById('duelGuessInput');
+        guessInput.addEventListener('input', async () => {
+            if (duelGuessLocked) return;
+            const guess = guessInput.value.trim();
+            if (!guess) return;
+
+            try {
+                const res = await fetch('/duel/answer', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ roomCode: duelRoomCode, playerName: duelPlayerName, guess })
+                });
+                const result = await res.json();
+
+                if (result.correct) {
+                    duelGuessLocked = true;
+                    guessInput.disabled = true;
+                    playCorrectSound();
+                }
+
+                duelLastState = result.state;
+                updateDuelScoreDisplay(result.state);
+
+                if (result.state.roundOver) {
+                    showDuelRoundResult(result.state);
+                }
+            } catch (e) {
+                // sessizce geç, bir sonraki yazımda tekrar dener
+            }
+        });
+    }
+
+    function updateDuelScoreDisplay(state) {
+        const s1 = document.getElementById('duelScore1');
+        const s2 = document.getElementById('duelScore2');
+        if (s1) s1.textContent = String(state.player1Score);
+        if (s2) s2.textContent = String(state.player2Score);
+    }
+
+    function showDuelRoundResult(state) {
+        duelGuessLocked = true;
+        clearInterval(duelLocalTimerInterval);
+        const guessInput = document.getElementById('duelGuessInput');
+        if (guessInput) guessInput.disabled = true;
+
+        const statusEl = document.getElementById('duelRoundStatus');
+        if (!statusEl || document.getElementById('duelRoundResultBox')) return;
+
+        statusEl.id = 'duelRoundResultBox';
+
+        // 🏆 Hedef skora ulaşıldıysa (oyun bitti) — farklı, kalıcı bir final ekranı
+        if (state.gameOver) {
+            const gameWinnerText = state.gameWinner === duelPlayerName
+                ? '🏆 Tebrikler, YARIŞMAYI SEN kazandın!'
+                : `🏆 Yarışmayı ${escapeHtml(state.gameWinner)} kazandı.`;
+
+            statusEl.innerHTML = `
+                <div class="quiz-win-title" style="font-size: 1.2rem; margin-top: 16px;">${gameWinnerText}</div>
+                <div style="color: var(--light-green); font-weight: 600; margin-bottom: 14px;">
+                    Son cevap: ${escapeHtml(state.revealedPlayerName || '-')}
+                </div>
+                <div class="quiz-stats-bar" style="margin-bottom: 16px;">
+                    <div class="quiz-stat-box">
+                        <span class="quiz-stat-label">${escapeHtml(state.player1Name)}</span>
+                        <span class="quiz-stat-value">${state.player1Score}</span>
+                    </div>
+                    <div class="quiz-stat-box">
+                        <span class="quiz-stat-label">${escapeHtml(state.player2Name || '')}</span>
+                        <span class="quiz-stat-value">${state.player2Score}</span>
+                    </div>
+                </div>
+            `;
+            return;
+        }
+
+        const winnerText = state.timedOut
+            ? '⏱️ Süre doldu, kimse bilemedi!'
+            : (state.roundWinner === duelPlayerName
+                ? '🎉 Bu turu SEN kazandın!'
+                : `😅 Bu turu ${escapeHtml(state.roundWinner)} kazandı.`);
+
+        statusEl.innerHTML = `
+            <div class="quiz-win-title" style="font-size: 1.1rem; margin-top: 16px;">${winnerText}</div>
+            <div style="color: var(--light-green); font-weight: 600; margin-bottom: 14px;">
+                Cevap: ${escapeHtml(state.revealedPlayerName || '-')}
+            </div>
+            <div style="font-size: 0.78rem; color: rgba(var(--fg-rgb), 0.5);">Sonraki soru birazdan geliyor...</div>
+        `;
+
+        // 💡 Otomatik geçiş — ama sadece oda kurucusu (player1) tetikliyor, yoksa
+        // her iki oyuncunun tarayıcısı da aynı anda /duel/next çağırıp turu
+        // iki kez ilerletebilirdi (yarış durumu).
+        if (duelPlayerName === state.player1Name) {
+            setTimeout(async () => {
+                try {
+                    await fetch('/duel/next', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ roomCode: duelRoomCode })
+                    });
+                } catch (e) {
+                    showToast('❌ Sonraki soru getirilemedi, tekrar deneyin');
+                }
+            }, 3000);
+        }
     }
 
     function setupPlayerMode() {
@@ -2437,8 +2911,9 @@
             document.getElementById('mainGuessRow').style.display = 'none';
             document.getElementById('mainGuessInput').value = '';
             tableHead.style.display = 'none';
+            document.getElementById('duelModeBtn').style.display = 'none';
             startQuizScoreTimer();
-            startPlayerMode();
+            startPlayerMode(false); // Quiz'a ilk giriş, ses yok
         });
     }
 
@@ -2530,6 +3005,19 @@
     }
 
     function setupThemeSwitcher() {
+        const btn = document.getElementById('themeSwitcherBtn');
+        const panel = document.getElementById('themeSwitcherPanel');
+
+        btn.addEventListener('click', () => {
+            panel.classList.toggle('open');
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('#themeSwitcherWrapper')) {
+                panel.classList.remove('open');
+            }
+        });
+
         document.querySelectorAll('.theme-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 document.body.classList.remove('theme-sunset', 'theme-night', 'theme-light');
@@ -2540,6 +3028,8 @@
 
                 document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
+
+                panel.classList.remove('open'); // seçince panel kapansın, diğer panellerdeki gibi
             });
         });
     }
@@ -2948,7 +3438,7 @@
         }
     }
 
-    async function searchPlayers() {
+    async function searchPlayers(playSound = true) {
         const input1 = document.getElementById("club1Input").value.trim();
         const input2 = document.getElementById("club2Input").value.trim();
         const resultsTable = document.getElementById("resultsTable");
@@ -2960,7 +3450,7 @@
         }
 
         topLoader.style.display = "flex";
-        playSearchSound();
+        if (playSound) playSearchSound();
 
         try {
             let url = input1 && input2
@@ -2983,7 +3473,7 @@
         }
     }
 
-    document.getElementById("searchBtn").addEventListener("click", searchPlayers);
+    document.getElementById("searchBtn").addEventListener("click", () => searchPlayers());
 
     window.onload = () => {
         applyQueryParamsToInputs();
@@ -3001,14 +3491,17 @@
         setupUtilityMenu();
         setupLuckyMode();
         setupPlayerMode();
+        setupDuelMode();
         setupHomeMenuButton();
         setupMainGuessInput();
         // 💡 Quiz butonu, sayfa ilk açılışındaki varsayılan oyuncu listesi tamamen
         // yüklenene kadar kilitli — yoksa erken basılırsa, o eski yükleme daha
         // sonra bitip Quiz ekranının üzerine yazabiliyordu (yarış durumu).
-        searchPlayers().then(() => {
+        searchPlayers(false).then(() => {
             const quizBtn = document.getElementById('playerModeBtn');
             if (quizBtn) quizBtn.disabled = false;
+            const duelBtn = document.getElementById('duelModeBtn');
+            if (duelBtn) duelBtn.disabled = false;
         });
     };
 </script>
