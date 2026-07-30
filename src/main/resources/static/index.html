@@ -1450,6 +1450,23 @@
     </div>
 </div>
 
+<div id="quizWinOverlay" class="confirm-modal-overlay" style="display: none;">
+    <div class="confirm-modal-box">
+        <div class="quiz-win-title">🏆 Kazandınız!</div>
+        <div class="quiz-stats-bar">
+            <div class="quiz-stat-box">
+                <span class="quiz-stat-label">Skor</span>
+                <span class="quiz-stat-value" id="quizWinFinalScore">0</span>
+            </div>
+            <div class="quiz-stat-box">
+                <span class="quiz-stat-label">Süre</span>
+                <span class="quiz-stat-value" id="quizWinFinalTime">00:00</span>
+            </div>
+        </div>
+        <button id="newQuizGameBtn" class="btn-search" style="width: 100%;">🔄 Yeni Oyun</button>
+    </div>
+</div>
+
 <div class="footer-signature">
     Developed with ❤️ by <span>mertyagiz</span>
 </div>
@@ -2009,31 +2026,14 @@
         const finalScore = quizScore;
         const finalTime = quizStartTime ? formatElapsedTime(Date.now() - quizStartTime) : '00:00';
 
-        const resultsTable = document.getElementById("resultsTable");
-        resultsTable.innerHTML = `
-            <tr>
-                <td colspan="5" style="padding: 40px 24px;">
-                    <div class="player-mode-card">
-                        <div class="quiz-win-title">🏆 Kazandınız!</div>
-                        <div class="quiz-stats-bar">
-                            <div class="quiz-stat-box">
-                                <span class="quiz-stat-label">Skor</span>
-                                <span class="quiz-stat-value">${finalScore}</span>
-                            </div>
-                            <div class="quiz-stat-box">
-                                <span class="quiz-stat-label">Süre</span>
-                                <span class="quiz-stat-value">${finalTime}</span>
-                            </div>
-                        </div>
-                        <button id="newQuizGameBtn" class="btn-search">🔄 Yeni Oyun</button>
-                    </div>
-                </td>
-            </tr>
-        `;
+        document.getElementById('quizWinFinalScore').textContent = String(finalScore);
+        document.getElementById('quizWinFinalTime').textContent = finalTime;
+        document.getElementById('quizWinOverlay').style.display = 'flex';
 
         const newGameBtn = document.getElementById('newQuizGameBtn');
         if (newGameBtn) {
             newGameBtn.addEventListener('click', () => {
+                document.getElementById('quizWinOverlay').style.display = 'none';
                 startQuizScoreTimer();
                 startPlayerMode();
             });
@@ -2408,6 +2408,7 @@
         playerModeActive = false;
         document.getElementById('playerModeBtn').classList.remove('active');
         document.getElementById('homeMenuBtn').style.display = 'none';
+        document.getElementById('quizWinOverlay').style.display = 'none';
         stopQuizScoreTimer();
         document.querySelector('.search-card').style.display = '';
         document.getElementById('luckyModeBtn').style.display = '';
@@ -2440,6 +2441,17 @@
     let duelLastState = null;
     let duelGuessLocked = false;
 
+    // 📱 Mobilde Bil Bakalım/Arkadaşla Yarış'a girince kullanıcı elle aşağı
+    // kaydırmak zorunda kalmasın diye, soru alanına otomatik kaydırıyoruz.
+    function scrollToResultsArea() {
+        const target = document.querySelector('.table-wrapper');
+        if (target) {
+            setTimeout(() => {
+                target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 50);
+        }
+    }
+
     function escapeHtml(str) {
         return (str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     }
@@ -2468,6 +2480,7 @@
         document.getElementById('homeMenuBtn').style.display = '';
 
         renderDuelSetupScreen();
+        scrollToResultsArea();
     }
 
     function exitDuelMode() {
@@ -2675,6 +2688,7 @@
 
         updateDuelScoreDisplay(state);
         checkOpponentLeft(state);
+        resyncDuelTimer(state); // 💡 sunucudaki gerçek süreyle her poll'da senkronize et
 
         if (state.roundOver && !document.getElementById('duelRoundResultBox')) {
             showDuelRoundResult(state);
@@ -2693,6 +2707,18 @@
         if (!warningEl) return;
 
         warningEl.style.display = (opponentSeconds > 8) ? 'block' : 'none';
+    }
+
+    // ⏱️ Yerel geri sayım, sekme arka plana atılırsa tarayıcı tarafından
+    // yavaşlatılabiliyor (throttling) — iki oyuncunun süresi bu yüzden
+    // birbirinden kopabiliyordu. Her poll'da sunucudaki gerçek süreyle
+    // düzeltip, iki tarafı da senkron tutuyoruz.
+    function resyncDuelTimer(state) {
+        if (state.roundOver) return;
+        const timerEl = document.getElementById('duelTimer');
+        if (timerEl) {
+            timerEl.textContent = String(state.remainingSeconds);
+        }
     }
 
     // ⏳ Yeni soru gelmeden önce kısa bir "3, 2, 1" göstergesi — kimse hazırlıksız
@@ -2980,6 +3006,7 @@
             document.getElementById('duelModeBtn').style.display = 'none';
             startQuizScoreTimer();
             startPlayerMode(false); // Quiz'a ilk giriş, ses yok
+            scrollToResultsArea();
         });
     }
 
