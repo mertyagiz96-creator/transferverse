@@ -10,9 +10,10 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import kotlinx.serialization.Serializable
 
-@Serializable data class CreateRoomRequest(val playerName: String, val winTarget: Int = 5)
+@Serializable data class CreateRoomRequest(val playerName: String, val winTarget: Int = 5, val maskingHintEnabled: Boolean = false)
 @Serializable data class JoinRoomRequest(val roomCode: String, val playerName: String)
 @Serializable data class DuelAnswerRequest(val roomCode: String, val playerName: String, val guess: String)
+@Serializable data class DuelPassRequest(val roomCode: String, val playerName: String)
 @Serializable data class NextRoundRequest(val roomCode: String)
 
 fun main() {
@@ -88,7 +89,7 @@ fun main() {
             // endpoint'e dokunmuyor. Polling tabanlı basit gerçek-zamanlı yarışma.
             post("/duel/create") {
                 val body = call.receive<CreateRoomRequest>()
-                val room = DuelManager.createRoom(body.playerName, body.winTarget)
+                val room = DuelManager.createRoom(body.playerName, body.winTarget, body.maskingHintEnabled)
                 call.respond(DuelManager.toState(room))
             }
 
@@ -119,6 +120,16 @@ fun main() {
                     call.respond(HttpStatusCode.NotFound, mapOf("error" to "Oda bulunamadı"))
                 } else {
                     call.respond(result)
+                }
+            }
+
+            post("/duel/pass") {
+                val body = call.receive<DuelPassRequest>()
+                val state = DuelManager.submitPass(body.roomCode, body.playerName)
+                if (state == null) {
+                    call.respond(HttpStatusCode.NotFound, mapOf("error" to "Oda bulunamadı"))
+                } else {
+                    call.respond(state)
                 }
             }
 

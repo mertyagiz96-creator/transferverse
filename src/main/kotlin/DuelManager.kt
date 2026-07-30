@@ -5,7 +5,7 @@ import kotlinx.serialization.Serializable
 // oda yönetimi. Veritabanına hiç yazmıyor, sunucu yeniden başlarsa odalar kaybolur
 // (2 arkadaşlık casual bir oyun için kabul edilebilir bir sınırlama).
 
-private const val ROUND_DURATION_MS = 60_000L
+private const val ROUND_DURATION_MS = 30_000L
 private const val ROOM_STALE_MS = 2 * 60 * 60 * 1000L // 2 saat hareketsizlik = terk edilmiş say
 private const val CLEANUP_INTERVAL_MS = 30 * 60 * 1000L // 30 dakikada bir kontrol et
 private const val OPPONENT_LEFT_THRESHOLD_SECONDS = 8 // ~5-6 kaçırılmış polling turu
@@ -35,7 +35,12 @@ data class DuelState(
     val gameOver: Boolean,
     val gameWinner: String?,
     val player1SecondsSinceSeen: Int,
-    val player2SecondsSinceSeen: Int
+    val player2SecondsSinceSeen: Int,
+    val player1Passed: Boolean,
+    val player2Passed: Boolean,
+    val bothPassed: Boolean,
+    val maskingHintEnabled: Boolean,
+    val maskedName: String?
 )
 
 @Serializable
@@ -48,7 +53,7 @@ sealed class JoinResult {
     object RoomNotFound : JoinResult()
 }
 
-class DuelRoom(val roomCode: String, val player1Name: String, val winTarget: Int) {
+class DuelRoom(val roomCode: String, val player1Name: String, val winTarget: Int, val maskingHintEnabled: Boolean) {
     var player2Name: String? = null
     var player1Score = 0
     var player2Score = 0
@@ -64,6 +69,9 @@ class DuelRoom(val roomCode: String, val player1Name: String, val winTarget: Int
     var player1LastSeen: Long = System.currentTimeMillis()
     var player2LastSeen: Long = System.currentTimeMillis()
     var lastActivityAt: Long = System.currentTimeMillis()
+    var player1Passed = false
+    var player2Passed = false
+    var bothPassed = false
     val lock = Any()
 }
 
@@ -105,13 +113,13 @@ object DuelManager {
         "Sivasspor", "Eyupspor", "Kocaelispor"
     )
 
-    fun createRoom(player1Name: String, winTarget: Int): DuelRoom {
+    fun createRoom(player1Name: String, winTarget: Int, maskingHintEnabled: Boolean): DuelRoom {
         var code: String
         do {
             code = generateCode()
         } while (rooms.containsKey(code))
         val validTarget = if (winTarget == 10) 10 else 5
-        val room = DuelRoom(code, player1Name.ifBlank { "Oyuncu 1" }, validTarget)
+        val room = DuelRoom(code, player1Name.ifBlank { "Oyuncu 1" }, validTarget, maskingHintEnabled)
         rooms[code] = room
         return room
     }
@@ -209,6 +217,36 @@ object DuelManager {
         }
     }
 
+    // 🏳️ Pas geçme — iki taraf da pas geçerse, süreyi beklemeden tur bitiyor
+    // (kimse kazanmamış sayılır), cevap açıklanıp sonraki soruya geçiliyor.
+    fun submitPass(code: String, playerName: String): DuelState? {
+        val room = rooms[code.uppercase()] ?: return null
+
+        synchronized(room.lock) {
+            checkTimeout(room)
+            room.lastActivityAt = System.currentTimeMillis()
+
+            when (playerName) {
+                room.player1Name -> {
+                    room.player1LastSeen = System.currentTimeMillis()
+                    room.player1Passed = true
+                }
+                room.player2Name -> {
+                    room.player2LastSeen = System.currentTimeMillis()
+                    room.player2Passed = true
+                }
+            }
+
+            if (!room.roundOver && !room.gameOver && room.player1Passed && room.player2Passed) {
+                room.roundOver = true
+                room.roundWinner = null
+                room.bothPassed = true
+            }
+
+            return toState(room)
+        }
+    }
+
     fun toState(room: DuelRoom): DuelState {
         val clubs = room.currentQuestion?.clubs?.map { DuelClubInfo(it.club, it.season) } ?: emptyList()
         val revealedName = if (room.roundOver) {
@@ -245,8 +283,32 @@ object DuelManager {
             gameOver = room.gameOver,
             gameWinner = room.gameWinner,
             player1SecondsSinceSeen = ((now - room.player1LastSeen) / 1000).toInt(),
-            player2SecondsSinceSeen = if (room.player2Name != null) ((now - room.player2LastSeen) / 1000).toInt() else 0
+            player2SecondsSinceSeen = if (room.player2Name != null) ((now - room.player2LastSeen) / 1000).toInt() else 0,
+            player1Passed = room.player1Passed,
+            player2Passed = room.player2Passed,
+            bothPassed = room.bothPassed,
+            maskingHintEnabled = room.maskingHintEnabled,
+            maskedName = if (room.maskingHintEnabled && !room.roundOver && room.currentQuestion != null) {
+                val cleanName = room.currentQuestion!!.playerName.replace(Regex("\\s*\\(\\d+\\)\\s*$"), "").trim()
+                maskNameForHint(cleanName)
+            } else null
         )
+    }
+
+    // 🎭 Solo Quiz'deki "Maskeli Göster" ile aynı mantık — sadece ilk ve son harf
+    // açık, aradaki her harf yıldızla gizli. Duel'de isteğe bağlı bir ipucu.
+    private fun maskNameForHint(name: String): String {
+        return name.split(" ").joinToString(" ") { word ->
+            val letters = word.toCharArray()
+            if (letters.size <= 2) {
+                word
+            } else {
+                letters.mapIndexed { idx, ch ->
+                    if (idx == 0 || idx == letters.size - 1) ch
+                    else if (ch.isLetter()) '✦' else ch
+                }.joinToString("")
+            }
+        }
     }
 
     // ⏱️ Süre (60sn) dolduysa turu otomatik bitiriyor — kimse kazanmamış sayılır,
@@ -268,6 +330,9 @@ object DuelManager {
         room.roundWinner = null
         room.timedOut = false
         room.noMatchFound = false
+        room.player1Passed = false
+        room.player2Passed = false
+        room.bothPassed = false
         room.roundStartTime = System.currentTimeMillis()
 
         var found: MultiClubPlayerResult? = null
@@ -286,10 +351,19 @@ object DuelManager {
         return (1..4).map { chars.random() }.joinToString("")
     }
 
+    // 💡 Önce Türkçe karakterleri (ı,ğ,ü,ş,ö,ç) katlayıp, sonra standart Unicode
+    // NFD ayrıştırmasıyla İbrahimović, Modrić, Szczęsny gibi diğer aksanlı Latin
+    // harfleri de temizliyoruz — frontend'deki normalizeGuess() ile aynı mantık.
     private fun normalizeForDuel(s: String): String {
-        return s.trim().lowercase()
+        val turkishFolded = s.trim().lowercase()
             .replace("ı", "i").replace("ğ", "g").replace("ü", "u")
             .replace("ş", "s").replace("ö", "o").replace("ç", "c")
+
+        val nfdNormalized = java.text.Normalizer.normalize(turkishFolded, java.text.Normalizer.Form.NFD)
+        val accentsStripped = nfdNormalized.replace(Regex("\\p{Mn}+"), "")
+
+        return accentsStripped
+            .replace("ł", "l").replace("đ", "d").replace("ø", "o").replace("ß", "ss")
             .replace(Regex("\\s+"), " ")
     }
 }

@@ -1369,10 +1369,6 @@
             </div>
         </div>
 
-        <button id="luckyModeBtn" class="toolbar-btn" title="Rastgele iki takım/ülke seçer, aramayı siz başlatırsınız — tahmin oyunu için ideal">
-            🎲 Rastgele Eşleşme
-        </button>
-
         <button id="homeMenuBtn" class="toolbar-btn" title="Quiz'ndan çıkıp normal arama ekranına dön" style="display: none;">
             🏠 Ana Menü
         </button>
@@ -1381,7 +1377,7 @@
             🎮 Bil Bakalım
         </button>
 
-        <button id="duelModeBtn" class="toolbar-btn duel-btn-fullwidth" title="Bir arkadaşınla aynı soruyu aynı anda çöz, kim önce bilirse kazanır" disabled>
+        <button id="duelModeBtn" class="toolbar-btn" title="Bir arkadaşınla aynı soruyu aynı anda çöz, kim önce bilirse kazanır" disabled>
             🏆 Arkadaşla Yarış
         </button>
     </div>
@@ -1393,6 +1389,12 @@
             <div class="rolling-ball">⚽</div>
         </div>
         <span>Transferler Taranıyor...</span>
+    </div>
+
+    <div style="display: flex; justify-content: flex-end; margin-bottom: 10px;">
+        <button id="luckyModeBtn" class="toolbar-btn" title="Rastgele iki takım/ülke seçer, aramayı siz başlatırsınız — tahmin oyunu için ideal">
+            🎲 Rastgele Eşleşme
+        </button>
     </div>
 
     <div class="search-card">
@@ -2413,7 +2415,6 @@
         document.getElementById('yearFilterWrapper').style.display = '';
         document.getElementById('resultsTableHead').style.display = '';
         document.getElementById('duelModeBtn').style.display = '';
-        document.getElementById('duelModeBtn').classList.add('duel-btn-fullwidth');
         document.getElementById('resultsTable').innerHTML = ''; // 💡 quiz kartı anında kaybolsun
         showIdleSearchState();
     }
@@ -2457,7 +2458,6 @@
     function enterDuelMode() {
         duelActive = true;
         document.getElementById('duelModeBtn').classList.add('active');
-        document.getElementById('duelModeBtn').classList.remove('duel-btn-fullwidth');
         document.querySelector('.search-card').style.display = 'none';
         document.getElementById('luckyModeBtn').style.display = 'none';
         document.getElementById('hunterModeWrapper').style.display = 'none';
@@ -2479,7 +2479,6 @@
         duelLastState = null;
 
         document.getElementById('duelModeBtn').classList.remove('active');
-        document.getElementById('duelModeBtn').classList.add('duel-btn-fullwidth');
         document.querySelector('.search-card').style.display = '';
         document.getElementById('luckyModeBtn').style.display = '';
         document.getElementById('hunterModeWrapper').style.display = '';
@@ -2508,6 +2507,7 @@
                             <button id="duelTarget5Btn" class="toolbar-btn active" data-target="5">İlk 5'e Yarış</button>
                             <button id="duelTarget10Btn" class="toolbar-btn" data-target="10">İlk 10'a Yarış</button>
                         </div>
+                        <button id="duelMaskingToggleBtn" class="toolbar-btn" style="width: 100%; margin-bottom: 16px;">🎭 Maskeleme Yardımı: Kapalı</button>
                         <button id="duelCreateBtn" class="btn-search" style="width: 100%; margin-bottom: 20px;">Yeni Oda Kur</button>
                         <div class="player-mode-guess-row">
                             <input type="text" id="duelJoinCodeInput" placeholder="Oda kodu (örn: A3F9)" autocomplete="off">
@@ -2535,6 +2535,16 @@
             target5Btn.classList.remove('active');
         });
 
+        let selectedMaskingHint = false;
+        const maskingToggleBtn = document.getElementById('duelMaskingToggleBtn');
+        maskingToggleBtn.addEventListener('click', () => {
+            selectedMaskingHint = !selectedMaskingHint;
+            maskingToggleBtn.classList.toggle('active', selectedMaskingHint);
+            maskingToggleBtn.textContent = selectedMaskingHint
+                ? '🎭 Maskeleme Yardımı: Açık'
+                : '🎭 Maskeleme Yardımı: Kapalı';
+        });
+
         function flashInputError(inputEl) {
             inputEl.classList.add('input-error');
             inputEl.focus();
@@ -2551,7 +2561,7 @@
                 const res = await fetch('/duel/create', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ playerName: name, winTarget: selectedWinTarget })
+                    body: JSON.stringify({ playerName: name, winTarget: selectedWinTarget, maskingHintEnabled: selectedMaskingHint })
                 });
                 const state = await res.json();
                 duelRoomCode = state.roomCode;
@@ -2762,8 +2772,11 @@
                         <div class="player-mode-guess-row">
                             <input type="text" id="duelGuessInput" placeholder="Tahminini yaz..." autocomplete="off">
                         </div>
+                        ${state.maskingHintEnabled ? `<div id="duelMaskedAnswer" style="display: none; font-size: 1rem; font-weight: 700; letter-spacing: 1px; color: var(--light-green); margin-bottom: 10px;"></div>` : ''}
                         <div class="player-mode-hint-row">
                             <button id="duelRevealPositionBtn" class="toolbar-btn">🧭 Mevkisini Göster</button>
+                            ${state.maskingHintEnabled ? '<button id="duelRevealMaskedBtn" class="toolbar-btn">🎭 Maskeli Göster</button>' : ''}
+                            <button id="duelPassBtn" class="toolbar-btn">🏳️ Pas Geç</button>
                         </div>
                         <div id="duelRoundStatus"></div>
                     </div>
@@ -2792,6 +2805,42 @@
             revealPositionBtn.addEventListener('click', () => {
                 revealPositionBtn.textContent = `🧭 ${state.position || 'Bilinmiyor'}`;
                 revealPositionBtn.disabled = true;
+            });
+        }
+
+        const revealMaskedBtn = document.getElementById('duelRevealMaskedBtn');
+        if (revealMaskedBtn) {
+            revealMaskedBtn.addEventListener('click', () => {
+                const maskedEl = document.getElementById('duelMaskedAnswer');
+                if (maskedEl && state.maskedName) {
+                    maskedEl.textContent = state.maskedName;
+                    maskedEl.style.display = 'block';
+                }
+                revealMaskedBtn.disabled = true;
+            });
+        }
+
+        const passBtn = document.getElementById('duelPassBtn');
+        if (passBtn) {
+            passBtn.addEventListener('click', async () => {
+                passBtn.disabled = true;
+                passBtn.textContent = '🏳️ Rakibini bekliyorsun...';
+                try {
+                    const res = await fetch('/duel/pass', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ roomCode: duelRoomCode, playerName: duelPlayerName })
+                    });
+                    const newState = await res.json();
+                    duelLastState = newState;
+                    if (newState.roundOver) {
+                        showDuelRoundResult(newState);
+                    }
+                } catch (e) {
+                    showToast('❌ Pas geçilemedi, tekrar deneyin');
+                    passBtn.disabled = false;
+                    passBtn.textContent = '🏳️ Pas Geç';
+                }
             });
         }
 
@@ -2870,11 +2919,13 @@
             return;
         }
 
-        const winnerText = state.timedOut
-            ? '⏱️ Süre doldu, kimse bilemedi!'
-            : (state.roundWinner === duelPlayerName
-                ? '🎉 Bu turu SEN kazandın!'
-                : `😅 Bu turu ${escapeHtml(state.roundWinner)} kazandı.`);
+        const winnerText = state.bothPassed
+            ? '🏳️ İkiniz de pas geçti, kimse bilemedi!'
+            : state.timedOut
+                ? '⏱️ Süre doldu, kimse bilemedi!'
+                : (state.roundWinner === duelPlayerName
+                    ? '🎉 Bu turu SEN kazandın!'
+                    : `😅 Bu turu ${escapeHtml(state.roundWinner)} kazandı.`);
 
         statusEl.innerHTML = `
             <div class="quiz-win-title" style="font-size: 1.1rem; margin-top: 16px;">${winnerText}</div>
