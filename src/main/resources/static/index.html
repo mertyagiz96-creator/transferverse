@@ -277,6 +277,7 @@
             text-align: center;
             max-width: 420px;
             margin: 0 auto;
+            scroll-margin-top: 90px;
         }
 
         /* 🎯 Quiz'in skor/pas/süre çubuğu — net görünsün diye büyük ve belirgin */
@@ -534,6 +535,16 @@
             white-space: normal;
         }
 
+        .player-mode-hint-row > .toolbar-wrapper {
+            flex: 1 1 30%;
+            min-width: 100px;
+        }
+
+        .player-mode-hint-row > .toolbar-wrapper > #quizHintsBtn {
+            width: 100%;
+            justify-content: center;
+        }
+
         .toolbar-btn.muted {
             opacity: 0.4;
             background: transparent;
@@ -562,6 +573,15 @@
         #utilityMenuPanel {
             left: 0;
             right: auto;
+        }
+
+        /* 💡 Bu panel kartın alt kısmında duruyor, aşağı açılırsa ekran dışına
+           taşıyordu — yukarı doğru açılıyor. */
+        #quizHintsPanel {
+            top: auto;
+            bottom: 100%;
+            margin-top: 0;
+            margin-bottom: 8px;
         }
 
         #themeSwitcherPanel {
@@ -936,6 +956,7 @@
             overflow-x: auto;
             border-radius: 4px;
             border: 1px solid rgba(var(--fg-rgb), 0.09);
+            min-height: 420px;
         }
 
         table {
@@ -2032,10 +2053,11 @@
 
         const newGameBtn = document.getElementById('newQuizGameBtn');
         if (newGameBtn) {
-            newGameBtn.addEventListener('click', () => {
+            newGameBtn.addEventListener('click', async () => {
                 document.getElementById('quizWinOverlay').style.display = 'none';
                 startQuizScoreTimer();
-                startPlayerMode();
+                await startPlayerMode();
+                scrollToResultsArea();
             });
         }
     }
@@ -2088,9 +2110,10 @@
 
         const newGameBtn = document.getElementById('newQuizGameBtn');
         if (newGameBtn) {
-            newGameBtn.addEventListener('click', () => {
+            newGameBtn.addEventListener('click', async () => {
                 startQuizScoreTimer();
-                startPlayerMode();
+                await startPlayerMode();
+                scrollToResultsArea();
             });
         }
     }
@@ -2232,9 +2255,14 @@
                     <div id="playerModeCelebration" class="player-mode-celebration">⚽</div>
                 </div>
                 <div class="player-mode-hint-row">
-                    <button id="revealPositionBtn" class="toolbar-btn">🧭 Mevkisini Göster</button>
-                    <button id="revealMaskedBtn" class="toolbar-btn">🎭 Maskeli Göster</button>
-                    ${hasRealPhoto ? `<button id="togglePhotoBtn" class="toolbar-btn">${showPhotoNow ? '🙈 Fotoğrafı Gizle' : '🖼️ Fotoğrafı Göster'}</button>` : ''}
+                    <div class="toolbar-wrapper" id="quizHintsWrapper">
+                        <button id="quizHintsBtn" class="toolbar-btn">💡 İpuçları</button>
+                        <div id="quizHintsPanel" class="year-filter-panel">
+                            <button id="revealPositionBtn" class="level-option-btn">🧭 Mevkisini Göster</button>
+                            <button id="revealMaskedBtn" class="level-option-btn">🎭 Maskeli Göster</button>
+                            ${hasRealPhoto ? `<button id="togglePhotoBtn" class="level-option-btn">${showPhotoNow ? '🙈 Fotoğrafı Gizle' : '🖼️ Fotoğrafı Göster'}</button>` : ''}
+                        </div>
+                    </div>
                     <button id="revealPlayerModeBtn" class="btn-search">Oyuncuyu Göster</button>
                 </div>
             `;
@@ -2267,6 +2295,19 @@
                 </td>
             </tr>
         `;
+
+        const quizHintsBtn = document.getElementById('quizHintsBtn');
+        const quizHintsPanel = document.getElementById('quizHintsPanel');
+        if (quizHintsBtn && quizHintsPanel) {
+            quizHintsBtn.addEventListener('click', () => {
+                quizHintsPanel.classList.toggle('open');
+            });
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('#quizHintsWrapper')) {
+                    quizHintsPanel.classList.remove('open');
+                }
+            });
+        }
 
         const revealPositionBtn = document.getElementById('revealPositionBtn');
         if (revealPositionBtn) {
@@ -2376,12 +2417,13 @@
             });
         }
 
-        document.getElementById('newPlayerModeBtn').addEventListener('click', () => {
+        document.getElementById('newPlayerModeBtn').addEventListener('click', async () => {
             if (!currentQuestionSolved) {
                 const depleted = useQuizPass(); // 🎫 çözülmeden atlanan soru pas hakkı tüketiyor
                 if (depleted) return; // useQuizPass zaten yeni soruyu getirecek, tekrar çağırmıyoruz
             }
-            startPlayerMode();
+            await startPlayerMode();
+            scrollToResultsArea();
         });
 
         // 🆕 Aktif oyun sırasında da, istediği zaman skoru/pası/kronometreyi
@@ -2390,9 +2432,10 @@
         const restartBtn = document.getElementById('restartQuizGameBtn');
         if (restartBtn) {
             restartBtn.addEventListener('click', () => {
-                showConfirmDialog('Skorun ve pas hakların sıfırlanacak, emin misin?', () => {
+                showConfirmDialog('Skorun ve pas hakların sıfırlanacak, emin misin?', async () => {
                     startQuizScoreTimer();
-                    startPlayerMode();
+                    await startPlayerMode();
+                    scrollToResultsArea();
                 });
             });
         }
@@ -2444,7 +2487,7 @@
     // 📱 Mobilde Bil Bakalım/Arkadaşla Yarış'a girince kullanıcı elle aşağı
     // kaydırmak zorunda kalmasın diye, soru alanına otomatik kaydırıyoruz.
     function scrollToResultsArea() {
-        const target = document.querySelector('.table-wrapper');
+        const target = document.querySelector('.player-mode-card');
         if (target) {
             setTimeout(() => {
                 target.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -2490,6 +2533,7 @@
         document.getElementById('homeMenuBtn').style.display = '';
 
         renderDuelSetupScreen();
+        scrollToResultsArea(); // sadece ilk girişte
     }
 
     function exitDuelMode() {
@@ -3015,7 +3059,7 @@
             document.getElementById('duelModeBtn').style.display = 'none';
             startQuizScoreTimer();
             await startPlayerMode(false); // Quiz'a ilk giriş, ses yok
-            scrollToResultsArea(); // 💡 soru gerçekten yüklendikten SONRA kaydır
+            scrollToResultsArea(); // sadece ilk girişte, tekrarlanmıyor
         });
     }
 
@@ -3587,7 +3631,16 @@
 
     document.getElementById("searchBtn").addEventListener("click", () => searchPlayers());
 
+    // 💡 Bazı tarayıcılar (özellikle "Ana Ekrana Ekle" ile açılan PWA'lar), sayfa
+    // yeniden açıldığında önceki oturumdaki kaydırma konumunu otomatik geri
+    // getiriyor. Bunu kapatıp, sayfayı her zaman en üstten başlatıyoruz.
+    if ('scrollRestoration' in history) {
+        history.scrollRestoration = 'manual';
+    }
+    window.scrollTo(0, 0);
+
     window.onload = () => {
+        window.scrollTo(0, 0);
         applyQueryParamsToInputs();
         setupClubLogoIcons();
         setupInstallBanner();
