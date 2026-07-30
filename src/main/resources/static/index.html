@@ -2418,6 +2418,7 @@
         document.getElementById('duelModeBtn').style.display = '';
         document.getElementById('resultsTable').innerHTML = ''; // 💡 quiz kartı anında kaybolsun
         showIdleSearchState();
+        scrollToSearchArea();
     }
 
     function setupHomeMenuButton() {
@@ -2445,6 +2446,16 @@
     // kaydırmak zorunda kalmasın diye, soru alanına otomatik kaydırıyoruz.
     function scrollToResultsArea() {
         const target = document.querySelector('.table-wrapper');
+        if (target) {
+            setTimeout(() => {
+                target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 50);
+        }
+    }
+
+    // 🏠 Ana Menü'ye dönünce, arama kutularının hemen görünmesi için yukarı kaydırıyoruz.
+    function scrollToSearchArea() {
+        const target = document.querySelector('.search-card');
         if (target) {
             setTimeout(() => {
                 target.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -2501,6 +2512,7 @@
         document.getElementById('homeMenuBtn').style.display = 'none';
 
         showIdleSearchState();
+        scrollToSearchArea();
     }
 
     function renderDuelSetupScreen() {
@@ -2987,7 +2999,7 @@
         const yearWrapper = document.getElementById('yearFilterWrapper');
         const tableHead = document.getElementById('resultsTableHead');
 
-        btn.addEventListener('click', () => {
+        btn.addEventListener('click', async () => {
             if (playerModeActive) {
                 exitPlayerMode();
                 return;
@@ -3005,8 +3017,8 @@
             tableHead.style.display = 'none';
             document.getElementById('duelModeBtn').style.display = 'none';
             startQuizScoreTimer();
-            startPlayerMode(false); // Quiz'a ilk giriş, ses yok
-            scrollToResultsArea();
+            await startPlayerMode(false); // Quiz'a ilk giriş, ses yok
+            scrollToResultsArea(); // 💡 soru gerçekten yüklendikten SONRA kaydır
         });
     }
 
