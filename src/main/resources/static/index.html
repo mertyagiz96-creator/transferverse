@@ -1208,7 +1208,7 @@
                 grid-template-columns: 1fr;
             }
 
-            #duelModeBtn {
+            #duelModeBtn.duel-btn-fullwidth {
                 grid-column: 1 / -1;
             }
 
@@ -1381,7 +1381,7 @@
             🎮 Bil Bakalım
         </button>
 
-        <button id="duelModeBtn" class="toolbar-btn" title="Bir arkadaşınla aynı soruyu aynı anda çöz, kim önce bilirse kazanır" disabled>
+        <button id="duelModeBtn" class="toolbar-btn duel-btn-fullwidth" title="Bir arkadaşınla aynı soruyu aynı anda çöz, kim önce bilirse kazanır" disabled>
             🏆 Arkadaşla Yarış
         </button>
     </div>
@@ -2413,8 +2413,9 @@
         document.getElementById('yearFilterWrapper').style.display = '';
         document.getElementById('resultsTableHead').style.display = '';
         document.getElementById('duelModeBtn').style.display = '';
+        document.getElementById('duelModeBtn').classList.add('duel-btn-fullwidth');
         document.getElementById('resultsTable').innerHTML = ''; // 💡 quiz kartı anında kaybolsun
-        searchPlayers(false); // menü geçişi, ses yok
+        showIdleSearchState();
     }
 
     function setupHomeMenuButton() {
@@ -2456,6 +2457,7 @@
     function enterDuelMode() {
         duelActive = true;
         document.getElementById('duelModeBtn').classList.add('active');
+        document.getElementById('duelModeBtn').classList.remove('duel-btn-fullwidth');
         document.querySelector('.search-card').style.display = 'none';
         document.getElementById('luckyModeBtn').style.display = 'none';
         document.getElementById('hunterModeWrapper').style.display = 'none';
@@ -2477,6 +2479,7 @@
         duelLastState = null;
 
         document.getElementById('duelModeBtn').classList.remove('active');
+        document.getElementById('duelModeBtn').classList.add('duel-btn-fullwidth');
         document.querySelector('.search-card').style.display = '';
         document.getElementById('luckyModeBtn').style.display = '';
         document.getElementById('hunterModeWrapper').style.display = '';
@@ -2485,7 +2488,7 @@
         document.getElementById('playerModeBtn').style.display = '';
         document.getElementById('homeMenuBtn').style.display = 'none';
 
-        searchPlayers(false); // menü geçişi, ses yok
+        showIdleSearchState();
     }
 
     function renderDuelSetupScreen() {
@@ -3450,6 +3453,16 @@
         }
     }
 
+    // 💡 Menü geçişlerinde (Ana Menü'ye dönüş, ilk yükleme) artık otomatik arama
+    // yapmıyoruz — gereksiz bir bekleme hissi yaratıyordu. Kullanıcı isterse
+    // kendi "Ara"ya basar.
+    function showIdleSearchState() {
+        const resultsTable = document.getElementById("resultsTable");
+        resultsTable.innerHTML = "<tr><td colspan='5' style='text-align:center; padding:20px;'>İki kulüp/ülke seçip 'Ara'ya basın.</td></tr>";
+        currentPlayers = [];
+        currentFilteredPlayers = [];
+    }
+
     async function searchPlayers(playSound = true) {
         const input1 = document.getElementById("club1Input").value.trim();
         const input2 = document.getElementById("club2Input").value.trim();
@@ -3506,15 +3519,11 @@
         setupDuelMode();
         setupHomeMenuButton();
         setupMainGuessInput();
-        // 💡 Quiz butonu, sayfa ilk açılışındaki varsayılan oyuncu listesi tamamen
-        // yüklenene kadar kilitli — yoksa erken basılırsa, o eski yükleme daha
-        // sonra bitip Quiz ekranının üzerine yazabiliyordu (yarış durumu).
-        searchPlayers(false).then(() => {
-            const quizBtn = document.getElementById('playerModeBtn');
-            if (quizBtn) quizBtn.disabled = false;
-            const duelBtn = document.getElementById('duelModeBtn');
-            if (duelBtn) duelBtn.disabled = false;
-        });
+        // 💡 Artık ilk yüklemede otomatik arama yapmıyoruz (gereksiz bekleme
+        // hissi yaratıyordu) — o yüzden Quiz/Duel butonlarını bekletmeye de gerek yok.
+        showIdleSearchState();
+        document.getElementById('playerModeBtn').disabled = false;
+        document.getElementById('duelModeBtn').disabled = false;
     };
 </script>
 </body>
