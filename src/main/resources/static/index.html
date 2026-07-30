@@ -2315,6 +2315,7 @@
                 const positionEl = document.getElementById('playerModePosition');
                 positionEl.textContent = 'Mevki: ' + positionEl.dataset.real;
                 positionEl.classList.add('revealed');
+                if (quizHintsPanel) quizHintsPanel.classList.remove('open');
             });
         }
 
@@ -2326,6 +2327,7 @@
                     answerEl.textContent = answerEl.dataset.masked;
                     answerEl.classList.add('masked-revealed');
                 }
+                if (quizHintsPanel) quizHintsPanel.classList.remove('open');
             });
         }
 
@@ -2341,6 +2343,7 @@
                     hidePlayerModeAvatar();
                     togglePhotoBtn.textContent = '🖼️ Fotoğrafı Göster';
                 }
+                if (quizHintsPanel) quizHintsPanel.classList.remove('open');
             });
         }
 
@@ -2490,7 +2493,10 @@
         const target = document.querySelector('.player-mode-card');
         if (target) {
             setTimeout(() => {
-                target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                const header = document.querySelector('.site-header');
+                const headerHeight = header ? header.offsetHeight : 70;
+                const targetTop = target.getBoundingClientRect().top + window.scrollY - headerHeight - 12;
+                window.scrollTo({ top: Math.max(0, targetTop), behavior: 'smooth' });
             }, 50);
         }
     }
