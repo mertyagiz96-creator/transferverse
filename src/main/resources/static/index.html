@@ -922,12 +922,14 @@
         /* 🕵️ Ana modda (Maskeleme açıkken) solo oynayanlar için tahmin kutusu */
         .main-guess-row {
             display: flex;
+            flex-wrap: wrap;
             gap: 8px;
             margin-bottom: 14px;
         }
 
         .main-guess-row input {
             flex: 1;
+            min-width: 0;
             padding: 12px 16px;
             border-radius: 4px;
             border: 1px solid rgba(var(--light-green-rgb), 0.35);
@@ -2539,7 +2541,6 @@
         document.getElementById('homeMenuBtn').style.display = '';
 
         renderDuelSetupScreen();
-        scrollToResultsArea(); // sadece ilk girişte
     }
 
     function exitDuelMode() {
