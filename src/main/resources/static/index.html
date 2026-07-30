@@ -2599,6 +2599,7 @@
                         <div style="font-size: 1.6rem; font-weight: 800; color: var(--accent-gold); letter-spacing: 4px; margin-bottom: 14px;">
                             ${escapeHtml(state.roomCode)}
                         </div>
+                        <button id="duelCopyCodeBtn" class="toolbar-btn" style="margin-bottom: 14px;">📋 Kodu Kopyala</button>
                         <div style="font-size: 0.85rem; color: rgba(var(--fg-rgb), 0.6); margin-bottom: 10px;">
                             Bu kodu arkadaşına gönder — "Arkadaşla Yarış" menüsünden bu kodla katılsın.
                         </div>
@@ -2609,6 +2610,17 @@
                 </td>
             </tr>
         `;
+
+        const copyBtn = document.getElementById('duelCopyCodeBtn');
+        if (copyBtn) {
+            copyBtn.addEventListener('click', () => {
+                navigator.clipboard.writeText(state.roomCode).then(() => {
+                    showToast('Kod kopyalandı! 📋');
+                }).catch(() => {
+                    showToast('Kopyalanamadı, kodu elle seçip kopyalayın.');
+                });
+            });
+        }
     }
 
     function startDuelPolling() {
