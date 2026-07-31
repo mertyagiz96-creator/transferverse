@@ -40,7 +40,8 @@ data class DuelState(
     val player2Passed: Boolean,
     val bothPassed: Boolean,
     val maskingHintEnabled: Boolean,
-    val maskedName: String?
+    val maskedName: String?,
+    val isCountryMix: Boolean
 )
 
 @Serializable
@@ -72,6 +73,8 @@ class DuelRoom(val roomCode: String, val player1Name: String, val winTarget: Int
     var player1Passed = false
     var player2Passed = false
     var bothPassed = false
+    val recentPlayerNames = mutableListOf<String>()
+    var isCountryMix = false
     val lock = Any()
 }
 
@@ -111,6 +114,14 @@ object DuelManager {
         "Caykur Rizespor", "Gaziantep FK", "Goztepe", "Hatayspor",
         "Kasimpasa", "Kayserispor", "Konyaspor", "Samsunspor",
         "Sivasspor", "Eyupspor", "Kocaelispor"
+    )
+
+    // 💡 Frontend'deki luckyCountries ile aynı liste — Bil Bakalım'daki gibi %20
+    // ihtimalle takım+ülke karışımı için
+    private val countryPool = listOf(
+        "Turkiye", "England", "Germany", "France", "Spain", "Italy", "Netherlands", "Portugal",
+        "Brazil", "Argentina", "Croatia", "Serbia", "Belgium", "Sweden", "Norway",
+        "Cote d'Ivoire", "Morocco", "Egypt", "Nigeria", "Japan", "Korea, South"
     )
 
     fun createRoom(player1Name: String, winTarget: Int, maskingHintEnabled: Boolean): DuelRoom {
@@ -291,7 +302,8 @@ object DuelManager {
             maskedName = if (room.maskingHintEnabled && !room.roundOver && room.currentQuestion != null) {
                 val cleanName = room.currentQuestion!!.playerName.replace(Regex("\\s*\\(\\d+\\)\\s*$"), "").trim()
                 maskNameForHint(cleanName)
-            } else null
+            } else null,
+            isCountryMix = room.isCountryMix
         )
     }
 
@@ -337,12 +349,35 @@ object DuelManager {
 
         var found: MultiClubPlayerResult? = null
         var attempts = 0
-        while (found == null && attempts < 8) {
-            val pair = clubPool.shuffled().take(2)
-            found = DatabaseClient.fetchPlayerAcrossClubs(pair)
+        var isCountryMix = false
+        while (attempts < 12) {
+            val useCountryMix = kotlin.random.Random.nextDouble() < 0.2
+            val terms: List<Pair<String, Boolean>> = if (useCountryMix) {
+                val club = clubPool.random()
+                val country = countryPool.random()
+                listOf(club to false, country to true)
+            } else {
+                clubPool.shuffled().take(2).map { it to false }
+            }
+
+            val candidate = DatabaseClient.fetchPlayerAcrossClubs(terms)
             attempts++
+
+            if (candidate != null) {
+                val cleanName = candidate.playerName.replace(Regex("\\s*\\(\\d+\\)\\s*$"), "").trim()
+                // 💡 Aynı (çok gezmiş) oyuncu bu odada son birkaç soruda zaten çıktıysa,
+                // son deneme değilse tekrar dene.
+                if (!room.recentPlayerNames.contains(cleanName) || attempts >= 12) {
+                    found = candidate
+                    isCountryMix = useCountryMix
+                    room.recentPlayerNames.add(cleanName)
+                    if (room.recentPlayerNames.size > 6) room.recentPlayerNames.removeAt(0)
+                    break
+                }
+            }
         }
         room.currentQuestion = found
+        room.isCountryMix = isCountryMix
         room.noMatchFound = (found == null)
     }
 

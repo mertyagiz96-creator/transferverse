@@ -77,7 +77,17 @@ fun main() {
                     return@get
                 }
 
-                val result = DatabaseClient.fetchPlayerAcrossClubs(clubs)
+                // 💡 YENİ: ?isCountry=0,1 gibi paralel bir bayrak listesi — hangi terimin
+                // ülke, hangisinin kulüp olduğunu belirtir. Verilmezse hepsi kulüp sayılır
+                // (geriye dönük uyumluluk).
+                val isCountryParam = call.request.queryParameters["isCountry"]
+                val isCountryFlags = isCountryParam?.split(",")?.map { it.trim() == "1" }
+
+                val terms = clubs.mapIndexed { idx, term ->
+                    term to (isCountryFlags?.getOrNull(idx) ?: false)
+                }
+
+                val result = DatabaseClient.fetchPlayerAcrossClubs(terms)
                 if (result == null) {
                     call.respond(HttpStatusCode.NotFound)
                 } else {

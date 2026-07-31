@@ -834,6 +834,10 @@
             letter-spacing: 1px;
             text-transform: uppercase;
             transition: color 0.6s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            min-height: 24px;
         }
 
         .input-group input {
@@ -2001,6 +2005,11 @@
     let quizTimerInterval = null;
     let currentQuestionSolved = false; // 🎫 "Yeni Oyuncu" pas hakkı tüketsin mi diye takip ediyor
 
+    // 🔁 Son gösterilen oyuncuları hatırlayıp kısa vadede tekrarını engelliyoruz —
+    // çok gezmiş oyuncular (Bruma, Zaha vb.) dar kulüp havuzunda aşırı sık çıkabiliyordu.
+    let recentQuizPlayers = [];
+    const MAX_RECENT_QUIZ_PLAYERS = 8;
+
     function formatElapsedTime(ms) {
         const totalSeconds = Math.floor(ms / 1000);
         const minutes = Math.floor(totalSeconds / 60);
@@ -2184,21 +2193,44 @@
         if (playSound) playSearchSound();
         currentQuestionSolved = false; // 🎫 her yeni soru için sıfırdan başlıyor
 
-        const maxAttempts = 8;
+        const maxAttempts = 12; // 💡 tekrar kontrolü için biraz daha fazla deneme payı
         let found = null;
 
+        let lastQuestionIsCountryMix = false; // 💡 soru cümlesini/ikonları buna göre ayarlıyoruz
+
         for (let i = 0; i < maxAttempts; i++) {
-            // 💡 %10 ihtimalle bu deneme Süper Lig havuzundan (kendi aralarında),
-            // %90 ihtimalle mevcut Avrupa/uluslararası havuzdan.
-            const pool = Math.random() < 0.1 ? superLigClubs : luckyClubs;
-            const shuffled = [...pool].sort(() => Math.random() - 0.5);
-            const pick = shuffled.slice(0, 2);
+            // 💡 %20 ihtimalle takım+ülke karışımı, %80 ihtimalle iki takım.
+            // Takım+ülke seçilirse: %10 Süper Lig, %90 uluslararası havuzdan TEK takım + rastgele bir ülke.
+            let pick, isCountryFlags;
+            if (Math.random() < 0.2) {
+                const clubPool = Math.random() < 0.1 ? superLigClubs : luckyClubs;
+                const club = clubPool[Math.floor(Math.random() * clubPool.length)];
+                const country = luckyCountries[Math.floor(Math.random() * luckyCountries.length)];
+                pick = [club, country];
+                isCountryFlags = [false, true];
+            } else {
+                const pool = Math.random() < 0.1 ? superLigClubs : luckyClubs;
+                const shuffled = [...pool].sort(() => Math.random() - 0.5);
+                pick = shuffled.slice(0, 2);
+                isCountryFlags = [false, false];
+            }
 
             try {
-                const res = await fetch(`/playerMode?clubs=${encodeURIComponent(pick.join(','))}`);
+                const res = await fetch(`/playerMode?clubs=${encodeURIComponent(pick.join(','))}&isCountry=${isCountryFlags.map(f => f ? '1' : '0').join(',')}`);
                 if (res.ok) {
-                    found = await res.json();
-                    break;
+                    const candidate = await res.json();
+                    const cleanCandidateName = candidate.playerName.replace(/\s*\(\d+\)\s*/g, "").trim();
+
+                    // 💡 Aynı (çok gezmiş) oyuncu son birkaç soruda zaten çıktıysa,
+                    // son deneme değilse tekrar dene — sonsuz döngüye girmesin diye
+                    // son denemede ne gelirse kabul ediyoruz.
+                    if (!recentQuizPlayers.includes(cleanCandidateName) || i === maxAttempts - 1) {
+                        found = candidate;
+                        lastQuestionIsCountryMix = isCountryFlags.includes(true);
+                        recentQuizPlayers.push(cleanCandidateName);
+                        if (recentQuizPlayers.length > MAX_RECENT_QUIZ_PLAYERS) recentQuizPlayers.shift();
+                        break;
+                    }
                 }
             } catch (e) {
                 // sessizce bir sonraki denemeye geç
@@ -2223,11 +2255,15 @@
                 const seasonBadge = (c.season && c.season !== '-')
                     ? `<span class="badge-season">${c.season}</span>`
                     : '';
-                const logoUrl = getClubLogo(c.club);
-                const logoHtml = logoUrl
-                    ? `<img src="${logoUrl}" alt="" class="club-logo-icon" onerror="this.style.display='none'">`
-                    : '';
-                return `<div class="player-mode-club">${logoHtml}${c.club} ${seasonBadge}</div>`;
+                const flag = getFlagEmoji(c.club);
+                let iconHtml = '';
+                if (flag) {
+                    iconHtml = `<span class="input-flag-icon">${flag}</span>`;
+                } else {
+                    const logoUrl = getClubLogo(c.club);
+                    iconHtml = logoUrl ? `<img src="${logoUrl}" alt="" class="club-logo-icon" onerror="this.style.display='none'">` : '';
+                }
+                return `<div class="player-mode-club">${iconHtml}${c.club} ${seasonBadge}</div>`;
             }).join('');
 
             const hasRealPhoto = found.imageUrl && !found.imageUrl.includes('default.jpg');
@@ -2242,10 +2278,13 @@
             `;
 
             const dashPattern = nameToDashPattern(cleanFullName);
+            const questionTitle = lastQuestionIsCountryMix
+                ? '🎮 Bu kulüpte oynamış ve bu ülkeden olan oyuncu kimdir?'
+                : '🎮 Her iki takımda da oynamış oyuncu kimdir?';
 
             bodyHtml = `
                 ${avatarHtml}
-                <div class="player-mode-title">🎮 Her iki takımda da oynamış oyuncu kimdir?</div>
+                <div class="player-mode-title">${questionTitle}</div>
                 <div class="player-mode-clubs">${clubListHtml}</div>
                 <div class="player-mode-position" id="playerModePosition" data-real="${safePosition}">Mevki: ???</div>
                 <div class="player-mode-answer" id="playerModeAnswer" data-real="${safeName}" data-masked="${safeMasked}">${dashPattern}</div>
@@ -2818,10 +2857,16 @@
         const resultsTable = document.getElementById("resultsTable");
 
         const clubsHtml = state.clubs.map(c => {
-            const logoUrl = getClubLogo(c.club);
-            const logoHtml = logoUrl ? `<img src="${logoUrl}" class="club-logo-icon" alt="" onerror="this.style.display='none'">` : '';
+            const flag = getFlagEmoji(c.club);
+            let iconHtml = '';
+            if (flag) {
+                iconHtml = `<span class="input-flag-icon">${flag}</span>`;
+            } else {
+                const logoUrl = getClubLogo(c.club);
+                iconHtml = logoUrl ? `<img src="${logoUrl}" class="club-logo-icon" alt="" onerror="this.style.display='none'">` : '';
+            }
             const seasonBadge = (c.season && c.season !== '-') ? `<span class="badge-season">${escapeHtml(c.season)}</span>` : '';
-            return `<div class="player-mode-club">${logoHtml}${escapeHtml(c.club)} ${seasonBadge}</div>`;
+            return `<div class="player-mode-club">${iconHtml}${escapeHtml(c.club)} ${seasonBadge}</div>`;
         }).join('');
 
         resultsTable.innerHTML = `
@@ -2842,7 +2887,7 @@
                                 <span class="quiz-stat-value" id="duelTimer">${state.remainingSeconds}</span>
                             </div>
                         </div>
-                        <div class="player-mode-title">🏆 Her iki takımda da oynamış oyuncu kimdir? Kim önce bilirse kazanır!</div>
+                        <div class="player-mode-title">${state.isCountryMix ? '🏆 Bu kulüpte oynamış ve bu ülkeden olan oyuncu kimdir? Kim önce bilirse kazanır!' : '🏆 Her iki takımda da oynamış oyuncu kimdir? Kim önce bilirse kazanır!'}</div>
                         <div id="duelOpponentWarning" style="display: none; font-size: 0.78rem; color: rgba(220, 90, 90, 0.9); margin-bottom: 12px;">
                             ⚠️ Rakibinin bağlantısı kesilmiş gibi görünüyor...
                         </div>

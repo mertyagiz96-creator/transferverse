@@ -596,38 +596,54 @@ object DatabaseClient {
     // 💡 "OYUNCU MODU" — verilen 2 (ya da daha fazla) kulübün HEPSİNDE gerçekten
     // oynamış rastgele bir oyuncu buluyor. Mevcut fetchPlayersByClub/fetchCommonPlayers
     // fonksiyonlarına hiç dokunmuyor, tamamen ayrı ve izole bir sorgu yolu.
-    fun fetchPlayerAcrossClubs(clubs: List<String>): MultiClubPlayerResult? {
-        if (clubs.size < 2) return null
+    // 💡 GENİŞLETİLMİŞ: her terim artık ya KULÜP ya da ÜLKE olabilir (Pair'in ikinci
+    // değeri isCountry). Ülke terimleri nationality_std üzerinden, kulüp terimleri
+    // eskisi gibi from_club_std/to_club_std üzerinden eşleştiriliyor.
+    fun fetchPlayerAcrossClubs(terms: List<Pair<String, Boolean>>): MultiClubPlayerResult? {
+        if (terms.size < 2) return null
 
-        val resolvedTerms = clubs.map { resolveClubSearchTerm(it) }
+        val resolvedClubTerms = terms.map { (term, isCountry) -> if (isCountry) null else resolveClubSearchTerm(term) }
+        val mappedCountryTerms = terms.map { (term, isCountry) ->
+            if (isCountry) {
+                val std = term.toStandardSearch()
+                countryMap[std] ?: std
+            } else null
+        }
 
         val sql = buildString {
             append(
                 """
-                SELECT p.id, p.name, p.position, p.image_url, t.from_club, t.to_club, t.season
+                SELECT p.id, p.name, p.position, p.nationality, p.image_url, t.from_club, t.to_club, t.season
                 FROM players p
                 JOIN transfers t ON p.id = t.transfer_id
                 WHERE 
                 """.trimIndent()
             )
-            val conditions = resolvedTerms.map { "(t.from_club_std LIKE ? OR t.to_club_std LIKE ?)" }
+            val conditions = terms.map { (_, isCountry) ->
+                if (isCountry) "p.nationality_std LIKE ?" else "(t.from_club_std LIKE ? OR t.to_club_std LIKE ?)"
+            }
             append(conditions.joinToString(" OR "))
         }
 
-        // playerId -> (orijinal kulüp adı -> o kulüpteki en erken sezon)
-        val playerClubSeasons = mutableMapOf<Int, MutableMap<String, String>>()
+        // playerId -> (orijinal terim -> o terime ait en erken sezon, ülke için "-")
+        val playerTermSeasons = mutableMapOf<Int, MutableMap<String, String>>()
         val playerNames = mutableMapOf<Int, String>()
         val playerPositions = mutableMapOf<Int, String>()
         val playerImageUrls = mutableMapOf<Int, String?>()
+        val playerNationalities = mutableMapOf<Int, String>()
 
         try {
             withConnection { conn ->
                 conn.prepareStatement(sql).use { stmt ->
                     var idx = 1
-                    resolvedTerms.forEach { term ->
-                        val p = "%$term%"
-                        stmt.setString(idx++, p)
-                        stmt.setString(idx++, p)
+                    terms.forEachIndexed { i, (_, isCountry) ->
+                        if (isCountry) {
+                            stmt.setString(idx++, "%${mappedCountryTerms[i]}%")
+                        } else {
+                            val p = "%${resolvedClubTerms[i]}%"
+                            stmt.setString(idx++, p)
+                            stmt.setString(idx++, p)
+                        }
                     }
 
                     stmt.executeQuery().use { rs ->
@@ -636,6 +652,7 @@ object DatabaseClient {
                             val name = rs.getString("name") ?: continue
                             val position = rs.getString("position") ?: ""
                             val imageUrl = rs.getString("image_url")
+                            val rawNat = rs.getString("nationality") ?: ""
                             val fromClub = rs.getString("from_club") ?: ""
                             val toClub = rs.getString("to_club") ?: ""
                             val season = rs.getString("season") ?: continue
@@ -643,14 +660,22 @@ object DatabaseClient {
                             playerNames[pId] = name
                             playerPositions[pId] = position
                             playerImageUrls[pId] = imageUrl
+                            playerNationalities[pId] = cleanNationalityText(rawNat)
 
-                            clubs.forEachIndexed { cIdx, originalClub ->
-                                val resolved = resolvedTerms[cIdx]
-                                if (matchesOriginalClub(fromClub, resolved) || matchesOriginalClub(toClub, resolved)) {
-                                    val bucket = playerClubSeasons.getOrPut(pId) { mutableMapOf() }
-                                    val existing = bucket[originalClub]
-                                    if (existing == null || parseSeasonToSortValue(season) < parseSeasonToSortValue(existing)) {
-                                        bucket[originalClub] = season
+                            terms.forEachIndexed { tIdx, (originalTerm, isCountry) ->
+                                if (isCountry) {
+                                    if (isPrimaryCountryMatch(playerNationalities[pId] ?: "", originalTerm, mappedCountryTerms[tIdx] ?: "")) {
+                                        val bucket = playerTermSeasons.getOrPut(pId) { mutableMapOf() }
+                                        bucket[originalTerm] = "-"
+                                    }
+                                } else {
+                                    val resolved = resolvedClubTerms[tIdx] ?: return@forEachIndexed
+                                    if (matchesOriginalClub(fromClub, resolved) || matchesOriginalClub(toClub, resolved)) {
+                                        val bucket = playerTermSeasons.getOrPut(pId) { mutableMapOf() }
+                                        val existing = bucket[originalTerm]
+                                        if (existing == null || existing == "-" || parseSeasonToSortValue(season) < parseSeasonToSortValue(existing)) {
+                                            bucket[originalTerm] = season
+                                        }
                                     }
                                 }
                             }
@@ -663,22 +688,27 @@ object DatabaseClient {
             return null
         }
 
-        // Sadece istenen TÜM kulüplerde eşleşmiş oyuncular kalsın
-        val fullMatches = playerClubSeasons.filter { (_, clubMap) -> clubs.all { clubMap.containsKey(it) } }
+        // Sadece istenen TÜM terimlerde eşleşmiş oyuncular kalsın
+        val fullMatches = playerTermSeasons.filter { (_, m) -> terms.all { (term, _) -> m.containsKey(term) } }
 
         if (fullMatches.isEmpty()) return null
 
-        val (chosenId, clubSeasonMap) = fullMatches.entries.random()
+        val (chosenId, termSeasonMap) = fullMatches.entries.random()
         val playerName = playerNames[chosenId] ?: return null
         val position = playerPositions[chosenId] ?: ""
 
         return MultiClubPlayerResult(
             playerName = playerName,
             position = position,
-            clubs = clubs.map { ClubSeason(it, clubSeasonMap[it] ?: "-") },
+            clubs = terms.map { (term, _) -> ClubSeason(term, termSeasonMap[term] ?: "-") },
             imageUrl = playerImageUrls[chosenId]
         )
     }
+
+    // 💡 Not: eski List<String> imzalı sürüm kaldırıldı — Kotlin'de jenerik tipler
+    // (List<String> vs List<Pair<String,Boolean>>) JVM bytecode seviyesinde aynı
+    // imzaya sıkışıyor (tip silme), bu yüzden iki ayrı fonksiyon olarak duramıyorlardı.
+    // Zaten hiçbir yerde eski imza çağrılmıyordu, üstteki yeni imza tek başına yeterli.
 
     private fun cleanNationalityText(rawNat: String): String {
         return rawNat.replace('\u00a0', ' ')
