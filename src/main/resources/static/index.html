@@ -283,8 +283,13 @@
         /* 🎯 Quiz'in skor/pas/süre çubuğu — net görünsün diye büyük ve belirgin */
         .quiz-stats-bar {
             display: flex;
+            flex-wrap: wrap;
             gap: 8px;
             margin-bottom: 20px;
+        }
+
+        .quiz-stats-bar .quiz-stat-box {
+            min-width: 70px;
         }
 
         .quiz-win-title {
@@ -1231,6 +1236,18 @@
         }
 
         @media (max-width: 650px) {
+            body {
+                padding: 20px 10px;
+            }
+
+            .container {
+                padding: 18px;
+            }
+
+            .quiz-stats-bar .quiz-stat-box {
+                min-width: 58px;
+            }
+
             .search-card {
                 grid-template-columns: 1fr;
             }
@@ -2001,6 +2018,7 @@
     // "Yeni Oyuncu" ile artmaya devam eder (aynı oturum sayılır).
     let quizScore = 0;
     let quizPassesRemaining = 3;
+    let quizHighScore = 14; // 🏆 sunucudan çekilen global rekor (varsayılan 14)
     let quizStartTime = null;
     let quizTimerInterval = null;
     let currentQuestionSolved = false; // 🎫 "Yeni Oyuncu" pas hakkı tüketsin mi diye takip ediyor
@@ -2039,14 +2057,56 @@
         const scoreEl = document.getElementById('quizScoreValue');
         if (scoreEl) scoreEl.textContent = String(quizScore);
 
+        // 🏆 Skoru sunucuya gönderiyoruz — rekoru geçtiyse orada güncelleniyor,
+        // her durumda güncel rekoru geri alıp ekranı tazeliyoruz.
+        submitQuizScoreToServer(quizScore);
+
         // 🎉 Seviye atlama kutlaması — her 3 doğruda bir, uzun süre görünüp kayboluyor
-        if (quizScore === 21) {
+        if (quizScore === 30) {
             showToast('🏆 Efsane seviyesindesin! Kazandınız!', 4500);
             setTimeout(showQuizWinScreen, 1600); // kutlama animasyonu/sesi bitsin diye kısa bekleme
         } else if (quizScore % 3 === 0) {
             const level = quizScore / 3 + 1;
             showToast(`🎉 Bravo! Level ${level}'e geçtin!`, 4500);
         }
+    }
+
+    async function fetchQuizHighScore() {
+        try {
+            const res = await fetch('/quiz/highscore');
+            if (res.ok) {
+                const data = await res.json();
+                quizHighScore = data.highScore || 0;
+                updateQuizHighScoreDisplay();
+            }
+        } catch (e) {
+            // sessizce geç, rekor kutusu 0 gösterir
+        }
+    }
+
+    async function submitQuizScoreToServer(score) {
+        try {
+            const res = await fetch('/quiz/highscore', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ score })
+            });
+            if (res.ok) {
+                const data = await res.json();
+                quizHighScore = data.highScore || quizHighScore;
+                updateQuizHighScoreDisplay();
+                if (quizHighScore === score) {
+                    showToast('🏆 Yeni rekor!', 3000);
+                }
+            }
+        } catch (e) {
+            // sessizce geç
+        }
+    }
+
+    function updateQuizHighScoreDisplay() {
+        const el = document.getElementById('quizHighScoreValue');
+        if (el) el.textContent = String(quizHighScore);
     }
 
     // 🏆 9 doğru bilince oyunu bitirip son skoru/süreyi net gösteren ekran —
@@ -2326,6 +2386,10 @@
                                 <span class="quiz-stat-label">Süre</span>
                                 <span class="quiz-stat-value" id="quizTimerValue">00:00</span>
                             </div>
+                            <div class="quiz-stat-box">
+                                <span class="quiz-stat-label">🏆 Rekor</span>
+                                <span class="quiz-stat-value" id="quizHighScoreValue">${quizHighScore}</span>
+                            </div>
                         </div>
                         ${bodyHtml}
                         <div class="player-mode-hint-row">
@@ -2440,7 +2504,7 @@
                     // 🔄 Doğru bilince otomatik yeni soru — kutlamayı görsün diye kısa
                     // bir bekleme sonra. 9'a ulaşıldıysa (kazanma ekranı) burada değil,
                     // incrementQuizScore() kendi geçişini zaten yönetiyor.
-                    if (quizScore < 21) {
+                    if (quizScore < 30) {
                         // 💡 Otomatik geçiş beklerken "Yeni Oyuncu"/"Yeni Oyun" butonlarına
                         // basılırsa çifte geçiş (ve olası pas karışıklığı) olabilir — o yüzden
                         // bekleme süresince kilitliyoruz. Yeni soru render olunca zaten
@@ -3110,6 +3174,7 @@
             tableHead.style.display = 'none';
             document.getElementById('duelModeBtn').style.display = 'none';
             startQuizScoreTimer();
+            await fetchQuizHighScore(); // 🏆 ilk render'dan önce güncel rekoru çek
             await startPlayerMode(false); // Quiz'a ilk giriş, ses yok
             scrollToResultsArea(); // sadece ilk girişte, tekrarlanmıyor
         });

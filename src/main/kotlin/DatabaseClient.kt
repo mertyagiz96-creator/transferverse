@@ -141,6 +141,61 @@ object DatabaseClient {
     private const val POOL_SIZE = 6
     private val connectionPool: java.util.concurrent.BlockingQueue<Connection> by lazy { createConnectionPool() }
 
+    // 🏆 Bil Bakalım global rekoru — tek satırlık küçük bir tablo, sunucu ilk
+    // ayağa kalkarken yoksa otomatik oluşturuluyor. Not: sunucunun dosya sistemi
+    // geçici (ephemeral), her yeni deploy'da bu tablo (ve rekor) sıfırlanır.
+    init {
+        try {
+            withConnection { conn ->
+                conn.createStatement().use { stmt ->
+                    stmt.execute(
+                        """
+                        CREATE TABLE IF NOT EXISTS quiz_high_score (
+                            id INTEGER PRIMARY KEY CHECK (id = 1),
+                            score INTEGER NOT NULL DEFAULT 0
+                        )
+                        """.trimIndent()
+                    )
+                    stmt.execute("INSERT OR IGNORE INTO quiz_high_score (id, score) VALUES (1, 14)")
+                }
+            }
+        } catch (e: Exception) {
+            println("🔥 quiz_high_score tablo oluşturma HATASI: ${e.message}")
+        }
+    }
+
+    fun fetchQuizHighScore(): Int {
+        return try {
+            withConnection { conn ->
+                conn.prepareStatement("SELECT score FROM quiz_high_score WHERE id = 1").use { stmt ->
+                    stmt.executeQuery().use { rs -> if (rs.next()) rs.getInt("score") else 0 }
+                }
+            }
+        } catch (e: Exception) {
+            println("🔥 fetchQuizHighScore HATASI: ${e.message}")
+            0
+        }
+    }
+
+    // 📈 Skoru gönderir, mevcut rekordan büyükse günceller — her durumda sonuçtaki
+    // (güncel) rekoru döndürür.
+    fun submitQuizScore(score: Int): Int {
+        return try {
+            withConnection { conn ->
+                conn.prepareStatement("UPDATE quiz_high_score SET score = MAX(score, ?) WHERE id = 1").use { stmt ->
+                    stmt.setInt(1, score)
+                    stmt.executeUpdate()
+                }
+                conn.prepareStatement("SELECT score FROM quiz_high_score WHERE id = 1").use { stmt ->
+                    stmt.executeQuery().use { rs -> if (rs.next()) rs.getInt("score") else score }
+                }
+            }
+        } catch (e: Exception) {
+            println("🔥 submitQuizScore HATASI: ${e.message}")
+            score
+        }
+    }
+
     private fun createConnectionPool(): java.util.concurrent.BlockingQueue<Connection> {
         val pool: java.util.concurrent.BlockingQueue<Connection> =
             java.util.concurrent.ArrayBlockingQueue(POOL_SIZE)
