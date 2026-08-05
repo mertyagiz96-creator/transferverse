@@ -2423,7 +2423,7 @@
 
         const photoUrl = avatarEl.dataset.photo;
         if (photoUrl) {
-            avatarEl.innerHTML = `<img src="${photoUrl}" alt="" onerror="this.style.display='none'">`;
+            avatarEl.innerHTML = `<img src="${photoUrl}" alt="" onerror="hidePlayerModeAvatar()">`;
         }
     }
 
@@ -2435,6 +2435,23 @@
 
     // 🚀 Sadece veriyi çeker, DOM'a hiç dokunmaz — hem normal akışta hem de
     // "doğru bildin" animasyonu oynarken ARKA PLANDA önceden çağırmak için.
+    // 🖼️ Fotoğrafı, soru kartı ekrana çizilmeden ÖNCE tarayıcı önbelleğine
+    // yükler — böylece kart göründüğünde fotoğraf da HAZIR olur, ayrı ayrı
+    // (metin hemen, fotoğraf geç) gelmez. Yavaş/bozuk bir resimde sonsuza
+    // kadar beklemesin diye bir zaman aşımı (timeout) payı var.
+    function preloadImage(url, timeoutMs = 2500) {
+        return new Promise((resolve) => {
+            if (!url) { resolve(); return; }
+            let done = false;
+            const finish = () => { if (!done) { done = true; resolve(); } };
+            const img = new Image();
+            img.onload = finish;
+            img.onerror = finish;
+            img.src = url;
+            setTimeout(finish, timeoutMs);
+        });
+    }
+
     async function fetchQuizQuestionData() {
         const maxAttempts = 12; // 💡 tekrar kontrolü için biraz daha fazla deneme payı
         let found = null;
@@ -2477,6 +2494,12 @@
             } catch (e) {
                 // sessizce bir sonraki denemeye geç
             }
+        }
+
+        // 🖼️ Kartı çizmeden önce fotoğrafı önbelleğe alıyoruz — hazır default.jpg
+        // ise (fotoğrafsız oyuncu) hiç beklemeye gerek yok.
+        if (found && found.imageUrl && !found.imageUrl.includes('default.jpg')) {
+            await preloadImage(found.imageUrl);
         }
 
         return { found, isCountryMix };
@@ -2530,7 +2553,7 @@
             const hasRealPhoto = found.imageUrl && !found.imageUrl.includes('default.jpg');
             const showPhotoNow = hasRealPhoto && photoVisibleByDefault;
             const initialAvatarInner = showPhotoNow
-                ? `<img src="${found.imageUrl}" alt="" onerror="this.style.display='none'">`
+                ? `<img src="${found.imageUrl}" alt="" onerror="hidePlayerModeAvatar()">`
                 : genericAvatarSvg;
             const avatarHtml = `
                 <div class="player-mode-avatar" id="playerModeAvatar" data-photo="${hasRealPhoto ? found.imageUrl : ''}">
@@ -2851,6 +2874,12 @@
         }
     }
 
+    function hideDuelAvatar() {
+        const avatarEl = document.getElementById('duelAvatar');
+        if (!avatarEl) return;
+        avatarEl.innerHTML = genericAvatarSvg;
+    }
+
     function escapeHtml(str) {
         return (str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     }
@@ -3130,6 +3159,11 @@
     // başlıyor (~2 saniyelik makul bir pay), ama bu, iki tarafa da net bir
     // "şimdi başlıyor" hissi veriyor.
     function showDuelCountdownThenQuestion(state) {
+        // 🖼️ "3,2,1" göstergesi oynarken fotoğrafı arka planda önceden yüklüyoruz
+        if (state.imageUrl && !state.imageUrl.includes('default.jpg')) {
+            preloadImage(state.imageUrl);
+        }
+
         const resultsTable = document.getElementById("resultsTable");
         let count = 3;
 
@@ -3199,7 +3233,7 @@
                         <div class="player-mode-clubs">${clubsHtml}</div>
                         <div class="player-mode-avatar" id="duelAvatar">
                             ${(state.imageUrl && !state.imageUrl.includes('default.jpg'))
-            ? `<img src="${state.imageUrl}" alt="" onerror="this.style.display='none'">`
+            ? `<img src="${state.imageUrl}" alt="" onerror="hideDuelAvatar()">`
             : `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                                     <circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="1.4"/>
                                     <path d="M4 20c0-4.4 3.6-7 8-7s8 2.6 8 7" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
