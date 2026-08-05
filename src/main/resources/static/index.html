@@ -2007,7 +2007,7 @@
 
     const countryFlags = {
         'turkiye': '🇹🇷', 'türkiye': '🇹🇷', 'turkey': '🇹🇷',
-        'england': '🏴󠁧󠁢󠁥󠁮󠁧󠁿', 'scotland': '🏴󠁧󠁢󠁳󠁣󠁴󠁿', 'wales': '🏴󠁧󠁢󠁷󠁬󠁳󠁿',
+        'england': '🇬🇧', 'scotland': '🇬🇧', 'wales': '🇬🇧',
         'uk': '🇬🇧', 'united kingdom': '🇬🇧', 'northern ireland': '🇬🇧',
         'germany': '🇩🇪', 'france': '🇫🇷', 'spain': '🇪🇸', 'italy': '🇮🇹',
         'netherlands': '🇳🇱', 'portugal': '🇵🇹', 'poland': '🇵🇱', 'russia': '🇷🇺',
@@ -2209,27 +2209,47 @@
     // ⏱️ Soru başına 30 saniye — Arkadaşla Yarış'taki mantıkla tutarlı. Süre
     // dolarsa (soru çözülmediyse) otomatik olarak bir pas hakkı düşüp yeni
     // soruya geçiliyor — tıpkı "Yeni Oyuncu"ya çözülmeden basmak gibi.
+    let quizQuestionStartTime = null; // ⏱️ sorunun GERÇEK başlangıç zaman damgası
+
+    // 🕵️ Gerçek zamana (Date.now()) dayalı hesaplama — basit bir "her saniye 1 azalt"
+    // sayacı değil. Bu sayede ekran kilitlenip setInterval duraklasa/atlasa bile,
+    // tekrar çalışmaya başladığı an GERÇEKTE ne kadar süre geçmişse onu yansıtıyor
+    // (kopya çekmek için ekranı kilitleyip uzaklaşmak süreyi DURDURMUYOR).
+    function quizQuestionTick() {
+        const elapsedSeconds = Math.floor((Date.now() - quizQuestionStartTime) / 1000);
+        quizQuestionSecondsLeft = Math.max(0, 30 - elapsedSeconds);
+        const el = document.getElementById('quizTimerValue');
+        if (el) el.textContent = String(quizQuestionSecondsLeft);
+
+        if (quizQuestionSecondsLeft <= 0) {
+            clearInterval(quizQuestionTimerInterval);
+            handleQuizQuestionTimeout();
+        }
+    }
+
     function startQuizQuestionTimer() {
+        quizQuestionStartTime = Date.now();
         quizQuestionSecondsLeft = 30;
         const timerEl = document.getElementById('quizTimerValue');
         if (timerEl) timerEl.textContent = String(quizQuestionSecondsLeft);
 
         clearInterval(quizQuestionTimerInterval);
-        quizQuestionTimerInterval = setInterval(() => {
-            quizQuestionSecondsLeft--;
-            const el = document.getElementById('quizTimerValue');
-            if (el) el.textContent = String(Math.max(0, quizQuestionSecondsLeft));
-
-            if (quizQuestionSecondsLeft <= 0) {
-                clearInterval(quizQuestionTimerInterval);
-                handleQuizQuestionTimeout();
-            }
-        }, 1000);
+        quizQuestionTimerInterval = setInterval(quizQuestionTick, 1000);
     }
+
+    // 📱 Sekme/ekran tekrar görünür olduğu an ANINDA senkronize ediyoruz — bir
+    // sonraki normal tick'i (1 saniyeye kadar) beklemeden, kaçırılan süreyi
+    // hemen yansıtıyor (örn. 40 saniye uzaklaşıldıysa süre anında 0'a düşer).
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden && playerModeActive && !currentQuestionSolved && quizQuestionStartTime) {
+            quizQuestionTick();
+        }
+    });
 
     function stopQuizQuestionTimer() {
         clearInterval(quizQuestionTimerInterval);
         quizQuestionTimerInterval = null;
+        quizQuestionStartTime = null;
     }
 
     function handleQuizQuestionTimeout() {
@@ -2439,7 +2459,7 @@
     // yükler — böylece kart göründüğünde fotoğraf da HAZIR olur, ayrı ayrı
     // (metin hemen, fotoğraf geç) gelmez. Yavaş/bozuk bir resimde sonsuza
     // kadar beklemesin diye bir zaman aşımı (timeout) payı var.
-    function preloadImage(url, timeoutMs = 2500) {
+    function preloadImage(url, timeoutMs = 8000) {
         return new Promise((resolve) => {
             if (!url) { resolve(); return; }
             let done = false;
@@ -2496,8 +2516,9 @@
             }
         }
 
-        // 🖼️ Kartı çizmeden önce fotoğrafı önbelleğe alıyoruz — hazır default.jpg
-        // ise (fotoğrafsız oyuncu) hiç beklemeye gerek yok.
+        // 🖼️ Fotoğraf tam yüklenene kadar bekliyoruz — soru ve fotoğraf HER ZAMAN
+        // birlikte görünsün diye. Sadece gerçekten kopuk/hiç yüklenmeyen bir link
+        // varsa 8 saniye sonra vazgeçip devam ediyoruz (sonsuza kadar takılmasın).
         if (found && found.imageUrl && !found.imageUrl.includes('default.jpg')) {
             await preloadImage(found.imageUrl);
         }
@@ -3159,11 +3180,6 @@
     // başlıyor (~2 saniyelik makul bir pay), ama bu, iki tarafa da net bir
     // "şimdi başlıyor" hissi veriyor.
     function showDuelCountdownThenQuestion(state) {
-        // 🖼️ "3,2,1" göstergesi oynarken fotoğrafı arka planda önceden yüklüyoruz
-        if (state.imageUrl && !state.imageUrl.includes('default.jpg')) {
-            preloadImage(state.imageUrl);
-        }
-
         const resultsTable = document.getElementById("resultsTable");
         let count = 3;
 
@@ -3178,13 +3194,20 @@
             </tr>
         `;
 
-        const countdownInterval = setInterval(() => {
+        // 🖼️ "3,2,1" göstergesi oynarken fotoğrafı arka planda yüklüyoruz; sayaç
+        // bitince (aşağıda) fotoğraf da gerçekten hazırsa göstereceğiz.
+        const imagePreloadPromise = (state.imageUrl && !state.imageUrl.includes('default.jpg'))
+            ? preloadImage(state.imageUrl)
+            : Promise.resolve();
+
+        const countdownInterval = setInterval(async () => {
             count--;
             const el = document.getElementById('duelCountdownText');
             if (count > 0) {
                 if (el) el.textContent = String(count);
             } else {
                 clearInterval(countdownInterval);
+                await imagePreloadPromise; // 💡 fotoğraf hazır değilse burada kısa bir süre daha bekler
                 buildDuelQuestionScreen(state);
             }
         }, 700);
