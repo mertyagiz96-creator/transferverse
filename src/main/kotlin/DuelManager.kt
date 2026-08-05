@@ -115,7 +115,7 @@ object DuelManager {
         "Kasimpasa", "Kayserispor", "Konyaspor", "Samsunspor",
         "Sivasspor", "Eyupspor", "Kocaelispor",
         // 🌍 Ünlü oyuncuların oynadığı "egzotik" kulüpler — soru zenginliği için
-        "Inter Miami", "Al-Ahli", "Beijing Guoan", "Shanghai Port", "Vissel Kobe"
+        "Inter Miami", "Al-Ahli", "Beijing Guoan", "Shanghai Port", "Vissel Kobe", "LA Galaxy"
     )
 
     // 💡 Frontend'deki luckyCountries ile aynı liste — Bil Bakalım'daki gibi %20
