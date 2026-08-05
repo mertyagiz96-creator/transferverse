@@ -2128,6 +2128,8 @@
     let quizHighScore = 14; // 🏆 sunucudan çekilen global rekor (varsayılan 14)
     let quizStartTime = null;
     let quizTimerInterval = null;
+    let quizQuestionSecondsLeft = 30; // ⏱️ soru başına geri sayım — süre dolarsa pas düşüp yeni soru gelir
+    let quizQuestionTimerInterval = null;
     let currentQuestionSolved = false; // 🎫 "Yeni Oyuncu" pas hakkı tüketsin mi diye takip ediyor
 
     // 🔁 Son gösterilen oyuncuları hatırlayıp kısa vadede tekrarını engelliyoruz —
@@ -2146,17 +2148,48 @@
         quizScore = 0;
         quizPassesRemaining = 3;
         quizStartTime = Date.now();
-
-        clearInterval(quizTimerInterval);
-        quizTimerInterval = setInterval(() => {
-            const timerEl = document.getElementById('quizTimerValue');
-            if (timerEl) timerEl.textContent = formatElapsedTime(Date.now() - quizStartTime);
-        }, 1000);
+        // 💡 Artık burada canlı bir arayüz güncellemesi yapmıyoruz — o iş artık
+        // startQuizQuestionTimer()'a ait. quizStartTime sadece bitiş ekranındaki
+        // "toplam süre" hesaplaması için arka planda tutuluyor.
     }
 
     function stopQuizScoreTimer() {
         clearInterval(quizTimerInterval);
         quizTimerInterval = null;
+    }
+
+    // ⏱️ Soru başına 30 saniye — Arkadaşla Yarış'taki mantıkla tutarlı. Süre
+    // dolarsa (soru çözülmediyse) otomatik olarak bir pas hakkı düşüp yeni
+    // soruya geçiliyor — tıpkı "Yeni Oyuncu"ya çözülmeden basmak gibi.
+    function startQuizQuestionTimer() {
+        quizQuestionSecondsLeft = 30;
+        const timerEl = document.getElementById('quizTimerValue');
+        if (timerEl) timerEl.textContent = String(quizQuestionSecondsLeft);
+
+        clearInterval(quizQuestionTimerInterval);
+        quizQuestionTimerInterval = setInterval(() => {
+            quizQuestionSecondsLeft--;
+            const el = document.getElementById('quizTimerValue');
+            if (el) el.textContent = String(Math.max(0, quizQuestionSecondsLeft));
+
+            if (quizQuestionSecondsLeft <= 0) {
+                clearInterval(quizQuestionTimerInterval);
+                handleQuizQuestionTimeout();
+            }
+        }, 1000);
+    }
+
+    function stopQuizQuestionTimer() {
+        clearInterval(quizQuestionTimerInterval);
+        quizQuestionTimerInterval = null;
+    }
+
+    function handleQuizQuestionTimeout() {
+        if (!playerModeActive || currentQuestionSolved) return;
+        const depleted = useQuizPass(); // 🎫 süre dolması, çözülmeden atlanan soru gibi pas hakkı tüketiyor
+        if (depleted) return; // useQuizPass zaten oyun bitti ekranını gösterdi
+        showToast('⏱️ Süre doldu!', 1800);
+        startPlayerMode(false); // otomatik geçiş, ses yok
     }
 
     function incrementQuizScore() {
@@ -2221,6 +2254,7 @@
     function showQuizWinScreen() {
         clearInterval(quizTimerInterval);
         quizTimerInterval = null;
+        stopQuizQuestionTimer();
 
         const finalScore = quizScore;
         const finalTime = quizStartTime ? formatElapsedTime(Date.now() - quizStartTime) : '00:00';
@@ -2260,6 +2294,7 @@
     function showQuizGameOverScreen() {
         clearInterval(quizTimerInterval);
         quizTimerInterval = null;
+        stopQuizQuestionTimer();
 
         const finalScore = quizScore;
         const finalTime = quizStartTime ? formatElapsedTime(Date.now() - quizStartTime) : '00:00';
@@ -2488,7 +2523,7 @@
                             </div>
                             <div class="quiz-stat-box">
                                 <span class="quiz-stat-label">Süre</span>
-                                <span class="quiz-stat-value" id="quizTimerValue">00:00</span>
+                                <span class="quiz-stat-value" id="quizTimerValue">30</span>
                             </div>
                             <div class="quiz-stat-box">
                                 <span class="quiz-stat-label">🏆 Rekor</span>
@@ -2576,6 +2611,7 @@
                 const guessInputEl = document.getElementById('playerModeGuessInput');
                 if (guessInputEl) guessInputEl.disabled = true;
 
+                stopQuizQuestionTimer(); // ⏱️ pes edildi, geri sayıma gerek kalmadı
                 useQuizPass(); // 🎫 pes edip cevabı görmek pas hakkı tüketiyor
                 currentQuestionSolved = true; // 💡 "Yeni Oyuncu" bir daha pas düşürmesin diye
             });
@@ -2608,6 +2644,7 @@
                     playCorrectSound();
                     incrementQuizScore();
                     currentQuestionSolved = true;
+                    stopQuizQuestionTimer(); // ⏱️ doğru bilindi, geri sayıma gerek kalmadı
 
                     const celebration = document.getElementById('playerModeCelebration');
                     if (celebration) celebration.classList.add('play');
@@ -2638,6 +2675,7 @@
         }
 
         document.getElementById('newPlayerModeBtn').addEventListener('click', async () => {
+            stopQuizQuestionTimer();
             if (!currentQuestionSolved) {
                 const depleted = useQuizPass(); // 🎫 çözülmeden atlanan soru pas hakkı tüketiyor
                 if (depleted) return; // useQuizPass zaten yeni soruyu getirecek, tekrar çağırmıyoruz
@@ -2659,6 +2697,8 @@
                 });
             });
         }
+
+        if (found) startQuizQuestionTimer(); // ⏱️ geçerli bir soru varsa 30sn'lik geri sayımı başlat
     }
 
     // 💡 Quiz'ndan çıkma mantığı — tek bir yerden yönetiliyor, hem karttaki
@@ -2673,6 +2713,7 @@
         document.getElementById('homeMenuBtn').style.display = 'none';
         document.getElementById('quizWinOverlay').style.display = 'none';
         stopQuizScoreTimer();
+        stopQuizQuestionTimer();
         document.querySelector('.search-card').style.display = '';
         document.getElementById('luckyModeBtn').style.display = '';
         document.getElementById('hunterModeWrapper').style.display = '';
