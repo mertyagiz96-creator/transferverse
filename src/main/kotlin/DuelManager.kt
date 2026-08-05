@@ -113,7 +113,9 @@ object DuelManager {
         "Basaksehir", "Adana Demirspor", "Alanyaspor", "Antalyaspor",
         "Caykur Rizespor", "Gaziantep FK", "Goztepe", "Hatayspor",
         "Kasimpasa", "Kayserispor", "Konyaspor", "Samsunspor",
-        "Sivasspor", "Eyupspor", "Kocaelispor"
+        "Sivasspor", "Eyupspor", "Kocaelispor",
+        // 🌍 Ünlü oyuncuların oynadığı "egzotik" kulüpler — soru zenginliği için
+        "Inter Miami", "Al-Ahli", "Beijing Guoan", "Shanghai Port", "Vissel Kobe"
     )
 
     // 💡 Frontend'deki luckyCountries ile aynı liste — Bil Bakalım'daki gibi %20

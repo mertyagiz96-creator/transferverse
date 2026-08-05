@@ -376,6 +376,60 @@
             margin-bottom: 20px;
         }
 
+        /* ⚡ YENİ: Bil Bakalım'da daha modern, "karşı karşıya" (VS) tarzı gösterim —
+           iki kulüp yan yana, aralarında ince dikey bir çizgi. */
+        .vs-layout {
+            display: flex;
+            align-items: stretch;
+            justify-content: center;
+            margin-bottom: 22px;
+        }
+
+        .vs-side {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 10px 12px;
+            min-width: 0;
+        }
+
+        .vs-divider {
+            width: 1px;
+            background: linear-gradient(to bottom, transparent, rgba(var(--fg-rgb), 0.22), transparent);
+            flex-shrink: 0;
+        }
+
+        .vs-club-logo-img {
+            width: 78px;
+            height: 78px;
+            object-fit: contain;
+        }
+
+        .vs-club-flag {
+            font-size: 3.2rem;
+            line-height: 1;
+        }
+
+        .vs-club-name {
+            font-size: 0.82rem;
+            font-weight: 700;
+            letter-spacing: 0.4px;
+            text-align: center;
+            color: rgb(var(--fg-rgb));
+            line-height: 1.3;
+        }
+
+        .vs-club-season {
+            font-size: 0.68rem;
+            font-weight: 600;
+            letter-spacing: 1px;
+            color: var(--light-green);
+            text-transform: uppercase;
+        }
+
         .player-mode-club {
             background: rgba(var(--fg-rgb), 0.025);
             border: 1px solid rgba(var(--light-green-rgb), 0.3);
@@ -1244,6 +1298,24 @@
                 padding: 18px;
             }
 
+            .vs-club-logo-img {
+                width: 56px;
+                height: 56px;
+            }
+
+            .vs-club-flag {
+                font-size: 2.4rem;
+            }
+
+            .vs-club-name {
+                font-size: 0.72rem;
+            }
+
+            .vs-side {
+                padding: 8px 6px;
+                gap: 6px;
+            }
+
             .quiz-stats-bar .quiz-stat-box {
                 min-width: 58px;
             }
@@ -1556,9 +1628,42 @@
         });
     }
 
+    // 🎯 Havuzumuzdaki (soru gelebilen) kulüpler için, veritabanından DOĞRULANMIŞ
+    // kesin eşleştirmeler — esnek (substring) aramanın "Inter" ↔ "Inter Miami",
+    // "Barcelona" ↔ "Espanyol" gibi yanlış eşleşmelerini önlüyor. Sadece burada
+    // listelenen kulüpler için geçerli, diğerleri eskisi gibi esnek aranıyor.
+    const clubLogoAliasMap = {
+        'inter': 'inter milan',
+        'ac milan': 'ac milan',
+        'arsenal': 'arsenal fc',
+        'barcelona': 'fc barcelona',
+        'atlético madrid': 'atlético de madrid',
+        'juventus': 'juventus fc',
+        'napoli': 'ssc napoli',
+        'paris sg': 'paris saint-germain',
+        'marseille': 'olympique marseille',
+        'benfica': 'sl benfica',
+        'ajax': 'ajax amsterdam',
+        'liverpool': 'liverpool fc',
+        'chelsea': 'chelsea fc',
+        'tottenham': 'tottenham hotspur',
+        'boca juniors': 'ca boca juniors',
+        'river plate': 'ca river plate',
+        // 🌍 Yeni eklenen "bilindik oyuncu" kulüpleri
+        'inter miami': 'inter miami cf',
+        'al-ahli': 'al-ahli sc',
+        'beijing guoan': 'beijing guoan',
+        'shanghai port': 'shanghai port',
+        'vissel kobe': 'vissel kobe'
+    };
+
     function getClubLogo(clubName) {
         if (!clubName) return null;
         const key = normalize(clubName);
+
+        if (clubLogoAliasMap[key] && clubLogos[clubLogoAliasMap[key]]) {
+            return clubLogos[clubLogoAliasMap[key]];
+        }
 
         if (clubLogos[key]) return clubLogos[key]; // tam eşleşme öncelikli
 
@@ -1935,7 +2040,9 @@
         'Bayern Munich', 'Borussia Dortmund', 'RB Leipzig',
         'Paris SG', 'Marseille', 'Olympique Lyon',
         'Ajax', 'Benfica', 'FC Porto',
-        'Boca Juniors', 'River Plate'
+        'Boca Juniors', 'River Plate',
+        // 🌍 Ünlü oyuncuların oynadığı "egzotik" kulüpler — soru zenginliği için
+        'Inter Miami', 'Al-Ahli', 'Beijing Guoan', 'Shanghai Port', 'Vissel Kobe'
     ];
 
     const luckyCountries = [
@@ -2311,20 +2418,21 @@
                 ? found.position.trim().replace(/"/g, "&quot;")
                 : "Bilinmiyor";
 
-            const clubListHtml = found.clubs.map(c => {
-                const seasonBadge = (c.season && c.season !== '-')
-                    ? `<span class="badge-season">${c.season}</span>`
+            const vsSidesHtml = found.clubs.map(c => {
+                const seasonHtml = (c.season && c.season !== '-')
+                    ? `<span class="vs-club-season">${c.season}</span>`
                     : '';
                 const flag = getFlagEmoji(c.club);
                 let iconHtml = '';
                 if (flag) {
-                    iconHtml = `<span class="input-flag-icon">${flag}</span>`;
+                    iconHtml = `<span class="vs-club-flag">${flag}</span>`;
                 } else {
                     const logoUrl = getClubLogo(c.club);
-                    iconHtml = logoUrl ? `<img src="${logoUrl}" alt="" class="club-logo-icon" onerror="this.style.display='none'">` : '';
+                    iconHtml = logoUrl ? `<img src="${logoUrl}" alt="" class="vs-club-logo-img" onerror="this.style.display='none'">` : '';
                 }
-                return `<div class="player-mode-club">${iconHtml}${c.club} ${seasonBadge}</div>`;
-            }).join('');
+                return `<div class="vs-side">${iconHtml}<span class="vs-club-name">${c.club}</span>${seasonHtml}</div>`;
+            }).join('<div class="vs-divider"></div>');
+            const clubListHtml = `<div class="vs-layout">${vsSidesHtml}</div>`;
 
             const hasRealPhoto = found.imageUrl && !found.imageUrl.includes('default.jpg');
             const showPhotoNow = hasRealPhoto && photoVisibleByDefault;
@@ -2338,15 +2446,11 @@
             `;
 
             const dashPattern = nameToDashPattern(cleanFullName);
-            const questionTitle = lastQuestionIsCountryMix
-                ? '🎮 Bu kulüpte oynamış ve bu ülkeden olan oyuncu kimdir?'
-                : '🎮 Her iki takımda da oynamış oyuncu kimdir?';
 
             bodyHtml = `
                 ${avatarHtml}
-                <div class="player-mode-title">${questionTitle}</div>
                 <div class="player-mode-clubs">${clubListHtml}</div>
-                <div class="player-mode-position" id="playerModePosition" data-real="${safePosition}">Mevki: ???</div>
+                <div class="player-mode-position" id="playerModePosition" data-real="${safePosition}" style="display: none;"></div>
                 <div class="player-mode-answer" id="playerModeAnswer" data-real="${safeName}" data-masked="${safeMasked}">${dashPattern}</div>
                 <div class="player-mode-guess-row">
                     <input type="text" id="playerModeGuessInput" placeholder="Tahminini yaz..." autocomplete="off">
@@ -2420,6 +2524,7 @@
                 const positionEl = document.getElementById('playerModePosition');
                 positionEl.textContent = 'Mevki: ' + positionEl.dataset.real;
                 positionEl.classList.add('revealed');
+                positionEl.style.display = 'block';
                 if (quizHintsPanel) quizHintsPanel.classList.remove('open');
             });
         }
@@ -2460,6 +2565,13 @@
                 answerEl.classList.add('revealed');
                 answerEl.classList.remove('masked-revealed');
                 revealPlayerModeAvatar();
+
+                const positionEl = document.getElementById('playerModePosition');
+                if (positionEl) {
+                    positionEl.textContent = 'Mevki: ' + positionEl.dataset.real;
+                    positionEl.classList.add('revealed');
+                    positionEl.style.display = 'block';
+                }
 
                 const guessInputEl = document.getElementById('playerModeGuessInput');
                 if (guessInputEl) guessInputEl.disabled = true;
