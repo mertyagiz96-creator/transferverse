@@ -554,29 +554,61 @@
             100% { transform: scale(1); opacity: 1; }
         }
 
-        /* ⚽ Doğru tahmin animasyonu — top ekranın solundan sağına dönerek kayıyor */
-        .player-mode-celebration-wrap {
+        /* ⚽ Doğru tahmin animasyonu — modern bir "pop + parıltı patlaması" efekti */
+        .correct-celebration-wrap {
             position: relative;
-            height: 30px;
-            overflow: hidden;
+            height: 54px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             margin-bottom: 6px;
         }
 
-        .player-mode-celebration {
-            position: absolute;
-            top: 0;
-            left: -10%;
-            font-size: 1.7rem;
+        .correct-check-icon {
+            font-size: 2.4rem;
             opacity: 0;
+            transform: scale(0.2) rotate(-15deg);
+            position: relative;
+            z-index: 2;
         }
 
-        .player-mode-celebration.play {
-            animation: ballRoll 1.1s ease-in-out forwards;
+        .correct-check-icon.play {
+            animation: checkPop 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
         }
 
-        @keyframes ballRoll {
-            0% { left: -10%; transform: rotate(0deg); opacity: 1; }
-            100% { left: 95%; transform: rotate(720deg); opacity: 1; }
+        @keyframes checkPop {
+            0% { opacity: 0; transform: scale(0.2) rotate(-15deg); }
+            55% { opacity: 1; transform: scale(1.25) rotate(6deg); }
+            75% { transform: scale(0.95) rotate(-2deg); }
+            100% { opacity: 1; transform: scale(1) rotate(0deg); }
+        }
+
+        .correct-particle {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            font-size: 1rem;
+            opacity: 0;
+            z-index: 1;
+        }
+
+        .correct-particle.play {
+            animation: particleBurst 0.9s ease-out forwards;
+        }
+
+        @keyframes particleBurst {
+            0% { opacity: 1; transform: translate(-50%, -50%) scale(0.5); }
+            100% { opacity: 0; transform: translate(calc(-50% + var(--tx)), calc(-50% + var(--ty))) scale(1.1); }
+        }
+
+        @keyframes avatarGlowPulse {
+            0% { box-shadow: 0 0 0 0 rgba(var(--accent-gold-rgb), 0.55); }
+            70% { box-shadow: 0 0 0 22px rgba(var(--accent-gold-rgb), 0); }
+            100% { box-shadow: 0 0 0 0 rgba(var(--accent-gold-rgb), 0); }
+        }
+
+        .player-mode-avatar.correct-glow {
+            animation: avatarGlowPulse 1s ease-out;
         }
 
         .player-mode-hint-row {
@@ -2385,20 +2417,12 @@
         avatarEl.innerHTML = genericAvatarSvg;
     }
 
-    async function startPlayerMode(playSound = true) {
-        const resultsTable = document.getElementById("resultsTable");
-        const topLoader = document.getElementById("topLoader");
-        resultsTable.innerHTML = ""; // 💡 eski içerik (liste ya da önceki quiz kartı) anında kaybolsun
-        const tableWrapperEl = document.querySelector('.table-wrapper');
-        if (tableWrapperEl) tableWrapperEl.scrollLeft = 0;
-        topLoader.style.display = "flex";
-        if (playSound) playSearchSound();
-        currentQuestionSolved = false; // 🎫 her yeni soru için sıfırdan başlıyor
-
+    // 🚀 Sadece veriyi çeker, DOM'a hiç dokunmaz — hem normal akışta hem de
+    // "doğru bildin" animasyonu oynarken ARKA PLANDA önceden çağırmak için.
+    async function fetchQuizQuestionData() {
         const maxAttempts = 12; // 💡 tekrar kontrolü için biraz daha fazla deneme payı
         let found = null;
-
-        let lastQuestionIsCountryMix = false; // 💡 soru cümlesini/ikonları buna göre ayarlıyoruz
+        let isCountryMix = false;
 
         for (let i = 0; i < maxAttempts; i++) {
             // 💡 %20 ihtimalle takım+ülke karışımı, %80 ihtimalle iki takım.
@@ -2428,7 +2452,7 @@
                     // son denemede ne gelirse kabul ediyoruz.
                     if (!recentQuizPlayers.includes(cleanCandidateName) || i === maxAttempts - 1) {
                         found = candidate;
-                        lastQuestionIsCountryMix = isCountryFlags.includes(true);
+                        isCountryMix = isCountryFlags.includes(true);
                         recentQuizPlayers.push(cleanCandidateName);
                         if (recentQuizPlayers.length > MAX_RECENT_QUIZ_PLAYERS) recentQuizPlayers.shift();
                         break;
@@ -2439,7 +2463,25 @@
             }
         }
 
+        return { found, isCountryMix };
+    }
+
+    async function startPlayerMode(playSound = true) {
+        const topLoader = document.getElementById("topLoader");
+        topLoader.style.display = "flex";
+        const questionData = await fetchQuizQuestionData();
         topLoader.style.display = "none";
+        renderQuizQuestion(questionData, playSound);
+    }
+
+    function renderQuizQuestion(questionData, playSound = true) {
+        const { found, isCountryMix: lastQuestionIsCountryMix } = questionData;
+        const resultsTable = document.getElementById("resultsTable");
+        resultsTable.innerHTML = ""; // 💡 eski içerik (liste ya da önceki quiz kartı) anında kaybolsun
+        const tableWrapperEl = document.querySelector('.table-wrapper');
+        if (tableWrapperEl) tableWrapperEl.scrollLeft = 0;
+        if (playSound) playSearchSound();
+        currentQuestionSolved = false; // 🎫 her yeni soru için sıfırdan başlıyor
         currentPlayers = [];
 
         let bodyHtml;
@@ -2491,8 +2533,14 @@
                     <input type="text" id="playerModeGuessInput" placeholder="Tahminini yaz..." autocomplete="off">
                     <span id="playerModeGuessCheck" class="guess-check">✔️</span>
                 </div>
-                <div class="player-mode-celebration-wrap">
-                    <div id="playerModeCelebration" class="player-mode-celebration">⚽</div>
+                <div class="correct-celebration-wrap" id="correctCelebrationWrap">
+                    <span class="correct-check-icon" id="correctCheckIcon">✅</span>
+                    <span class="correct-particle" id="correctParticle1" style="--tx: 50px; --ty: 0px;">⚽</span>
+                    <span class="correct-particle" id="correctParticle2" style="--tx: 25px; --ty: -43px;">✨</span>
+                    <span class="correct-particle" id="correctParticle3" style="--tx: -25px; --ty: -43px;">⚽</span>
+                    <span class="correct-particle" id="correctParticle4" style="--tx: -50px; --ty: 0px;">✨</span>
+                    <span class="correct-particle" id="correctParticle5" style="--tx: -25px; --ty: 43px;">⚽</span>
+                    <span class="correct-particle" id="correctParticle6" style="--tx: 25px; --ty: 43px;">✨</span>
                 </div>
                 <div class="player-mode-hint-row">
                     <div class="toolbar-wrapper" id="quizHintsWrapper">
@@ -2646,9 +2694,15 @@
                     currentQuestionSolved = true;
                     stopQuizQuestionTimer(); // ⏱️ doğru bilindi, geri sayıma gerek kalmadı
 
-                    const celebration = document.getElementById('playerModeCelebration');
-                    if (celebration) celebration.classList.add('play');
+                    const checkIcon = document.getElementById('correctCheckIcon');
+                    if (checkIcon) checkIcon.classList.add('play');
+                    for (let p = 1; p <= 6; p++) {
+                        const particle = document.getElementById(`correctParticle${p}`);
+                        if (particle) particle.classList.add('play');
+                    }
                     revealPlayerModeAvatar();
+                    const avatarEl = document.getElementById('playerModeAvatar');
+                    if (avatarEl) avatarEl.classList.add('correct-glow');
 
                     // 🔄 Doğru bilince otomatik yeni soru — kutlamayı görsün diye kısa
                     // bir bekleme sonra. 9'a ulaşıldıysa (kazanma ekranı) burada değil,
@@ -2663,8 +2717,16 @@
                         if (newBtnEl) newBtnEl.disabled = true;
                         if (restartBtnEl) restartBtnEl.disabled = true;
 
-                        setTimeout(() => {
-                            if (playerModeActive) startPlayerMode(false); // otomatik geçiş, ses yok
+                        // 🚀 Kutlama animasyonu oynarken, bir sonraki soruyu ARKA PLANDA
+                        // şimdiden çekmeye başlıyoruz — animasyon bitene kadar veri
+                        // genelde zaten hazır oluyor, ekstra bir yükleme beklemesi olmuyor.
+                        const prefetchPromise = fetchQuizQuestionData();
+
+                        setTimeout(async () => {
+                            if (playerModeActive) {
+                                const questionData = await prefetchPromise;
+                                renderQuizQuestion(questionData, false); // otomatik geçiş, ses yok
+                            }
                         }, 2000);
                     }
                 } else {
@@ -3032,7 +3094,13 @@
     function resyncDuelTimer(state) {
         if (state.roundOver) return;
         const timerEl = document.getElementById('duelTimer');
-        if (timerEl) {
+        if (!timerEl) return;
+
+        const displayed = parseInt(timerEl.textContent, 10);
+        // 💡 Küçük (1sn'lik) doğal ağ/zamanlama farklarını görmezden geliyoruz —
+        // sadece gerçek bir sapma varsa (örn. sekme uzun süre arka planda kaldıysa)
+        // düzeltiyoruz. Aksi halde her poll'da ileri-geri zıplama oluyordu.
+        if (isNaN(displayed) || Math.abs(displayed - state.remainingSeconds) > 2) {
             timerEl.textContent = String(state.remainingSeconds);
         }
     }
@@ -3263,7 +3331,27 @@
                         <span class="quiz-stat-value">${state.player2Score}</span>
                     </div>
                 </div>
+                <button id="duelRematchBtn" class="btn-search" style="width: 100%;">🔄 Tekrar Oyna</button>
             `;
+
+            const rematchBtn = document.getElementById('duelRematchBtn');
+            if (rematchBtn) {
+                rematchBtn.addEventListener('click', async () => {
+                    rematchBtn.disabled = true;
+                    rematchBtn.textContent = '🔄 Başlatılıyor...';
+                    try {
+                        await fetch('/duel/rematch', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ roomCode: duelRoomCode })
+                        });
+                    } catch (e) {
+                        showToast('❌ Tekrar başlatılamadı, tekrar deneyin');
+                        rematchBtn.disabled = false;
+                        rematchBtn.textContent = '🔄 Tekrar Oyna';
+                    }
+                });
+            }
             return;
         }
 

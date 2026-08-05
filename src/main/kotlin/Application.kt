@@ -15,6 +15,7 @@ import kotlinx.serialization.Serializable
 @Serializable data class DuelAnswerRequest(val roomCode: String, val playerName: String, val guess: String)
 @Serializable data class DuelPassRequest(val roomCode: String, val playerName: String)
 @Serializable data class NextRoundRequest(val roomCode: String)
+@Serializable data class QuizScoreSubmission(val score: Int)
 
 fun main() {
     val port = System.getenv("PORT")?.toIntOrNull() ?: 8080
@@ -37,6 +38,17 @@ fun main() {
             get("/clubLogos") {
                 val logos = DatabaseClient.fetchAllClubLogos()
                 call.respond(logos)
+            }
+
+            // 🏆 Bil Bakalım global rekoru
+            get("/quiz/highscore") {
+                call.respond(mapOf("highScore" to DatabaseClient.fetchQuizHighScore()))
+            }
+
+            post("/quiz/highscore") {
+                val body = call.receive<QuizScoreSubmission>()
+                val newRecord = DatabaseClient.submitQuizScore(body.score)
+                call.respond(mapOf("highScore" to newRecord))
             }
 
             get("/players") {
@@ -146,6 +158,16 @@ fun main() {
             post("/duel/next") {
                 val body = call.receive<NextRoundRequest>()
                 val room = DuelManager.nextRound(body.roomCode)
+                if (room == null) {
+                    call.respond(HttpStatusCode.NotFound, mapOf("error" to "Oda bulunamadı"))
+                } else {
+                    call.respond(DuelManager.toState(room))
+                }
+            }
+
+            post("/duel/rematch") {
+                val body = call.receive<NextRoundRequest>()
+                val room = DuelManager.rematch(body.roomCode)
                 if (room == null) {
                     call.respond(HttpStatusCode.NotFound, mapOf("error" to "Oda bulunamadı"))
                 } else {

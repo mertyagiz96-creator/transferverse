@@ -266,7 +266,8 @@ object DatabaseClient {
         val youthKeywords = listOf(
             "u15", "u16", "u17", "u18", "u19", "u20", "u21", "u23",
             "u-15", "u-16", "u-17", "u-18", "u-19", "u-20", "u-21", "u-23",
-            "yth", "youth", "academy", "akademi", "reserves", "amateur", "ii"
+            "yth", "youth", "academy", "akademi", "reserves", "amateur", "ii",
+            "res.", "sva" // 💡 Çin ligi kısaltmaları (örn. "SH Shenhua Res.", "SH Shenhua SVA")
         )
         return youthKeywords.any { lower.contains(it) }
     }
