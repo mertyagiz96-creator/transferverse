@@ -3285,6 +3285,7 @@
             document.getElementById('mainGuessInput').value = '';
             tableHead.style.display = 'none';
             document.getElementById('duelModeBtn').style.display = 'none';
+            document.getElementById('resultsTable').innerHTML = ''; // 💡 eski "İki kulüp seçip Ara'ya basın" mesajı anında kaybolsun
             startQuizScoreTimer();
             await fetchQuizHighScore(); // 🏆 ilk render'dan önce güncel rekoru çek
             await startPlayerMode(false); // Quiz'a ilk giriş, ses yok
