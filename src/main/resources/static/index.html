@@ -2537,7 +2537,7 @@
             const vsSidesHtml = found.clubs.map(c => {
                 const seasonHtml = (c.season && c.season !== '-')
                     ? `<span class="vs-club-season">${c.season}</span>`
-                    : '';
+                    : `<span class="vs-club-season" style="visibility: hidden;">-</span>`;
                 const flag = getFlagEmoji(c.club);
                 let iconHtml = '';
                 if (flag) {
