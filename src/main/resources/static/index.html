@@ -396,6 +396,17 @@
             min-width: 0;
         }
 
+        /* 💡 Logo (sabit piksel) ile bayrak (font tabanlı emoji) farklı gerçek
+           yükseklikte render oluyordu, iki taraf birbirinden bağımsız ortalanınca
+           hizası kayıyordu. Bu sabit yükseklikli kutu, ikon türü ne olursa olsun
+           aynı alanı kaplamasını garanti ediyor. */
+        .vs-icon-box {
+            height: 78px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
         .vs-divider {
             width: 1px;
             background: linear-gradient(to bottom, transparent, rgba(var(--fg-rgb), 0.22), transparent);
@@ -1348,6 +1359,10 @@
                 gap: 6px;
             }
 
+            .vs-icon-box {
+                height: 56px;
+            }
+
             .quiz-stats-bar .quiz-stat-box {
                 min-width: 58px;
             }
@@ -1992,7 +2007,7 @@
 
     const countryFlags = {
         'turkiye': '🇹🇷', 'türkiye': '🇹🇷', 'turkey': '🇹🇷',
-        'england': '🏴', 'scotland': '🏴', 'wales': '🏴',
+        'england': '🏴󠁧󠁢󠁥󠁮󠁧󠁿', 'scotland': '🏴󠁧󠁢󠁳󠁣󠁴󠁿', 'wales': '🏴󠁧󠁢󠁷󠁬󠁳󠁿',
         'uk': '🇬🇧', 'united kingdom': '🇬🇧', 'northern ireland': '🇬🇧',
         'germany': '🇩🇪', 'france': '🇫🇷', 'spain': '🇪🇸', 'italy': '🇮🇹',
         'netherlands': '🇳🇱', 'portugal': '🇵🇹', 'poland': '🇵🇱', 'russia': '🇷🇺',
@@ -2508,7 +2523,7 @@
                     const logoUrl = getClubLogo(c.club);
                     iconHtml = logoUrl ? `<img src="${logoUrl}" alt="" class="vs-club-logo-img" onerror="this.style.display='none'">` : '';
                 }
-                return `<div class="vs-side">${iconHtml}<span class="vs-club-name">${c.club}</span>${seasonHtml}</div>`;
+                return `<div class="vs-side"><div class="vs-icon-box">${iconHtml}</div><span class="vs-club-name">${c.club}</span>${seasonHtml}</div>`;
             }).join('<div class="vs-divider"></div>');
             const clubListHtml = `<div class="vs-layout">${vsSidesHtml}</div>`;
 
@@ -2737,7 +2752,9 @@
             });
         }
 
-        document.getElementById('newPlayerModeBtn').addEventListener('click', async () => {
+        document.getElementById('newPlayerModeBtn').addEventListener('click', async (e) => {
+            e.currentTarget.disabled = true;
+            e.currentTarget.textContent = '⏳ Yükleniyor...';
             stopQuizQuestionTimer();
             if (!currentQuestionSolved) {
                 const depleted = useQuizPass(); // 🎫 çözülmeden atlanan soru pas hakkı tüketiyor
@@ -2754,6 +2771,8 @@
         if (restartBtn) {
             restartBtn.addEventListener('click', () => {
                 showConfirmDialog('Skorun ve pas hakların sıfırlanacak, emin misin?', async () => {
+                    restartBtn.disabled = true;
+                    restartBtn.textContent = '⏳ Yükleniyor...';
                     startQuizScoreTimer();
                     await startPlayerMode();
                     scrollToResultsArea();
