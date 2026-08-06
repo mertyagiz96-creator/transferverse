@@ -123,7 +123,9 @@ object DuelManager {
     private val countryPool = listOf(
         "Turkiye", "England", "Germany", "France", "Spain", "Italy", "Netherlands", "Portugal",
         "Brazil", "Argentina", "Croatia", "Serbia", "Belgium", "Sweden", "Norway",
-        "Cote d'Ivoire", "Morocco", "Egypt", "Nigeria", "Japan", "Korea, South"
+        "Cote d'Ivoire", "Morocco", "Egypt", "Nigeria", "Japan", "Korea, South",
+        // 🌍 Yeni eklenenler — havuzumuzdaki kulüplerle iyi eşleşen ülkeler
+        "Scotland", "Wales", "Uruguay", "Colombia", "Mexico"
     )
 
     fun createRoom(player1Name: String, winTarget: Int, maskingHintEnabled: Boolean): DuelRoom {
