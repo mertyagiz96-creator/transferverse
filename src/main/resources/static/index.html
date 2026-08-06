@@ -349,6 +349,42 @@
             color: var(--accent-gold);
         }
 
+        /* 🖼️ Fotoğraf henüz yüklenirken hafif bir "nefes alma" efekti — kart hiç
+           beklemeden hemen çiziliyor, fotoğraf gelince yumuşakça beliriyor. */
+        .player-mode-avatar.photo-loading {
+            animation: avatarPulse 1.4s ease-in-out infinite;
+        }
+
+        @keyframes avatarPulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.55; }
+        }
+
+        .player-mode-avatar img.photo-fade-in {
+            opacity: 0;
+            animation: avatarFadeIn 0.35s ease forwards;
+        }
+
+        @keyframes avatarFadeIn {
+            to { opacity: 1; }
+        }
+
+        /* 💡 Fotoğraf gösterilecekse, kulüpler/soru/tahmin kutusu fotoğrafla
+           BİRLİKTE beliriyor — fotoğraf olmadan soru eksik/anlaşılmaz kalmasın diye. */
+        .question-details-wrap {
+            opacity: 0;
+        }
+
+        .question-details-wrap.revealed {
+            opacity: 1;
+            animation: questionDetailsFadeIn 0.3s ease forwards;
+        }
+
+        @keyframes questionDetailsFadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
         .player-mode-avatar svg {
             width: 48px;
             height: 48px;
@@ -1374,6 +1410,24 @@
 
             .container {
                 padding: 18px;
+            }
+
+            .correct-check-icon {
+                font-size: 1.3rem;
+            }
+
+            .correct-celebration-wrap {
+                height: 24px;
+                margin-bottom: 0;
+            }
+
+            .celebration-ball {
+                font-size: 0.95rem;
+            }
+
+            .celebration-ball-track {
+                height: 16px;
+                margin-bottom: 8px;
             }
 
             .vs-club-logo-img {
@@ -2478,14 +2532,29 @@
 
         const photoUrl = avatarEl.dataset.photo;
         if (photoUrl) {
-            avatarEl.innerHTML = `<img src="${photoUrl}" alt="" onerror="hidePlayerModeAvatar()">`;
+            avatarEl.classList.add('photo-loading');
+            avatarEl.innerHTML = `<img src="${photoUrl}" alt="" class="photo-fade-in" onload="this.closest('.player-mode-avatar').classList.remove('photo-loading')" onerror="hidePlayerModeAvatar()">`;
         }
     }
 
     function hidePlayerModeAvatar() {
         const avatarEl = document.getElementById('playerModeAvatar');
         if (!avatarEl) return;
+        avatarEl.classList.remove('photo-loading');
         avatarEl.innerHTML = genericAvatarSvg;
+    }
+
+    // 🖼️ Fotoğraf yüklenince (ya da yüklenemeyip yedek ikona düşünce) kulüpler/
+    // soru/tahmin kutusunu da BİRLİKTE gösteriyoruz — fotoğrafsız soru eksik
+    // kalmasın diye. Zaten çağrıldıysa tekrar tetiklenmesin diye kontrol var.
+    function revealQuestionWithPhoto() {
+        const avatarEl = document.getElementById('playerModeAvatar');
+        if (avatarEl) avatarEl.classList.remove('photo-loading');
+
+        const wrap = document.getElementById('questionDetailsWrap');
+        if (wrap && !wrap.classList.contains('revealed')) {
+            wrap.classList.add('revealed');
+        }
     }
 
     // 🚀 Sadece veriyi çeker, DOM'a hiç dokunmaz — hem normal akışta hem de
@@ -2602,18 +2671,20 @@
             const hasRealPhoto = found.imageUrl && !found.imageUrl.includes('default.jpg');
             const showPhotoNow = hasRealPhoto && photoVisibleByDefault;
             const initialAvatarInner = showPhotoNow
-                ? `<img src="${found.imageUrl}" alt="" onerror="hidePlayerModeAvatar()">`
+                ? `<img src="${found.imageUrl}" alt="" class="photo-fade-in" onload="revealQuestionWithPhoto()" onerror="hidePlayerModeAvatar(); revealQuestionWithPhoto();">`
                 : genericAvatarSvg;
             const avatarHtml = `
-                <div class="player-mode-avatar" id="playerModeAvatar" data-photo="${hasRealPhoto ? found.imageUrl : ''}">
+                <div class="player-mode-avatar${showPhotoNow ? ' photo-loading' : ''}" id="playerModeAvatar" data-photo="${hasRealPhoto ? found.imageUrl : ''}">
                     ${initialAvatarInner}
                 </div>
             `;
 
             const dashPattern = nameToDashPattern(cleanFullName);
+            const waitForPhoto = showPhotoNow; // 💡 sadece gerçek bir fotoğraf gösterilecekse bekliyoruz
 
             bodyHtml = `
                 ${avatarHtml}
+                <div class="question-details-wrap${waitForPhoto ? '' : ' revealed'}" id="questionDetailsWrap">
                 <div class="player-mode-clubs">${clubListHtml}</div>
                 <div class="player-mode-position" id="playerModePosition" data-real="${safePosition}" style="display: none;"></div>
                 <div class="player-mode-answer" id="playerModeAnswer" data-real="${safeName}" data-masked="${safeMasked}">${dashPattern}</div>
@@ -2643,6 +2714,7 @@
                         </div>
                     </div>
                     <button id="revealPlayerModeBtn" class="btn-search">Oyuncuyu Göster</button>
+                </div>
                 </div>
             `;
         }
@@ -2862,6 +2934,12 @@
         }
 
         if (found) startQuizQuestionTimer(); // ⏱️ geçerli bir soru varsa 30sn'lik geri sayımı başlat
+
+        // 🛡️ Güvenlik payı: onload/onerror her nasılsa hiç tetiklenmezse, soru
+        // sonsuza kadar gizli kalmasın diye 2.5 saniye sonra yine de gösteriyoruz.
+        if (found) {
+            setTimeout(revealQuestionWithPhoto, 2500);
+        }
     }
 
     // 💡 Quiz'ndan çıkma mantığı — tek bir yerden yönetiliyor, hem karttaki
@@ -2935,6 +3013,7 @@
     function hideDuelAvatar() {
         const avatarEl = document.getElementById('duelAvatar');
         if (!avatarEl) return;
+        avatarEl.classList.remove('photo-loading');
         avatarEl.innerHTML = genericAvatarSvg;
     }
 
@@ -3284,9 +3363,9 @@
                             ⚠️ Rakibinin bağlantısı kesilmiş gibi görünüyor...
                         </div>
                         <div class="player-mode-clubs">${clubsHtml}</div>
-                        <div class="player-mode-avatar" id="duelAvatar">
+                        <div class="player-mode-avatar${(state.imageUrl && !state.imageUrl.includes('default.jpg')) ? ' photo-loading' : ''}" id="duelAvatar">
                             ${(state.imageUrl && !state.imageUrl.includes('default.jpg'))
-            ? `<img src="${state.imageUrl}" alt="" onerror="hideDuelAvatar()">`
+            ? `<img src="${state.imageUrl}" alt="" class="photo-fade-in" onload="this.closest('.player-mode-avatar').classList.remove('photo-loading')" onerror="hideDuelAvatar()">`
             : `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                                     <circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="1.4"/>
                                     <path d="M4 20c0-4.4 3.6-7 8-7s8 2.6 8 7" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
