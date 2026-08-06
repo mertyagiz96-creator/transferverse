@@ -568,15 +568,15 @@
         /* ⚽ Doğru tahmin animasyonu — modern bir "pop + parıltı patlaması" efekti */
         .correct-celebration-wrap {
             position: relative;
-            height: 54px;
+            height: 30px;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin-bottom: 6px;
+            margin-bottom: 2px;
         }
 
         .correct-check-icon {
-            font-size: 2.4rem;
+            font-size: 1.5rem;
             opacity: 0;
             transform: scale(0.2) rotate(-15deg);
             position: relative;
@@ -610,6 +610,41 @@
         @keyframes particleBurst {
             0% { opacity: 1; transform: translate(-50%, -50%) scale(0.5); }
             100% { opacity: 0; transform: translate(calc(-50% + var(--tx)), calc(-50% + var(--ty))) scale(1.1); }
+        }
+
+        /* ⚽ Tik + parçacıklar bitince (0.9sn), arka planda soru hazırlanırken
+           ekran "donmuş" hissi vermesin diye top yuvarlanıyor — top yuvarlanması
+           bitene kadar (toplam ~2sn) yeni soru zaten gelmiş oluyor. */
+        .celebration-ball-track {
+            position: relative;
+            height: 20px;
+            overflow: hidden;
+            margin-top: 0;
+            margin-bottom: 6px;
+        }
+
+        .celebration-ball {
+            position: absolute;
+            top: 0;
+            left: -10%;
+            font-size: 1.1rem;
+            opacity: 0;
+        }
+
+        .celebration-ball.roll {
+            animation: celebrationBallRoll 0.95s linear 0.85s infinite;
+        }
+
+        /* 💡 "Yeni Oyuncu"/"Yeni Oyun" tıklamasında — önce bir tik animasyonu
+           olmadığı için gecikmesiz, hemen başlıyor. */
+        .celebration-ball.roll-immediate {
+            animation: celebrationBallRoll 0.95s linear 0s infinite;
+        }
+
+        @keyframes celebrationBallRoll {
+            0% { left: -10%; transform: rotate(0deg); opacity: 1; }
+            90% { opacity: 1; }
+            100% { left: 115%; transform: rotate(650deg); opacity: 0; }
         }
 
         @keyframes avatarGlowPulse {
@@ -2516,13 +2551,6 @@
             }
         }
 
-        // 🖼️ Fotoğraf tam yüklenene kadar bekliyoruz — soru ve fotoğraf HER ZAMAN
-        // birlikte görünsün diye. Sadece gerçekten kopuk/hiç yüklenmeyen bir link
-        // varsa 8 saniye sonra vazgeçip devam ediyoruz (sonsuza kadar takılmasın).
-        if (found && found.imageUrl && !found.imageUrl.includes('default.jpg')) {
-            await preloadImage(found.imageUrl);
-        }
-
         return { found, isCountryMix };
     }
 
@@ -2601,6 +2629,9 @@
                     <span class="correct-particle" id="correctParticle4" style="--tx: -50px; --ty: 0px;">✨</span>
                     <span class="correct-particle" id="correctParticle5" style="--tx: -25px; --ty: 43px;">⚽</span>
                     <span class="correct-particle" id="correctParticle6" style="--tx: 25px; --ty: 43px;">✨</span>
+                </div>
+                <div class="celebration-ball-track">
+                    <span class="celebration-ball" id="celebrationBall">⚽</span>
                 </div>
                 <div class="player-mode-hint-row">
                     <div class="toolbar-wrapper" id="quizHintsWrapper">
@@ -2760,6 +2791,8 @@
                         const particle = document.getElementById(`correctParticle${p}`);
                         if (particle) particle.classList.add('play');
                     }
+                    const ballEl = document.getElementById('celebrationBall');
+                    if (ballEl) ballEl.classList.add('roll'); // ⚽ tik bitince (0.85sn sonra) top yuvarlanmaya başlar
                     revealPlayerModeAvatar();
                     const avatarEl = document.getElementById('playerModeAvatar');
                     if (avatarEl) avatarEl.classList.add('correct-glow');
@@ -2799,6 +2832,8 @@
         document.getElementById('newPlayerModeBtn').addEventListener('click', async (e) => {
             e.currentTarget.disabled = true;
             e.currentTarget.textContent = '⏳ Yükleniyor...';
+            const ballEl = document.getElementById('celebrationBall');
+            if (ballEl) ballEl.classList.add('roll-immediate'); // ⚽ soru gelene kadar top kayar
             stopQuizQuestionTimer();
             if (!currentQuestionSolved) {
                 const depleted = useQuizPass(); // 🎫 çözülmeden atlanan soru pas hakkı tüketiyor
@@ -2817,6 +2852,8 @@
                 showConfirmDialog('Skorun ve pas hakların sıfırlanacak, emin misin?', async () => {
                     restartBtn.disabled = true;
                     restartBtn.textContent = '⏳ Yükleniyor...';
+                    const ballEl = document.getElementById('celebrationBall');
+                    if (ballEl) ballEl.classList.add('roll-immediate');
                     startQuizScoreTimer();
                     await startPlayerMode();
                     scrollToResultsArea();
@@ -3194,20 +3231,13 @@
             </tr>
         `;
 
-        // 🖼️ "3,2,1" göstergesi oynarken fotoğrafı arka planda yüklüyoruz; sayaç
-        // bitince (aşağıda) fotoğraf da gerçekten hazırsa göstereceğiz.
-        const imagePreloadPromise = (state.imageUrl && !state.imageUrl.includes('default.jpg'))
-            ? preloadImage(state.imageUrl)
-            : Promise.resolve();
-
-        const countdownInterval = setInterval(async () => {
+        const countdownInterval = setInterval(() => {
             count--;
             const el = document.getElementById('duelCountdownText');
             if (count > 0) {
                 if (el) el.textContent = String(count);
             } else {
                 clearInterval(countdownInterval);
-                await imagePreloadPromise; // 💡 fotoğraf hazır değilse burada kısa bir süre daha bekler
                 buildDuelQuestionScreen(state);
             }
         }, 700);
