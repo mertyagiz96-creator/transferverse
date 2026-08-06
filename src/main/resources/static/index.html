@@ -2098,7 +2098,7 @@
 
     const countryFlags = {
         'turkiye': '🇹🇷', 'türkiye': '🇹🇷', 'turkey': '🇹🇷',
-        'england': '🇬🇧', 'scotland': '🇬🇧', 'wales': '🇬🇧',
+        'england': '🇬🇧', 'scotland': '🏴󠁧󠁢󠁳󠁣󠁴󠁿', 'wales': '🏴󠁧󠁢󠁷󠁬󠁳󠁿',
         'uk': '🇬🇧', 'united kingdom': '🇬🇧', 'northern ireland': '🇬🇧',
         'germany': '🇩🇪', 'france': '🇫🇷', 'spain': '🇪🇸', 'italy': '🇮🇹',
         'netherlands': '🇳🇱', 'portugal': '🇵🇹', 'poland': '🇵🇱', 'russia': '🇷🇺',
@@ -2128,7 +2128,7 @@
         'hirvatistan': '🇭🇷', 'sirbistan': '🇷🇸', 'belcika': '🇧🇪', 'isvec': '🇸🇪', 'norvec': '🇳🇴',
         'fildisi sahili': '🇨🇮', 'fas': '🇲🇦', 'misir': '🇪🇬', 'nijerya': '🇳🇬',
         'japonya': '🇯🇵', 'guney kore': '🇰🇷',
-        'iskocya': '🇬🇧', 'galler': '🇬🇧', 'kolombiya': '🇨🇴', 'meksika': '🇲🇽'
+        'iskocya': '🏴󠁧󠁢󠁳󠁣󠁴󠁿', 'galler': '🏴󠁧󠁢󠁷󠁬󠁳󠁿', 'kolombiya': '🇨🇴', 'meksika': '🇲🇽'
     };
 
     // 💡 Öneri kutusunda "Besiktas" yerine "Beşiktaş" gibi Türkçe karakterli
@@ -2581,6 +2581,18 @@
         });
     }
 
+    // 🎲 Doğru, adil karıştırma (Fisher-Yates) — array.sort(() => Math.random() - 0.5)
+    // yöntemi bilinen, önyargılı bir hata: dizideki konuma göre kimi öğeleri
+    // sistematik olarak daha sık/az seçiyordu (test ettik, gerçekten oluyormuş).
+    function fisherYatesShuffle(arr) {
+        const result = [...arr];
+        for (let i = result.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [result[i], result[j]] = [result[j], result[i]];
+        }
+        return result;
+    }
+
     async function fetchQuizQuestionData() {
         const maxAttempts = 12; // 💡 tekrar kontrolü için biraz daha fazla deneme payı
         let found = null;
@@ -2598,7 +2610,7 @@
                 isCountryFlags = [false, true];
             } else {
                 const pool = Math.random() < 0.1 ? superLigClubs : luckyClubs;
-                const shuffled = [...pool].sort(() => Math.random() - 0.5);
+                const shuffled = fisherYatesShuffle(pool);
                 pick = shuffled.slice(0, 2);
                 isCountryFlags = [false, false];
             }
