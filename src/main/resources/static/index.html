@@ -455,6 +455,14 @@
             object-fit: contain;
         }
 
+        .vs-stadium-img {
+            width: 110px;
+            height: 78px;
+            object-fit: cover;
+            border-radius: 4px;
+            border: 1px solid rgba(var(--fg-rgb), 0.15);
+        }
+
         .vs-club-flag {
             font-size: 4.4rem;
             line-height: 1;
@@ -1447,6 +1455,11 @@
                 height: 56px;
             }
 
+            .vs-stadium-img {
+                width: 80px;
+                height: 56px;
+            }
+
             .vs-club-flag {
                 font-size: 3.2rem;
             }
@@ -1753,6 +1766,65 @@
     // özel tasarlanmış, hotlink'e açık ücretsiz bir spor veritabanı. Transfermarkt
     // sorun yaşarsa (bugün olduğu gibi) buradan gerçek logoları çekip kullanıyoruz.
     let sportsDbLogos = {};
+
+    // 🏟️ Stadyum fotoğrafları — Wikimedia Commons'tan (Special:FilePath, kalıcı/
+    // hotlink'e açık bağlantı) elle seçilmiş, doğrulanmış görseller. Şimdilik
+    // sadece bu kulüplerde dolu — havuzun geri kalanı otomatik olarak normal
+    // logo moduna düşer, kullanıcı hiçbir şey fark etmez.
+    const stadiumPhotos = {
+        'manchester united': 'https://commons.wikimedia.org/wiki/Special:FilePath/Manchester_United_Old_Trafford.jpg',
+        'barcelona': 'https://commons.wikimedia.org/wiki/Special:FilePath/Camp_Nou_FC_Barcelona.JPG',
+        'borussia dortmund': 'https://commons.wikimedia.org/wiki/Special:FilePath/Signal_Iduna_Park_Panorama.jpg',
+        'paris sg': 'https://commons.wikimedia.org/wiki/Special:FilePath/Paris_Parc_des_Princes_1.jpg',
+        'galatasaray': 'https://commons.wikimedia.org/wiki/Special:FilePath/Ali_Sami_Yen_Spor_Kompleksi_T%C3%BCrk_Telekom_Arena4.jpg',
+        'manchester city': 'https://commons.wikimedia.org/wiki/Special:FilePath/Etihad_Stadium.jpg',
+        'chelsea': 'https://commons.wikimedia.org/wiki/Special:FilePath/Stamford_Bridge_stadium.jpg',
+        'fenerbahce': 'https://commons.wikimedia.org/wiki/Special:FilePath/Sukrusaracoglu.jpg',
+        'real madrid': 'https://commons.wikimedia.org/wiki/Special:FilePath/Real_Madrid%27s_Santiago_Bernab%C3%A9u_Stadium%2C_Madrid%2C_Spain_%28Ank_Kumar%29_07.jpg',
+        'bayern munich': 'https://commons.wikimedia.org/wiki/Special:FilePath/Allianz_Arena_during_a_match_between_Bayern_Munich_and_1860_Munich.jpg',
+        'juventus': 'https://commons.wikimedia.org/wiki/Special:FilePath/Juventus_stadium.jpg',
+        'ac milan': 'https://commons.wikimedia.org/wiki/Special:FilePath/Stadio_San_Siro.jpg',
+        'inter': 'https://commons.wikimedia.org/wiki/Special:FilePath/Stadio_San_Siro.jpg',
+        'arsenal': 'https://commons.wikimedia.org/wiki/Special:FilePath/Emirates_Stadium_2000_04.jpg',
+        'ajax': 'https://commons.wikimedia.org/wiki/Special:FilePath/Ajax_Stadium.jpg',
+        'besiktas': 'https://commons.wikimedia.org/wiki/Special:FilePath/Vodafone_Park.jpg',
+        'kocaelispor': 'https://commons.wikimedia.org/wiki/Special:FilePath/Kocaeli_Stadyumu.jpg'
+    };
+
+    // 💡 Stadyum adı kulüp adını (kısmen/tamamen) içeriyorsa cevabı ele verir —
+    // bu kulüplerde stadyumu FARKLI/kısaltılmış bir görünen adla gösteriyoruz.
+    const stadiumDisplayNameOverrides = {
+        'basaksehir': 'Fatih Terim Stadyumu'
+    };
+
+    const stadiumNames = {
+        'galatasaray': 'Rams Park',
+        'fenerbahce': 'Chobani Stadyumu',
+        'manchester united': 'Old Trafford',
+        'manchester city': 'Etihad Stadium',
+        'chelsea': 'Stamford Bridge',
+        'barcelona': 'Spotify Camp Nou',
+        'borussia dortmund': 'Signal Iduna Park',
+        'paris sg': 'Parc des Princes',
+        'real madrid': 'Santiago Bernabéu',
+        'bayern munich': 'Allianz Arena',
+        'juventus': 'Allianz Stadium',
+        'ac milan': 'San Siro',
+        'inter': 'San Siro',
+        'arsenal': 'Emirates Stadium',
+        'ajax': 'Johan Cruijff ArenA',
+        'besiktas': 'Tüpraş Stadyumu',
+        'kocaelispor': 'Kocaeli Stadyumu'
+    };
+
+    // 🕰️ Galatasaray 2011'de Ali Sami Yen'den Rams Park'a taşındı — oyuncunun
+    // Galatasaray'daki sezonu 2011'den ÖNCEYSE eski stadyumu, sonraysa güncel
+    // Rams Park'ı gösteriyoruz. Wikipedia'dan doğrulanmış, tarihli (12.04.2009)
+    // bir maç fotoğrafı kullanılıyor.
+    const galatasarayOldStadium = {
+        photo: 'https://commons.wikimedia.org/wiki/Special:FilePath/Galatasaray-Fenerbah%C3%A7e_12.04.2009.jpg',
+        name: 'Ali Sami Yen Stadyumu'
+    };
 
     // 💡 TheSportsDB bazı kulüpleri farklı/daha uzun bir isimle indekslemiş olabilir —
     // bu kulüpler için arama terimini özelleştiriyoruz.
@@ -2975,19 +3047,54 @@
                 return yearA - yearB;
             });
 
+            // 🏟️ %15 ihtimalle taraflardan biri (elimizde stadyum fotoğrafı VARSA)
+            // logo yerine stadyum fotoğrafı + adıyla gösteriliyor. Veri yoksa
+            // sessizce normal logo moduna dönüyoruz, kullanıcı hiçbir şey fark etmez.
+            // 🏟️ TEST AŞAMASI: önce bu sorudaki kulüplerden birinde stadyum
+            // verimiz var mı bakıyoruz, varsa %50 ihtimalle gösteriyoruz — az
+            // sayıda kulüp olduğu için önceki "önce %X genel ihtimal, sonra veri
+            // var mı" yöntemi çok nadir tetikleniyordu. Daha fazla stadyum
+            // eklendikçe bu oranı (şu an %50) düşürebiliriz.
+            let stadiumSideIndex = -1;
+            const stadiumCandidateIndices = sortedClubs
+                .map((c, idx) => (stadiumPhotos[normalize(c.club)] ? idx : -1))
+                .filter(idx => idx !== -1);
+            if (stadiumCandidateIndices.length > 0 && Math.random() < 0.33) {
+                stadiumSideIndex = stadiumCandidateIndices[Math.floor(Math.random() * stadiumCandidateIndices.length)];
+            }
+
             const vsSidesHtml = sortedClubs.map((c, idx) => {
                 const seasonHtml = (c.season && c.season !== '-')
                     ? `<span class="vs-club-season">${c.season}</span>`
                     : `<span class="vs-club-season" style="visibility: hidden;">-</span>`;
-                const flag = getFlagEmoji(c.club);
                 let iconHtml = '';
-                if (flag) {
-                    iconHtml = `<span class="vs-club-flag">${flag}</span>`;
+                let nameLabel = c.club;
+                if (idx === stadiumSideIndex) {
+                    const key = normalize(c.club);
+                    let stadiumUrl = stadiumPhotos[key];
+                    let stadiumName = stadiumDisplayNameOverrides[key] || stadiumNames[key] || '';
+
+                    // 🕰️ Galatasaray özel durumu: sezon 2011'den önceyse eski stadyum
+                    if (key === 'galatasaray') {
+                        const seasonYear = seasonToYear(c.season);
+                        if (seasonYear !== null && seasonYear < 2011) {
+                            stadiumUrl = galatasarayOldStadium.photo;
+                            stadiumName = galatasarayOldStadium.name;
+                        }
+                    }
+
+                    iconHtml = `<img src="${stadiumUrl}" alt="" class="vs-stadium-img" onerror="this.remove()">`;
+                    nameLabel = stadiumName ? `🏟️ ${stadiumName}` : c.club;
                 } else {
-                    const logoUrl = getClubLogo(c.club);
-                    iconHtml = logoUrl ? `<img src="${logoUrl}" alt="" class="vs-club-logo-img" onerror="this.remove()">` : '';
+                    const flag = getFlagEmoji(c.club);
+                    if (flag) {
+                        iconHtml = `<span class="vs-club-flag">${flag}</span>`;
+                    } else {
+                        const logoUrl = getClubLogo(c.club);
+                        iconHtml = logoUrl ? `<img src="${logoUrl}" alt="" class="vs-club-logo-img" onerror="this.remove()">` : '';
+                    }
                 }
-                return `<div class="vs-side"><div class="vs-icon-box" data-club-name="${c.club.replace(/"/g, '&quot;')}">${iconHtml}</div><span class="vs-club-name">${c.club}</span>${seasonHtml}</div>`;
+                return `<div class="vs-side"><div class="vs-icon-box" data-club-name="${c.club.replace(/"/g, '&quot;')}">${iconHtml}</div><span class="vs-club-name">${nameLabel}</span>${seasonHtml}</div>`;
             }).join('<div class="vs-divider"></div>');
             const clubListHtml = `<div class="vs-layout">${vsSidesHtml}</div>`;
 
