@@ -1098,6 +1098,16 @@
             transform: translateY(0);
         }
 
+        .btn-search:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .btn-search:disabled:hover {
+            background: rgb(var(--fg-rgb));
+            transform: none;
+        }
+
         /* 🕵️ Ana modda (Maskeleme açıkken) solo oynayanlar için tahmin kutusu */
         .main-guess-row {
             display: flex;
@@ -1739,29 +1749,85 @@
     let clubLogos = {}; // 🖼️ club_name_std -> logo_url, sayfa yüklenirken bir kere çekiliyor
     let refreshClubLogoIcons = () => {};
 
+    // 🌍 TheSportsDB — Transfermarkt'tan TAMAMEN BAĞIMSIZ, geliştiriciler için
+    // özel tasarlanmış, hotlink'e açık ücretsiz bir spor veritabanı. Transfermarkt
+    // sorun yaşarsa (bugün olduğu gibi) buradan gerçek logoları çekip kullanıyoruz.
+    let sportsDbLogos = {};
+
+    // 💡 TheSportsDB bazı kulüpleri farklı/daha uzun bir isimle indekslemiş olabilir —
+    // bu kulüpler için arama terimini özelleştiriyoruz.
+    const sportsDbSearchAliasMap = {
+        'psv': 'PSV Eindhoven',
+        'feyenoord': 'Feyenoord Rotterdam',
+        'la galaxy': 'LA Galaxy',
+        'vissel kobe': 'Vissel Kobe',
+        'shanghai port': 'Shanghai Port FC',
+        'beijing guoan': 'Beijing Guoan FC',
+        'al-ahli': 'Al Ahli Jeddah',
+        'panathinaikos': 'Panathinaikos FC',
+        'olympiacos': 'Olympiacos FC',
+        'paris sg': 'Paris Saint Germain',
+        'inter': 'Inter Milan'
+    };
+
+    let sportsDbFetchInProgress = {}; // 💡 aynı kulüp için aynı anda birden fazla istek atmayı önlüyor
+
+    // 🐌 Bilerek "tembel" (lazy) — sayfa açılır açılmaz 55 kulübü art arda istemek
+    // hız limitine takılıyordu. Bunun yerine bir kulüp GERÇEKTEN bir soruda/aramada
+    // görününce, o an arka planda tek bir istek atıyoruz — istekler tüm oturuma
+    // doğal olarak yayılıyor, ani bir yığılma olmuyor.
+    async function fetchSportsDbLogo(clubName) {
+        const key = normalize(clubName);
+        if (sportsDbLogos[key]) return sportsDbLogos[key];
+        if (sportsDbFetchInProgress[key]) return null; // zaten yolda, tekrar isteme
+
+        sportsDbFetchInProgress[key] = true;
+        const searchTerm = sportsDbSearchAliasMap[key] || clubName;
+
+        try {
+            const res = await fetch(`https://www.thesportsdb.com/api/v1/json/123/searchteams.php?t=${encodeURIComponent(searchTerm)}`);
+            if (res.ok) {
+                const data = await res.json();
+                if (data && data.teams && data.teams.length > 0) {
+                    const badge = data.teams[0].strTeamBadge || data.teams[0].strBadge;
+                    if (badge) {
+                        sportsDbLogos[key] = badge;
+                        delete sportsDbFetchInProgress[key];
+                        refreshVisibleClubIcons(); // 💡 o an ekranda açık bir soru varsa anında düzelt
+                        refreshClubLogoIcons(); // 💡 arama kutularının yanındaki ikonları da düzelt
+                        return badge;
+                    }
+                }
+            }
+        } catch (e) {
+            // sessizce geç, hardcodedPoolLogos zaten yedek olarak duruyor
+        }
+        delete sportsDbFetchInProgress[key];
+        return null;
+    }
+
+    // 🚀 Sayfa yüklenirken, havuzumuzdaki TÜM kulüpler için arka planda (aceleye
+    // getirmeden, sırayla) TheSportsDB'den logo çekip önbelleğe alıyoruz. Ücretsiz
+    // API anahtarı hız sınırlı olabileceği için aralığı biraz açık tutuyoruz, ve
+    // ilk turda başarısız olanlar için (muhtemelen hız limiti) bir tur daha deniyoruz.
+    // 💡 Not: eskiden burada sayfa açılır açılmaz 55 kulübü art arda isteyen bir
+    // fonksiyon vardı — bu, TheSportsDB'nin hız limitine takılıyordu. Artık her
+    // kulübün logosu, gerçekten bir soruda/aramada göründüğü an, getClubLogo()
+    // içinden tembel (lazy) olarak isteniyor.
+
     // 💡 Yeni deploy sonrası sunucu/veritabanı henüz "ısınmamış" olabiliyor —
     // tek bir başarısız denemede oturumun sonuna kadar logosuz kalınmasın diye
     // birkaç kez, aralıklarla tekrar deniyoruz.
-    async function loadClubLogos(retriesLeft = 6) {
+    async function loadClubLogos() {
         try {
             const response = await fetch('/clubLogos');
             if (response.ok) {
-                const data = await response.json();
-                if (Object.keys(data).length > 0) {
-                    clubLogos = data;
-                    refreshClubLogoIcons();
-                    preloadLuckyClubLogos();
-                    refreshVisibleClubIcons(); // 💡 geç gelirse, ekranda zaten açık olan soruyu da düzeltiyoruz
-                    return;
-                }
+                clubLogos = await response.json();
+                refreshClubLogoIcons();
+                preloadLuckyClubLogos();
             }
-            throw new Error('Boş veya başarısız yanıt');
         } catch (e) {
-            if (retriesLeft > 0) {
-                setTimeout(() => loadClubLogos(retriesLeft - 1), 2500);
-            } else {
-                console.log("Kulüp logoları yüklenirken pas geçildi.");
-            }
+            console.log("Kulüp logoları yüklenirken pas geçildi.");
         }
     }
 
@@ -1783,6 +1849,68 @@
     // kesin eşleştirmeler — esnek (substring) aramanın "Inter" ↔ "Inter Miami",
     // "Barcelona" ↔ "Espanyol" gibi yanlış eşleşmelerini önlüyor. Sadece burada
     // listelenen kulüpler için geçerli, diğerleri eskisi gibi esnek aranıyor.
+    // 🛡️ YEDEK/GARANTİ: Havuzumuzdaki (~40) kulübün logo linkleri BURADA,
+    // ülke bayrakları gibi doğrudan JS içine gömülü — /clubLogos isteğinin
+    // gelmesini hiç beklemeden, ağdan tamamen bağımsız çalışır. getClubLogo()
+    // önce buna bakıyor, bulursa anında ve garantili sonuç veriyor.
+    const hardcodedPoolLogos = {
+        'galatasaray': 'https://tmssl.akamaized.net//images/wappen/head/141.png?lm=1406739071',
+        'fenerbahce': 'https://tmssl.akamaized.net//images/wappen/head/36.png?lm=1753429185',
+        'besiktas': 'https://tmssl.akamaized.net//images/wappen/head/114.png?lm=1741019298',
+        'trabzonspor': 'https://tmssl.akamaized.net//images/wappen/head/449.png?lm=1727269339',
+        'manchester united': 'https://tmssl.akamaized.net//images/wappen/head/985.png?lm=1457975903',
+        'manchester city': 'https://tmssl.akamaized.net//images/wappen/head/281.png?lm=1467356331',
+        'liverpool': 'https://tmssl.akamaized.net//images/wappen/head/31.png?lm=1727873452',
+        'chelsea': 'https://tmssl.akamaized.net//images/wappen/head/631.png?lm=1682435911',
+        'arsenal': 'https://tmssl.akamaized.net//images/wappen/head/11.png?lm=1489787850',
+        'tottenham': 'https://tmssl.akamaized.net//images/wappen/head/148.png?lm=1732011953',
+        'real madrid': 'https://tmssl.akamaized.net//images/wappen/head/418.png?lm=1729684474',
+        'barcelona': 'https://tmssl.akamaized.net//images/wappen/head/131.png?lm=1406739548',
+        'atlético madrid': 'https://tmssl.akamaized.net//images/wappen/head/13.png?lm=1719915566',
+        'sevilla fc': 'https://tmssl.akamaized.net//images/wappen/head/368.png?lm=1730896593',
+        'juventus': 'https://tmssl.akamaized.net//images/wappen/head/506.png?lm=1626441487',
+        'inter': 'https://tmssl.akamaized.net//images/wappen/head/46.png?lm=1618900989',
+        'ac milan': 'https://tmssl.akamaized.net//images/wappen/head/5.png?lm=1605166627',
+        'napoli': 'https://tmssl.akamaized.net//images/wappen/head/6195.png?lm=1753167643',
+        'as roma': 'https://tmssl.akamaized.net//images/wappen/head/12.png?lm=1751979202',
+        'bayern munich': 'https://tmssl.akamaized.net//images/wappen/head/27.png?lm=1729503608',
+        'borussia dortmund': 'https://tmssl.akamaized.net//images/wappen/head/16.png?lm=1396275280',
+        'rb leipzig': 'https://tmssl.akamaized.net//images/wappen/head/23826.png?lm=1619431624',
+        'paris sg': 'https://tmssl.akamaized.net//images/wappen/head/583.png?lm=1728026461',
+        'marseille': 'https://tmssl.akamaized.net//images/wappen/head/244.png?lm=1485642163',
+        'olympique lyon': 'https://tmssl.akamaized.net//images/wappen/head/1041.png?lm=1656668172',
+        'ajax': 'https://tmssl.akamaized.net//images/wappen/head/610.png?lm=1750408025',
+        'benfica': 'https://tmssl.akamaized.net//images/wappen/head/294.png?lm=1535908439',
+        'fc porto': 'https://tmssl.akamaized.net//images/wappen/head/720.png?lm=1486310161',
+        'boca juniors': 'https://tmssl.akamaized.net//images/wappen/head/189.png?lm=1511621129',
+        'river plate': 'https://tmssl.akamaized.net//images/wappen/head/209.png?lm=1645539487',
+        'inter miami': 'https://tmssl.akamaized.net//images/wappen/head/69261.png?lm=1573561237',
+        'al-ahli': 'https://tmssl.akamaized.net//images/wappen/head/3612.png?lm=1727009929',
+        'beijing guoan': 'https://tmssl.akamaized.net//images/wappen/head/3176.png?lm=1645957360',
+        'shanghai port': 'https://tmssl.akamaized.net//images/wappen/head/27190.png?lm=1702165860',
+        'vissel kobe': 'https://tmssl.akamaized.net//images/wappen/head/3958.png?lm=1411407793',
+        'la galaxy': 'https://tmssl.akamaized.net//images/wappen/head/1061.png?lm=1493067070',
+        'feyenoord': 'https://tmssl.akamaized.net//images/wappen/head/234.png?lm=1721654567',
+        'psv': 'https://tmssl.akamaized.net//images/wappen/head/383.png?lm=1682925949',
+        'panathinaikos': 'https://tmssl.akamaized.net//images/wappen/head/265.png?lm=1629382830',
+        'olympiacos': 'https://tmssl.akamaized.net//images/wappen/head/683.png?lm=1717764764',
+        'basaksehir': 'https://tmssl.akamaized.net//images/wappen/head/6890.png?lm=1753429032',
+        'adana demirspor': 'https://tmssl.akamaized.net//images/wappen/head/3840.png?lm=1753361832',
+        'alanyaspor': 'https://tmssl.akamaized.net//images/wappen/head/11282.png?lm=1753428907',
+        'antalyaspor': 'https://tmssl.akamaized.net//images/wappen/head/589.png?lm=1753428974',
+        'caykur rizespor': 'https://tmssl.akamaized.net//images/wappen/head/126.png?lm=1753432348',
+        'gaziantep fk': 'https://tmssl.akamaized.net//images/wappen/head/2832.png?lm=1753429399',
+        'goztepe': 'https://tmssl.akamaized.net//images/wappen/head/1467.png?lm=1753429550',
+        'hatayspor': 'https://tmssl.akamaized.net//images/wappen/head/7775.png?lm=1753359991',
+        'kasimpasa': 'https://tmssl.akamaized.net//images/wappen/head/10484.png?lm=1753430136',
+        'kayserispor': 'https://tmssl.akamaized.net//images/wappen/head/3205.png?lm=1753430186',
+        'konyaspor': 'https://tmssl.akamaized.net//images/wappen/head/2293.png?lm=1753430360',
+        'samsunspor': 'https://tmssl.akamaized.net//images/wappen/head/152.png?lm=1753432411',
+        'sivasspor': 'https://tmssl.akamaized.net//images/wappen/head/2381.png?lm=1753360079',
+        'eyupspor': 'https://tmssl.akamaized.net//images/wappen/head/7160.png?lm=1753429120',
+        'kocaelispor': 'https://tmssl.akamaized.net//images/wappen/head/120.png?lm=1753430297'
+    };
+
     const clubLogoAliasMap = {
         'inter': 'inter milan',
         'ac milan': 'ac milan',
@@ -1817,6 +1945,16 @@
         if (!clubName) return null;
         const key = normalize(clubName);
 
+        // 🌍 Önce TheSportsDB (bağımsız kaynak) — Transfermarkt sorun yaşarsa bile çalışır
+        if (sportsDbLogos[key]) return sportsDbLogos[key];
+
+        // 💡 Henüz önbellekte yok — arka planda (bekletmeden) tembel bir istek başlatıyoruz,
+        // gelince refreshVisibleClubIcons/refreshClubLogoIcons ile ekran kendini düzeltecek.
+        fetchSportsDbLogo(clubName);
+
+        // 🛡️ Bu arada gömülü Transfermarkt yedek listesi — TheSportsDB'de yoksa/henüz gelmediyse
+        if (hardcodedPoolLogos[key]) return hardcodedPoolLogos[key];
+
         if (clubLogoAliasMap[key] && clubLogos[clubLogoAliasMap[key]]) {
             return clubLogos[clubLogoAliasMap[key]];
         }
@@ -1842,7 +1980,7 @@
             const clubName = box.dataset.clubName;
             const logoUrl = getClubLogo(clubName);
             if (logoUrl) {
-                box.innerHTML = `<img src="${logoUrl}" alt="" class="vs-club-logo-img" onerror="this.style.display='none'">`;
+                box.innerHTML = `<img src="${logoUrl}" alt="" class="vs-club-logo-img" onerror="this.remove()">`;
             }
         });
         document.querySelectorAll('.duel-club-icon-box[data-club-name]').forEach(box => {
@@ -1850,7 +1988,7 @@
             const clubName = box.dataset.clubName;
             const logoUrl = getClubLogo(clubName);
             if (logoUrl) {
-                box.innerHTML = `<img src="${logoUrl}" class="club-logo-icon" alt="" onerror="this.style.display='none'">`;
+                box.innerHTML = `<img src="${logoUrl}" class="club-logo-icon" alt="" onerror="this.remove()">`;
             }
         });
     }
@@ -2787,7 +2925,7 @@
                     iconHtml = `<span class="vs-club-flag">${flag}</span>`;
                 } else {
                     const logoUrl = getClubLogo(c.club);
-                    iconHtml = logoUrl ? `<img src="${logoUrl}" alt="" class="vs-club-logo-img" onerror="this.style.display='none'">` : '';
+                    iconHtml = logoUrl ? `<img src="${logoUrl}" alt="" class="vs-club-logo-img" onerror="this.remove()">` : '';
                 }
                 return `<div class="vs-side"><div class="vs-icon-box" data-club-name="${c.club.replace(/"/g, '&quot;')}">${iconHtml}</div><span class="vs-club-name">${c.club}</span>${seasonHtml}</div>`;
             }).join('<div class="vs-divider"></div>');
@@ -3459,7 +3597,7 @@
                 iconHtml = `<span class="input-flag-icon">${flag}</span>`;
             } else {
                 const logoUrl = getClubLogo(c.club);
-                iconHtml = logoUrl ? `<img src="${logoUrl}" class="club-logo-icon" alt="" onerror="this.style.display='none'">` : '';
+                iconHtml = logoUrl ? `<img src="${logoUrl}" class="club-logo-icon" alt="" onerror="this.remove()">` : '';
             }
             const seasonBadge = (c.season && c.season !== '-') ? `<span class="badge-season">${escapeHtml(c.season)}</span>` : '';
             const safeClubName = c.club.replace(/"/g, '&quot;');
