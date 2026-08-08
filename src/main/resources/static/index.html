@@ -1772,6 +1772,40 @@
 
     let sportsDbFetchInProgress = {}; // 💡 aynı kulüp için aynı anda birden fazla istek atmayı önlüyor
 
+    // 🖼️ Oyuncu fotoğrafı için YEDEK kaynak — Transfermarkt'ın fotoğrafı GERÇEKTEN
+    // yüklenemezse (onerror tetiklenirse) devreye giriyor. Kapsamı kulüpler kadar
+    // garantili değil (binlerce farklı oyuncu var), ama kayıp bir şey yok — sadece
+    // bir ihtimal daha.
+    let sportsDbPlayerPhotos = {};
+
+    async function tryFallbackPlayerPhoto(imgEl, playerName) {
+        const key = normalize(playerName);
+        if (sportsDbPlayerPhotos[key] === null) { hidePlayerModeAvatar(); return; } // daha önce denendi, bulunamadı
+        if (sportsDbPlayerPhotos[key]) {
+            imgEl.src = sportsDbPlayerPhotos[key];
+            return;
+        }
+
+        try {
+            const res = await fetch(`https://www.thesportsdb.com/api/v1/json/123/searchplayers.php?p=${encodeURIComponent(playerName)}`);
+            if (res.ok) {
+                const data = await res.json();
+                if (data && data.player && data.player.length > 0) {
+                    const photo = data.player[0].strCutout || data.player[0].strThumb;
+                    if (photo) {
+                        sportsDbPlayerPhotos[key] = photo;
+                        imgEl.src = photo; // 💡 img hâlâ DOM'daysa anında güncellenir
+                        return;
+                    }
+                }
+            }
+        } catch (e) {
+            // aşağıda zaten hidePlayerModeAvatar() ile silüete düşülüyor
+        }
+        sportsDbPlayerPhotos[key] = null; // 💡 bulunamadı, tekrar tekrar denemeyelim
+        hidePlayerModeAvatar(); // 🛡️ hem Transfermarkt hem yedek başarısız oldu — asla "boş" bırakmıyoruz
+    }
+
     // 🐌 Bilerek "tembel" (lazy) — sayfa açılır açılmaz 55 kulübü art arda istemek
     // hız limitine takılıyordu. Bunun yerine bir kulüp GERÇEKTEN bir soruda/aramada
     // görününce, o an arka planda tek bir istek atıyoruz — istekler tüm oturuma
@@ -2777,6 +2811,21 @@
         </svg>
     `;
 
+    // 🖼️ Transfermarkt fotoğrafı yüklenemezse önce TheSportsDB'yi deniyoruz,
+    // o da bulamazsa (ya da oyuncu adı bir şekilde elde edilemezse) genel
+    // silüete düşüyoruz. Hem ilk render hem "Oyuncuyu Göster" ile açılan
+    // fotoğraf, ikisi de bu ortak fonksiyonu kullanıyor.
+    function handlePlayerPhotoError(imgEl) {
+        const answerEl = document.getElementById('playerModeAnswer');
+        const playerName = answerEl ? answerEl.dataset.real : null;
+        if (playerName && imgEl) {
+            imgEl.onerror = () => hidePlayerModeAvatar(); // yedek de başarısız olursa buraya düşer
+            tryFallbackPlayerPhoto(imgEl, playerName);
+        } else {
+            hidePlayerModeAvatar();
+        }
+    }
+
     function revealPlayerModeAvatar() {
         const avatarEl = document.getElementById('playerModeAvatar');
         if (!avatarEl) return;
@@ -2784,7 +2833,7 @@
         const photoUrl = avatarEl.dataset.photo;
         if (photoUrl) {
             avatarEl.classList.add('photo-loading');
-            avatarEl.innerHTML = `<img src="${photoUrl}" alt="" class="photo-fade-in" onload="this.closest('.player-mode-avatar').classList.remove('photo-loading')" onerror="hidePlayerModeAvatar()">`;
+            avatarEl.innerHTML = `<img src="${photoUrl}" alt="" class="photo-fade-in" onload="this.closest('.player-mode-avatar').classList.remove('photo-loading')" onerror="handlePlayerPhotoError(this)">`;
         }
     }
 
@@ -2915,7 +2964,18 @@
                 ? found.position.trim().replace(/"/g, "&quot;")
                 : "Bilinmiyor";
 
-            const vsSidesHtml = found.clubs.map(c => {
+            // 🕰️ Solda önce oynadığı kulüp, sağda sonra oynadığı kulüp olsun diye
+            // sezona göre kronolojik sıralıyoruz — mevcut yıl filtresinde kullandığımız
+            // seasonToYear() fonksiyonunu burada da kullanıyoruz. Sezon bilgisi
+            // okunamıyorsa (null), sıralamayı bozmadan olduğu gibi bırakıyoruz.
+            const sortedClubs = [...found.clubs].sort((a, b) => {
+                const yearA = seasonToYear(a.season);
+                const yearB = seasonToYear(b.season);
+                if (yearA === null || yearB === null) return 0;
+                return yearA - yearB;
+            });
+
+            const vsSidesHtml = sortedClubs.map((c, idx) => {
                 const seasonHtml = (c.season && c.season !== '-')
                     ? `<span class="vs-club-season">${c.season}</span>`
                     : `<span class="vs-club-season" style="visibility: hidden;">-</span>`;
@@ -2934,7 +2994,7 @@
             const hasRealPhoto = found.imageUrl && !found.imageUrl.includes('default.jpg');
             const showPhotoNow = hasRealPhoto && photoVisibleByDefault;
             const initialAvatarInner = showPhotoNow
-                ? `<img src="${found.imageUrl}" alt="" class="photo-fade-in" onload="revealQuestionWithPhoto()" onerror="hidePlayerModeAvatar(); revealQuestionWithPhoto();">`
+                ? `<img src="${found.imageUrl}" alt="" class="photo-fade-in" onload="revealQuestionWithPhoto()" onerror="handlePlayerPhotoError(this); revealQuestionWithPhoto();">`
                 : genericAvatarSvg;
             const avatarHtml = `
                 <div class="player-mode-avatar${showPhotoNow ? ' photo-loading' : ''}" id="playerModeAvatar" data-photo="${hasRealPhoto ? found.imageUrl : ''}">
