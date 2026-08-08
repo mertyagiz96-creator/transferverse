@@ -1793,7 +1793,11 @@
         'beijing guoan': 'beijing guoan',
         'shanghai port': 'shanghai port',
         'vissel kobe': 'vissel kobe',
-        'la galaxy': 'los angeles galaxy'
+        'la galaxy': 'los angeles galaxy',
+        'feyenoord': 'feyenoord rotterdam',
+        'psv': 'psv eindhoven',
+        'panathinaikos': 'panathinaikos fc',
+        'olympiacos': 'olympiacos piraeus'
     };
 
     function getClubLogo(clubName) {
@@ -2016,6 +2020,34 @@
         }
     }
 
+    // ⏱️ Son 3 saniyede çalan kısa "tık" sesi — kullanıcı sürenin dolmak
+    // üzere olduğunu fark etsin diye.
+    function playTickSound() {
+        if (!soundOn) return;
+        try {
+            const ctx = getAudioContext();
+            const now = ctx.currentTime;
+
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(900, now);
+
+            gain.gain.setValueAtTime(0, now);
+            gain.gain.linearRampToValueAtTime(0.1, now + 0.01);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+
+            osc.start(now);
+            osc.stop(now + 0.14);
+        } catch (e) {
+            console.log("Ses çalınamadı:", e);
+        }
+    }
+
     function playSearchSound() {
         if (!soundOn) return;
         try {
@@ -2182,7 +2214,8 @@
         'Ajax', 'Benfica', 'FC Porto',
         'Boca Juniors', 'River Plate',
         // 🌍 Ünlü oyuncuların oynadığı "egzotik" kulüpler — soru zenginliği için
-        'Inter Miami', 'Al-Ahli', 'Beijing Guoan', 'Shanghai Port', 'Vissel Kobe', 'LA Galaxy'
+        'Inter Miami', 'Al-Ahli', 'Beijing Guoan', 'Shanghai Port', 'Vissel Kobe', 'LA Galaxy',
+        'Feyenoord', 'PSV', 'Panathinaikos', 'Olympiacos'
     ];
 
     const luckyCountries = [
@@ -2311,9 +2344,15 @@
     // (kopya çekmek için ekranı kilitleyip uzaklaşmak süreyi DURDURMUYOR).
     function quizQuestionTick() {
         const elapsedSeconds = Math.floor((Date.now() - quizQuestionStartTime) / 1000);
+        const prevSecondsLeft = quizQuestionSecondsLeft;
         quizQuestionSecondsLeft = Math.max(0, 30 - elapsedSeconds);
         const el = document.getElementById('quizTimerValue');
         if (el) el.textContent = String(quizQuestionSecondsLeft);
+
+        // ⏱️ Son 3 saniye (3, 2, 1) — her saniyede bir kez tık sesi
+        if (quizQuestionSecondsLeft !== prevSecondsLeft && quizQuestionSecondsLeft >= 1 && quizQuestionSecondsLeft <= 3) {
+            playTickSound();
+        }
 
         if (quizQuestionSecondsLeft <= 0) {
             clearInterval(quizQuestionTimerInterval);
@@ -2348,6 +2387,20 @@
 
     function handleQuizQuestionTimeout() {
         if (!playerModeActive || currentQuestionSolved) return;
+
+        // 🔒 Süre dolar dolmaz kartı hemen kilitliyoruz — yeni soru gelene kadar
+        // eski (artık geçersiz) sorunun butonlarına/kutusuna basılamasın diye.
+        const guessInputEl = document.getElementById('playerModeGuessInput');
+        if (guessInputEl) guessInputEl.disabled = true;
+        const revealBtn = document.getElementById('revealPlayerModeBtn');
+        if (revealBtn) revealBtn.disabled = true;
+        const newBtnEl = document.getElementById('newPlayerModeBtn');
+        if (newBtnEl) newBtnEl.disabled = true;
+        const restartBtnEl = document.getElementById('restartQuizGameBtn');
+        if (restartBtnEl) restartBtnEl.disabled = true;
+        const hintsBtn = document.getElementById('quizHintsBtn');
+        if (hintsBtn) hintsBtn.disabled = true;
+
         const depleted = useQuizPass(); // 🎫 süre dolması, çözülmeden atlanan soru gibi pas hakkı tüketiyor
         if (depleted) return; // useQuizPass zaten oyun bitti ekranını gösterdi
         showToast('⏱️ Süre doldu!', 1800);
@@ -2363,13 +2416,24 @@
         // her durumda güncel rekoru geri alıp ekranı tazeliyoruz.
         submitQuizScoreToServer(quizScore);
 
-        // 🎉 Seviye atlama kutlaması — her 3 doğruda bir, uzun süre görünüp kayboluyor
+        // 🎉 Seviye atlama kutlaması — her 3 doğruda bir, uzun süre görünüp kayboluyor.
+        // 🎫 Ayrıca (maksimum 3'ü geçmeyecek şekilde) bir pas hakkı da hediye ediyoruz —
+        // skoru ilerletmek zor olduğu için motive edici bir teşvik.
         if (quizScore === 30) {
             showToast('🏆 Efsane seviyesindesin! Kazandınız!', 4500);
             setTimeout(showQuizWinScreen, 1600); // kutlama animasyonu/sesi bitsin diye kısa bekleme
         } else if (quizScore % 3 === 0) {
             const level = quizScore / 3 + 1;
-            showToast(`🎉 Bravo! Level ${level}'e geçtin!`, 4500);
+            let message = `🎉 Bravo! Level ${level}'e geçtin!`;
+
+            if (quizPassesRemaining < 3) {
+                quizPassesRemaining++;
+                const passesEl = document.getElementById('quizPassesValue');
+                if (passesEl) passesEl.textContent = String(quizPassesRemaining);
+                message += ' 🎫 Yeni bir pas hakkı kazandın!';
+            }
+
+            showToast(message, 4500);
         }
     }
 
