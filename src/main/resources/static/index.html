@@ -1967,6 +1967,18 @@
         });
     }
 
+    // 🏟️ Stadyum fotoğrafları sabit, önceden bilinen linkler — kulüp logoları
+    // gibi sayfa açılır açılmaz tarayıcı önbelleğine alıyoruz. Böylece stadyum
+    // modu rastgele tetiklendiğinde resim zaten hazır oluyor, gecikme olmuyor.
+    function preloadStadiumPhotos() {
+        Object.values(stadiumPhotos).forEach(url => {
+            const img = new Image();
+            img.src = url;
+        });
+        const oldImg = new Image();
+        oldImg.src = galatasarayOldStadium.photo;
+    }
+
     // 🎯 Havuzumuzdaki (soru gelebilen) kulüpler için, veritabanından DOĞRULANMIŞ
     // kesin eşleştirmeler — esnek (substring) aramanın "Inter" ↔ "Inter Miami",
     // "Barcelona" ↔ "Espanyol" gibi yanlış eşleşmelerini önlüyor. Sadece burada
@@ -2547,6 +2559,15 @@
         'Bayern Munich', 'Borussia Dortmund', 'Paris SG', 'Ajax'
     ];
 
+    // 🟡 "Orta Zorluk" — skor 3-10 arası için, en az bilinen/egzotik kulüpleri
+    // (ünlü tek bir oyuncu yüzünden eklenmiş, dar bağlantılı takımlar) havuzdan
+    // çıkarıyoruz. Kolay (0-3) → Orta (3-10) → Tam (10+) şeklinde yumuşak bir geçiş.
+    const hardClubs = [
+        'Inter Miami', 'Al-Ahli', 'Beijing Guoan', 'Shanghai Port', 'Vissel Kobe', 'LA Galaxy',
+        'Feyenoord', 'PSV', 'Panathinaikos', 'Olympiacos'
+    ];
+    const mediumClubs = luckyClubs.filter(c => !hardClubs.includes(c));
+
     function pickRandom(arr) {
         return arr[Math.floor(Math.random() * arr.length)];
     }
@@ -3059,22 +3080,26 @@
         let found = null;
         let isCountryMix = false;
 
-        // 🟢 Henüz 3 doğru bilmemiş (level 2'ye ulaşmamış) kullanıcılar için,
-        // sadece en bilindik kulüplerden soru geliyor — kolaydan zora bir giriş.
+        // 🟢🟡 Üç kademeli zorluk: skor 3'e kadar KOLAY (17 bilindik kulüp),
+        // 3-10 arası ORTA (egzotik/dar bağlantılı ~10 kulüp çıkarılmış hâli),
+        // 10'dan sonra TAM havuz — kolaydan zora daha yumuşak bir geçiş.
         const inEasyPhase = quizScore < 3;
+        const inMediumPhase = !inEasyPhase && quizScore < 10;
+        const currentClubPool = inEasyPhase ? easyClubs : (inMediumPhase ? mediumClubs : luckyClubs);
 
         for (let i = 0; i < maxAttempts; i++) {
             // 💡 %20 ihtimalle takım+ülke karışımı, %80 ihtimalle iki takım.
-            // Takım+ülke seçilirse: %10 Süper Lig, %90 uluslararası havuzdan TEK takım + rastgele bir ülke.
+            // Takım+ülke seçilirse: %10 Süper Lig (sadece tam fazda), %90 mevcut
+            // fazın havuzundan TEK takım + rastgele bir ülke.
             let pick, isCountryFlags;
             if (!inEasyPhase && Math.random() < 0.2) {
-                const clubPool = Math.random() < 0.1 ? superLigClubs : luckyClubs;
+                const clubPool = (!inMediumPhase && Math.random() < 0.1) ? superLigClubs : currentClubPool;
                 const club = clubPool[Math.floor(Math.random() * clubPool.length)];
                 const country = luckyCountries[Math.floor(Math.random() * luckyCountries.length)];
                 pick = [club, country];
                 isCountryFlags = [false, true];
             } else {
-                const pool = inEasyPhase ? easyClubs : (Math.random() < 0.1 ? superLigClubs : luckyClubs);
+                const pool = (!inEasyPhase && !inMediumPhase && Math.random() < 0.1) ? superLigClubs : currentClubPool;
                 const shuffled = fisherYatesShuffle(pool);
                 pick = shuffled.slice(0, 2);
                 isCountryFlags = [false, false];
@@ -3086,12 +3111,20 @@
                     const candidate = await res.json();
                     const cleanCandidateName = candidate.playerName.replace(/\s*\(\d+\)\s*/g, "").trim();
 
+                    // 🕰️ İki taraf da 2000'den ÖNCEYSE (çok eski, az bilinen bir
+                    // dönem olabilir), bu soruyu atlayıp başka bir eşleşme arıyoruz.
+                    const bothVeryOld = candidate.clubs && candidate.clubs.length === 2 &&
+                        candidate.clubs.every(c => {
+                            const y = seasonToYear(c.season);
+                            return y !== null && y < 2000;
+                        });
+
                     // 💡 İki katmanlı tekrar kontrolü: hem bu OTURUMDA son birkaç
                     // soruda çıktıysa, hem de son 3 GÜN içinde (tarayıcı hafızasında)
                     // görüldüyse tekrar dene — sonsuz döngüye girmesin diye son
                     // denemede ne gelirse kabul ediyoruz.
                     const seenRecently = recentQuizPlayers.includes(cleanCandidateName) || isPlayerRecentlySeen(cleanCandidateName);
-                    if (!seenRecently || i === maxAttempts - 1) {
+                    if ((!seenRecently && !bothVeryOld) || i === maxAttempts - 1) {
                         found = candidate;
                         isCountryMix = isCountryFlags.includes(true);
                         recentQuizPlayers.push(cleanCandidateName);
@@ -4720,6 +4753,7 @@
         setupInstallBanner();
         loadSuggestions();
         loadClubLogos();
+        preloadStadiumPhotos(); // 🏟️ stadyum modu geciktirmesin diye önceden önbelleğe al
         setupAutocomplete("club1Input", "club1Dropdown");
         setupAutocomplete("club2Input", "club2Dropdown");
         setupThemeSwitcher();
