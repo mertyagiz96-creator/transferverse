@@ -1313,7 +1313,7 @@
 
         #appToast {
             position: fixed;
-            bottom: 24px;
+            bottom: 90px;
             left: 50%;
             transform: translateX(-50%) translateY(20px);
             background: rgb(var(--surface-strong-rgb));
@@ -1326,7 +1326,7 @@
             opacity: 0;
             pointer-events: none;
             transition: opacity 0.3s ease, transform 0.3s ease;
-            z-index: 500;
+            z-index: 1100;
             box-shadow: 0 12px 28px rgba(0, 0, 0, 0.5);
         }
 
@@ -1788,7 +1788,15 @@
         'arsenal': 'https://commons.wikimedia.org/wiki/Special:FilePath/Emirates_Stadium_2000_04.jpg',
         'ajax': 'https://commons.wikimedia.org/wiki/Special:FilePath/Ajax_Stadium.jpg',
         'besiktas': 'https://commons.wikimedia.org/wiki/Special:FilePath/Vodafone_Park.jpg',
-        'kocaelispor': 'https://commons.wikimedia.org/wiki/Special:FilePath/Kocaeli_Stadyumu.jpg'
+        'kocaelispor': 'https://commons.wikimedia.org/wiki/Special:FilePath/Kocaeli_Stadyumu.jpg',
+        'trabzonspor': 'https://commons.wikimedia.org/wiki/Special:FilePath/Medical_Park_Arena_Trabzonspor_-_Galatasaray.jpg',
+        'napoli': 'https://commons.wikimedia.org/wiki/Special:FilePath/Stadio_Maradona_Serie_A.jpg',
+        'atlético madrid': 'https://commons.wikimedia.org/wiki/Special:FilePath/Estadio_Wanda_Metropolitano_%282018%29.jpg',
+        'as roma': 'https://commons.wikimedia.org/wiki/Special:FilePath/Stadio_Olimpico_%28Roma%2C_ITA%29.jpg',
+        'benfica': 'https://commons.wikimedia.org/wiki/Special:FilePath/Estadio_da_Luz%2C_del_equipo_de_Benfica_en_Lisboa_Portugal.jpg',
+        'sevilla fc': 'https://commons.wikimedia.org/wiki/Special:FilePath/EstadioRamonSanchezPizjuan-SevillaFC.JPG',
+        'fc porto': 'https://commons.wikimedia.org/wiki/Special:FilePath/Estadio_do_Dragao_en_Porto.jpg',
+        'marseille': 'https://commons.wikimedia.org/wiki/Special:FilePath/Stadion_Marseille_Stade_V%C3%A9lodrome_%28204787669%29.jpeg'
     };
 
     // 💡 Stadyum adı kulüp adını (kısmen/tamamen) içeriyorsa cevabı ele verir —
@@ -1814,7 +1822,15 @@
         'arsenal': 'Emirates Stadium',
         'ajax': 'Johan Cruijff ArenA',
         'besiktas': 'Tüpraş Stadyumu',
-        'kocaelispor': 'Kocaeli Stadyumu'
+        'kocaelispor': 'Kocaeli Stadyumu',
+        'trabzonspor': 'Papara Park',
+        'napoli': 'Stadio Diego Armando Maradona',
+        'atlético madrid': 'Riyadh Air Metropolitano',
+        'as roma': 'Stadio Olimpico',
+        'benfica': 'Estádio da Luz',
+        'sevilla fc': 'Estadio Ramón Sánchez Pizjuán',
+        'fc porto': 'Estádio do Dragão',
+        'marseille': 'Orange Vélodrome'
     };
 
     // 🕰️ Galatasaray 2011'de Ali Sami Yen'den Rams Park'a taşındı — oyuncunun
@@ -2520,6 +2536,17 @@
         'Sivasspor', 'Eyüpspor', 'Kocaelispor'
     ];
 
+    // 🟢 "Kolay Kulüpler" — Avrupa'nın en bilindik takımları (stadyum verimizin
+    // de olduğu 17 kulüple aynı liste). Oyuna YENİ başlayan (henüz 3 doğru
+    // bilmemiş) kullanıcılar için ilk sorular bu havuzdan geliyor — kolaydan
+    // zora doğru bir giriş hissi versin, insanlar hemen pes edip kapatmasın.
+    const easyClubs = [
+        'Galatasaray', 'Fenerbahçe', 'Beşiktaş', 'Kocaelispor',
+        'Manchester United', 'Manchester City', 'Chelsea', 'Arsenal',
+        'Real Madrid', 'Barcelona', 'Juventus', 'AC Milan', 'Inter',
+        'Bayern Munich', 'Borussia Dortmund', 'Paris SG', 'Ajax'
+    ];
+
     function pickRandom(arr) {
         return arr[Math.floor(Math.random() * arr.length)];
     }
@@ -2589,6 +2616,44 @@
     // 🔁 Son gösterilen oyuncuları hatırlayıp kısa vadede tekrarını engelliyoruz —
     // çok gezmiş oyuncular (Bruma, Zaha vb.) dar kulüp havuzunda aşırı sık çıkabiliyordu.
     let recentQuizPlayers = [];
+
+    // 🗓️ Aynı oyuncu birkaç gün / 10-12 oyun içinde tekrar çıkmasın diye,
+    // sadece bu oturumla sınırlı kalmayan, tarayıcının KALICI hafızasında
+    // (localStorage) saklanan uzun vadeli bir "görüldü" listesi tutuyoruz.
+    const RECENT_PLAYERS_STORAGE_KEY = 'transferkolik_recent_quiz_players';
+    const RECENT_PLAYERS_MAX_AGE_MS = 3 * 24 * 60 * 60 * 1000; // 3 gün
+    const RECENT_PLAYERS_MAX_COUNT = 60; // en az 10-12 oyun boyunca hatırlansın diye bol tutuyoruz
+
+    function loadRecentPlayersFromStorage() {
+        try {
+            const raw = localStorage.getItem(RECENT_PLAYERS_STORAGE_KEY);
+            if (!raw) return [];
+            const parsed = JSON.parse(raw);
+            const cutoff = Date.now() - RECENT_PLAYERS_MAX_AGE_MS;
+            return parsed.filter(entry => entry.t > cutoff); // 💡 3 günden eski kayıtları temizle
+        } catch (e) {
+            return [];
+        }
+    }
+
+    function saveRecentPlayerToStorage(playerName) {
+        try {
+            let list = loadRecentPlayersFromStorage();
+            list.push({ n: playerName, t: Date.now() });
+            if (list.length > RECENT_PLAYERS_MAX_COUNT) {
+                list = list.slice(list.length - RECENT_PLAYERS_MAX_COUNT);
+            }
+            localStorage.setItem(RECENT_PLAYERS_STORAGE_KEY, JSON.stringify(list));
+        } catch (e) {
+            // localStorage dolu/kapalı olabilir, sessizce geç — kritik değil
+        }
+    }
+
+    function isPlayerRecentlySeen(playerName) {
+        return loadRecentPlayersFromStorage().some(entry => entry.n === playerName);
+    }
+
+    let passFreeStreak = 0; // 🔥 pas kullanmadan üst üste kaç doğru — pas kullanılınca sıfırlanır
     const MAX_RECENT_QUIZ_PLAYERS = 8;
 
     function formatElapsedTime(ms) {
@@ -2601,6 +2666,7 @@
     function startQuizScoreTimer() {
         quizScore = 0;
         quizPassesRemaining = 3;
+        passFreeStreak = 0;
         quizStartTime = Date.now();
         // 💡 Artık burada canlı bir arayüz güncellemesi yapmıyoruz — o iş artık
         // startQuizQuestionTimer()'a ait. quizStartTime sadece bitiş ekranındaki
@@ -2664,11 +2730,10 @@
         quizQuestionStartTime = null;
     }
 
-    function handleQuizQuestionTimeout() {
-        if (!playerModeActive || currentQuestionSolved) return;
-
-        // 🔒 Süre dolar dolmaz kartı hemen kilitliyoruz — yeni soru gelene kadar
-        // eski (artık geçersiz) sorunun butonlarına/kutusuna basılamasın diye.
+    // 🔒 Yeni soru gelene kadar (herhangi bir sebeple — doğru bilindi, süre
+    // doldu, "Yeni Oyuncu"/"Yeni Oyun" tıklandı) TÜM etkileşimli butonları
+    // kapatıyoruz — kullanıcı yanlışlıkla eski/geçersiz soruya basmasın diye.
+    function disableAllQuestionButtons() {
         const guessInputEl = document.getElementById('playerModeGuessInput');
         if (guessInputEl) guessInputEl.disabled = true;
         const revealBtn = document.getElementById('revealPlayerModeBtn');
@@ -2679,6 +2744,14 @@
         if (restartBtnEl) restartBtnEl.disabled = true;
         const hintsBtn = document.getElementById('quizHintsBtn');
         if (hintsBtn) hintsBtn.disabled = true;
+    }
+
+    function handleQuizQuestionTimeout() {
+        if (!playerModeActive || currentQuestionSolved) return;
+
+        // 🔒 Süre dolar dolmaz kartı hemen kilitliyoruz — yeni soru gelene kadar
+        // eski (artık geçersiz) sorunun butonlarına/kutusuna basılamasın diye.
+        disableAllQuestionButtons();
 
         const depleted = useQuizPass(); // 🎫 süre dolması, çözülmeden atlanan soru gibi pas hakkı tüketiyor
         if (depleted) return; // useQuizPass zaten oyun bitti ekranını gösterdi
@@ -2688,43 +2761,63 @@
 
     function incrementQuizScore() {
         quizScore++;
+        passFreeStreak++;
+
         const scoreEl = document.getElementById('quizScoreValue');
         if (scoreEl) scoreEl.textContent = String(quizScore);
 
-        // 🏆 Rekoru geçip geçmediğimizi burada (senkron) belirliyoruz — sunucu
-        // yanıtını beklemiyoruz, çünkü aşağıdaki level mesajıyla AYNI toast
-        // kutusunu paylaşıyorlar; ikisi ayrı ayrı gösterilirse biri diğerini
-        // sessizce eziyordu (örn. pas hakkı bilgisi hiç görünmeden kayboluyordu).
         const isNewRecord = quizScore > quizHighScore;
-        submitQuizScoreToServer(quizScore); // arka planda sunucuyla senkronize ediyor, kendi tostunu göstermiyor artık
+        submitQuizScoreToServer(quizScore); // arka planda sunucuyla senkronize ediyor, kendi tostunu göstermiyor
 
-        // 🎉 Seviye atlama kutlaması — her 3 doğruda bir, uzun süre görünüp kayboluyor.
-        // 🎫 Ayrıca (maksimum 3'ü geçmeyecek şekilde) bir pas hakkı da hediye ediyoruz —
-        // skoru ilerletmek zor olduğu için motive edici bir teşvik.
+        // 🏆 90'a ulaşıldıysa kazandınız ekranı
         if (quizScore === 90) {
             showToast('🏆 Efsane seviyesindesin! Kazandınız!', 4500);
             setTimeout(showQuizWinScreen, 1600); // kutlama animasyonu/sesi bitsin diye kısa bekleme
             return;
         }
 
+        let messageParts = [];
+        let bonusPasses = 0;
+
+        // 🔥 Seri bonusu — artık SKORA değil, PAS HAKKINA ekleniyor. Böylece
+        // skor her zaman gerçek doğru sayısıyla birebir kalıyor, level atlama
+        // da her zaman düzgün 3'ün katlarında oluyor — kafa karıştırmıyor.
+        if (passFreeStreak === 3) {
+            bonusPasses += 1;
+            messageParts.push('🔥 Pas kullanmadan 3\'lü seri! +1 pas hakkı!');
+        } else if (passFreeStreak === 5) {
+            bonusPasses += 2;
+            messageParts.push('🔥🔥 Pas kullanmadan 5\'li seri! +2 pas hakkı!');
+        }
+
+        // 🎉 Seviye atlama — her 3 doğruda bir, sınırsız pas hakkı hediyesiyle
         if (quizScore % 3 === 0) {
             const level = quizScore / 3 + 1;
-            let message = `🎉 Bravo! Level ${level}'e geçtin!`;
+            bonusPasses += 1;
+            messageParts.push(`🎉 Bravo! Level ${level}'e geçtin! 🎫 Yeni bir pas hakkı kazandın!`);
+        }
 
-            if (quizPassesRemaining < 3) {
-                quizPassesRemaining++;
-                const passesEl = document.getElementById('quizPassesValue');
-                if (passesEl) passesEl.textContent = String(quizPassesRemaining);
-                message += ' 🎫 Yeni bir pas hakkı kazandın!';
+        if (bonusPasses > 0) {
+            quizPassesRemaining += bonusPasses;
+            const passesEl = document.getElementById('quizPassesValue');
+            if (passesEl) passesEl.textContent = String(quizPassesRemaining);
+        }
+
+        // 🏆 Rekor durumu — ya kırıldı, ya da yaklaşılıyor (5 veya 1 kala)
+        if (isNewRecord) {
+            messageParts.push('🏆 Yeni rekor!');
+        } else {
+            const remaining = quizHighScore - quizScore;
+            if (remaining === 5) {
+                messageParts.push('🏆 Rekora 5 kaldı!');
+            } else if (remaining === 1) {
+                messageParts.push('🏆 Rekora 1 kaldı!');
             }
+        }
 
-            if (isNewRecord) {
-                message += ' 🏆 Üstelik yeni rekor!';
-            }
-
-            showToast(message, 4500);
-        } else if (isNewRecord) {
-            showToast('🏆 Yeni rekor!', 3000);
+        // 💡 Tüm mesajlar TEK bir toast'ta birleşiyor — biri diğerini ezmesin diye
+        if (messageParts.length > 0) {
+            showToast(messageParts.join(' '), 4800);
         }
     }
 
@@ -2793,6 +2886,7 @@
     // sıfırlanıp yeni oyun başlıyor, kısa bir uyarıyla bildiriliyor.
     function useQuizPass() {
         quizPassesRemaining--;
+        passFreeStreak = 0; // 🔥 pas kullanıldı, seri sıfırlanır
         const passesEl = document.getElementById('quizPassesValue');
         if (passesEl) passesEl.textContent = String(Math.max(quizPassesRemaining, 0));
 
@@ -2965,18 +3059,22 @@
         let found = null;
         let isCountryMix = false;
 
+        // 🟢 Henüz 3 doğru bilmemiş (level 2'ye ulaşmamış) kullanıcılar için,
+        // sadece en bilindik kulüplerden soru geliyor — kolaydan zora bir giriş.
+        const inEasyPhase = quizScore < 3;
+
         for (let i = 0; i < maxAttempts; i++) {
             // 💡 %20 ihtimalle takım+ülke karışımı, %80 ihtimalle iki takım.
             // Takım+ülke seçilirse: %10 Süper Lig, %90 uluslararası havuzdan TEK takım + rastgele bir ülke.
             let pick, isCountryFlags;
-            if (Math.random() < 0.2) {
+            if (!inEasyPhase && Math.random() < 0.2) {
                 const clubPool = Math.random() < 0.1 ? superLigClubs : luckyClubs;
                 const club = clubPool[Math.floor(Math.random() * clubPool.length)];
                 const country = luckyCountries[Math.floor(Math.random() * luckyCountries.length)];
                 pick = [club, country];
                 isCountryFlags = [false, true];
             } else {
-                const pool = Math.random() < 0.1 ? superLigClubs : luckyClubs;
+                const pool = inEasyPhase ? easyClubs : (Math.random() < 0.1 ? superLigClubs : luckyClubs);
                 const shuffled = fisherYatesShuffle(pool);
                 pick = shuffled.slice(0, 2);
                 isCountryFlags = [false, false];
@@ -2988,14 +3086,17 @@
                     const candidate = await res.json();
                     const cleanCandidateName = candidate.playerName.replace(/\s*\(\d+\)\s*/g, "").trim();
 
-                    // 💡 Aynı (çok gezmiş) oyuncu son birkaç soruda zaten çıktıysa,
-                    // son deneme değilse tekrar dene — sonsuz döngüye girmesin diye
-                    // son denemede ne gelirse kabul ediyoruz.
-                    if (!recentQuizPlayers.includes(cleanCandidateName) || i === maxAttempts - 1) {
+                    // 💡 İki katmanlı tekrar kontrolü: hem bu OTURUMDA son birkaç
+                    // soruda çıktıysa, hem de son 3 GÜN içinde (tarayıcı hafızasında)
+                    // görüldüyse tekrar dene — sonsuz döngüye girmesin diye son
+                    // denemede ne gelirse kabul ediyoruz.
+                    const seenRecently = recentQuizPlayers.includes(cleanCandidateName) || isPlayerRecentlySeen(cleanCandidateName);
+                    if (!seenRecently || i === maxAttempts - 1) {
                         found = candidate;
                         isCountryMix = isCountryFlags.includes(true);
                         recentQuizPlayers.push(cleanCandidateName);
                         if (recentQuizPlayers.length > MAX_RECENT_QUIZ_PLAYERS) recentQuizPlayers.shift();
+                        saveRecentPlayerToStorage(cleanCandidateName); // 🗓️ uzun vadeli hafızaya da ekle
                         break;
                     }
                 }
@@ -3303,14 +3404,11 @@
                     // bir bekleme sonra. 90'a ulaşıldıysa (kazanma ekranı) burada değil,
                     // incrementQuizScore() kendi geçişini zaten yönetiyor.
                     if (quizScore < 90) {
-                        // 💡 Otomatik geçiş beklerken "Yeni Oyuncu"/"Yeni Oyun" butonlarına
-                        // basılırsa çifte geçiş (ve olası pas karışıklığı) olabilir — o yüzden
-                        // bekleme süresince kilitliyoruz. Yeni soru render olunca zaten
-                        // taze, aktif butonlarla değişecekler.
-                        const newBtnEl = document.getElementById('newPlayerModeBtn');
-                        const restartBtnEl = document.getElementById('restartQuizGameBtn');
-                        if (newBtnEl) newBtnEl.disabled = true;
-                        if (restartBtnEl) restartBtnEl.disabled = true;
+                        // 💡 Otomatik geçiş beklerken TÜM butonları kilitliyoruz —
+                        // "Oyuncuyu Göster"/"İpuçları" dahil, kimse eski (zaten
+                        // çözülmüş) soruya yanlışlıkla basmasın diye. Yeni soru
+                        // render olunca zaten taze, aktif butonlarla değişecekler.
+                        disableAllQuestionButtons();
 
                         // 🚀 Kutlama animasyonu oynarken, bir sonraki soruyu ARKA PLANDA
                         // şimdiden çekmeye başlıyoruz — animasyon bitene kadar veri
@@ -3332,7 +3430,7 @@
         }
 
         document.getElementById('newPlayerModeBtn').addEventListener('click', async (e) => {
-            e.currentTarget.disabled = true;
+            disableAllQuestionButtons(); // 🔒 tüm butonlar, sadece kendisi değil
             e.currentTarget.textContent = '⏳ Yükleniyor...';
             const ballEl = document.getElementById('celebrationBall');
             if (ballEl) ballEl.classList.add('roll-immediate'); // ⚽ soru gelene kadar top kayar
@@ -3352,7 +3450,7 @@
         if (restartBtn) {
             restartBtn.addEventListener('click', () => {
                 showConfirmDialog('Skorun ve pas hakların sıfırlanacak, emin misin?', async () => {
-                    restartBtn.disabled = true;
+                    disableAllQuestionButtons(); // 🔒 tüm butonlar, sadece kendisi değil
                     restartBtn.textContent = '⏳ Yükleniyor...';
                     const ballEl = document.getElementById('celebrationBall');
                     if (ballEl) ballEl.classList.add('roll-immediate');

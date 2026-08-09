@@ -9,6 +9,7 @@ private const val ROUND_DURATION_MS = 30_000L
 private const val ROOM_STALE_MS = 2 * 60 * 60 * 1000L // 2 saat hareketsizlik = terk edilmiş say
 private const val CLEANUP_INTERVAL_MS = 30 * 60 * 1000L // 30 dakikada bir kontrol et
 private const val OPPONENT_LEFT_THRESHOLD_SECONDS = 8 // ~5-6 kaçırılmış polling turu
+private const val EASY_PHASE_ROUND_COUNT = 3 // 🟢 ısınma turu sayısı
 
 @Serializable
 data class DuelClubInfo(val club: String, val season: String)
@@ -82,8 +83,6 @@ object DuelManager {
     private val rooms = ConcurrentHashMap<String, DuelRoom>()
 
     init {
-        // 🧹 Terk edilmiş odaları periyodik olarak temizleyen arka plan iş parçacığı —
-        // sunucunun hafızasını gereksiz yere şişirmesin diye.
         Thread {
             while (true) {
                 try {
@@ -114,18 +113,25 @@ object DuelManager {
         "Caykur Rizespor", "Gaziantep FK", "Goztepe", "Hatayspor",
         "Kasimpasa", "Kayserispor", "Konyaspor", "Samsunspor",
         "Sivasspor", "Eyupspor", "Kocaelispor",
-        // 🌍 Ünlü oyuncuların oynadığı "egzotik" kulüpler — soru zenginliği için
         "Inter Miami", "Al-Ahli", "Beijing Guoan", "Shanghai Port", "Vissel Kobe", "LA Galaxy",
         "Feyenoord", "PSV", "Panathinaikos", "Olympiacos"
     )
 
-    // 💡 Frontend'deki luckyCountries ile aynı liste — Bil Bakalım'daki gibi %20
-    // ihtimalle takım+ülke karışımı için
+    // 🟢 "Kolay Kulüpler" — frontend'deki Bil Bakalım'daki easyClubs ile AYNI 17
+    // kulüp (stadyum verimizin de olduğu, Avrupa'nın en bilindik takımları). Her
+    // odanın İLK 3 turu bu havuzdan geliyor — ısınma turu, kimse hemen zor bir
+    // soruyla karşılaşıp oyundan soğumasın diye.
+    private val easyClubPool = listOf(
+        "Galatasaray", "Fenerbahce", "Besiktas", "Kocaelispor",
+        "Manchester United", "Manchester City", "Chelsea", "Arsenal",
+        "Real Madrid", "Barcelona", "Juventus", "AC Milan", "Inter",
+        "Bayern Munich", "Borussia Dortmund", "Paris SG", "Ajax"
+    )
+
     private val countryPool = listOf(
         "Turkiye", "England", "Germany", "France", "Spain", "Italy", "Netherlands", "Portugal",
         "Brazil", "Argentina", "Croatia", "Serbia", "Belgium", "Sweden", "Norway",
         "Cote d'Ivoire", "Morocco", "Egypt", "Nigeria", "Japan", "Korea, South",
-        // 🌍 Yeni eklenenler — havuzumuzdaki kulüplerle iyi eşleşen ülkeler
         "Scotland", "Wales", "Uruguay", "Colombia", "Mexico"
     )
 
@@ -154,7 +160,6 @@ object DuelManager {
                 return JoinResult.Success(room)
             }
 
-            // Sayfa yenilenmiş olabilir — aynı isimle tekrar "katılmaya" izin veriyoruz
             if (room.player2Name == player2Name || room.player1Name == player2Name) {
                 return JoinResult.Success(room)
             }
@@ -163,8 +168,6 @@ object DuelManager {
         }
     }
 
-    // 🕵️ playerName verilirse, o oyuncunun "son görülme" zamanı güncelleniyor —
-    // rakibin bağlantısının kesilip kesilmediğini anlamak için kullanılıyor.
     fun getRoom(code: String, playerName: String? = null): DuelRoom? {
         val room = rooms[code.uppercase()] ?: return null
         synchronized(room.lock) {
@@ -191,15 +194,13 @@ object DuelManager {
         return room
     }
 
-    // 🔄 Oyun bittikten sonra, Ana Menü'ye dönmeden AYNI odada yeniden başlatır —
-    // skorlar sıfırlanır, yeni bir tur başlar. Oda kodu, oyuncu isimleri, hedef
-    // skor ve maskeleme ayarı aynen korunur.
     fun rematch(code: String): DuelRoom? {
         val room = rooms[code.uppercase()] ?: return null
         synchronized(room.lock) {
             room.lastActivityAt = System.currentTimeMillis()
             room.player1Score = 0
             room.player2Score = 0
+            room.roundNumber = 0 // 🟢 yeniden maç, ısınma turları da baştan başlasın
             room.gameOver = false
             room.gameWinner = null
             room.recentPlayerNames.clear()
@@ -219,8 +220,6 @@ object DuelManager {
                 room.player2Name -> room.player2LastSeen = System.currentTimeMillis()
             }
 
-            // Tur zaten bittiyse (rakip bilmiş, süre dolmuş ya da oyun bitmişse)
-            // geç kalan cevap işleme alınmıyor
             if (room.roundOver || room.currentQuestion == null || room.gameOver) {
                 return DuelAnswerResult(correct = false, state = toState(room))
             }
@@ -250,8 +249,6 @@ object DuelManager {
         }
     }
 
-    // 🏳️ Pas geçme — iki taraf da pas geçerse, süreyi beklemeden tur bitiyor
-    // (kimse kazanmamış sayılır), cevap açıklanıp sonraki soruya geçiliyor.
     fun submitPass(code: String, playerName: String): DuelState? {
         val room = rooms[code.uppercase()] ?: return null
 
@@ -329,8 +326,6 @@ object DuelManager {
         )
     }
 
-    // 🎭 Solo Quiz'deki "Maskeli Göster" ile aynı mantık — sadece ilk ve son harf
-    // açık, aradaki her harf yıldızla gizli. Duel'de isteğe bağlı bir ipucu.
     private fun maskNameForHint(name: String): String {
         return name.split(" ").joinToString(" ") { word ->
             val letters = word.toCharArray()
@@ -345,8 +340,6 @@ object DuelManager {
         }
     }
 
-    // ⏱️ Süre (60sn) dolduysa turu otomatik bitiriyor — kimse kazanmamış sayılır,
-    // cevap açıklanır, "Sonraki Soru" ile devam edilir.
     private fun checkTimeout(room: DuelRoom) {
         if (!room.roundOver && room.currentQuestion != null && !room.gameOver) {
             val elapsed = System.currentTimeMillis() - room.roundStartTime
@@ -369,17 +362,23 @@ object DuelManager {
         room.bothPassed = false
         room.roundStartTime = System.currentTimeMillis()
 
+        // 🟢 İlk EASY_PHASE_ROUND_COUNT tur (varsayılan 3), sadece en bilindik
+        // 17 kulüpten geliyor — ısınma turu. Bu fazda ülke karışımı da kapalı,
+        // tamamen kulüp-kulüp gidiyor (Bil Bakalım'daki mantıkla birebir aynı).
+        val inEasyPhase = room.roundNumber <= EASY_PHASE_ROUND_COUNT
+
         var found: MultiClubPlayerResult? = null
         var attempts = 0
         var isCountryMix = false
         while (attempts < 12) {
-            val useCountryMix = kotlin.random.Random.nextDouble() < 0.2
+            val useCountryMix = !inEasyPhase && kotlin.random.Random.nextDouble() < 0.2
             val terms: List<Pair<String, Boolean>> = if (useCountryMix) {
                 val club = clubPool.random()
                 val country = countryPool.random()
                 listOf(club to false, country to true)
             } else {
-                clubPool.shuffled().take(2).map { it to false }
+                val pool = if (inEasyPhase) easyClubPool else clubPool
+                pool.shuffled().take(2).map { it to false }
             }
 
             val candidate = DatabaseClient.fetchPlayerAcrossClubs(terms)
@@ -387,8 +386,6 @@ object DuelManager {
 
             if (candidate != null) {
                 val cleanName = candidate.playerName.replace(Regex("\\s*\\(\\d+\\)\\s*$"), "").trim()
-                // 💡 Aynı (çok gezmiş) oyuncu bu odada son birkaç soruda zaten çıktıysa,
-                // son deneme değilse tekrar dene.
                 if (!room.recentPlayerNames.contains(cleanName) || attempts >= 12) {
                     found = candidate
                     isCountryMix = useCountryMix
@@ -408,9 +405,6 @@ object DuelManager {
         return (1..4).map { chars.random() }.joinToString("")
     }
 
-    // 💡 Önce Türkçe karakterleri (ı,ğ,ü,ş,ö,ç) katlayıp, sonra standart Unicode
-    // NFD ayrıştırmasıyla İbrahimović, Modrić, Szczęsny gibi diğer aksanlı Latin
-    // harfleri de temizliyoruz — frontend'deki normalizeGuess() ile aynı mantık.
     private fun normalizeForDuel(s: String): String {
         val turkishFolded = s.trim().lowercase()
             .replace("ı", "i").replace("ğ", "g").replace("ü", "u")
