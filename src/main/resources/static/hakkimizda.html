@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hakkımızda | TransferKolik</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(180deg, #14190f 0%, #1c2318 100%);
+            color: rgb(242, 240, 236);
+            min-height: 100vh;
+            padding: 40px 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 800px;
+            background: rgba(242, 240, 236, 0.025);
+            border: 1px solid rgba(242, 240, 236, 0.09);
+            border-radius: 10px;
+            padding: 40px;
+        }
+
+        a.back-link {
+            display: inline-block;
+            margin-bottom: 24px;
+            color: #c9a961;
+            text-decoration: none;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        a.back-link:hover {
+            text-decoration: underline;
+        }
+
+        h1 {
+            font-size: 1.6rem;
+            font-weight: 800;
+            color: #c9a961;
+            margin-bottom: 8px;
+        }
+
+        .subtitle {
+            font-size: 0.88rem;
+            color: rgba(242, 240, 236, 0.6);
+            margin-bottom: 28px;
+        }
+
+        h2 {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: rgb(242, 240, 236);
+            margin-top: 30px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        p, li {
+            font-size: 0.92rem;
+            line-height: 1.75;
+            color: rgba(242, 240, 236, 0.85);
+        }
+
+        ul {
+            margin: 10px 0 10px 20px;
+        }
+
+        li {
+            margin-bottom: 8px;
+        }
+
+        .feature-card {
+            background: rgba(143, 174, 152, 0.06);
+            border: 1px solid rgba(143, 174, 152, 0.25);
+            border-radius: 6px;
+            padding: 16px 18px;
+            margin-bottom: 14px;
+        }
+
+        .feature-title {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: #c9a961;
+            margin-bottom: 6px;
+        }
+
+        .feature-desc {
+            font-size: 0.87rem;
+            color: rgba(242, 240, 236, 0.78);
+            line-height: 1.65;
+        }
+
+        strong {
+            color: #c9a961;
+        }
+
+        .footer-note {
+            margin-top: 36px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(242, 240, 236, 0.09);
+            font-size: 0.78rem;
+            color: rgba(242, 240, 236, 0.5);
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <a href="/" class="back-link">← Ana Sayfaya Dön</a>
+    <h1>⚽ TransferKolik Hakkında</h1>
+    <div class="subtitle">Türk futbolseverler için transfer geçmişi, kulüp/oyuncu araması ve tahmin oyunları</div>
+
+    <p>TransferKolik, futbolcuların kariyerleri boyunca hangi kulüplerde/ülke takımlarında oynadığını araştırmanızı, iki kulüp arasındaki ortak oyuncuları bulmanızı ve bu bilgiyi eğlenceli tahmin oyunlarına dönüştürmenizi sağlayan, Türkçe ve Türk futboluna odaklanmış ücretsiz bir web sitesidir. Herhangi bir kayıt ya da hesap oluşturmaya gerek yok — siteye girer girmez kullanabilirsiniz.</p>
+
+    <h2>🔍 Kulüp / Ülke Arama</h2>
+    <p>Ana ekrandaki iki kutuya istediğiniz kulüp veya ülke ismini yazıp <strong>"Ara"</strong>ya basarak, o iki takımda (ya da bir kulüp + bir ülke takımında) ortak oynamış tüm oyuncuların listesini görebilirsiniz. Her oyuncunun mevkisi, uyruğu ve hangi sezonlarda oynadığı bilgisiyle birlikte listelenir.</p>
+
+    <h2>🎮 Oyun Modları</h2>
+
+    <div class="feature-card">
+        <div class="feature-title">🎲 Rastgele Eşleşme</div>
+        <div class="feature-desc">İki takımı/ülkeyi sizin yerinize rastgele seçer — aramayı siz başlatırsınız. Arkadaşlarınızla "önce kim bilir" şeklinde eğlenceli bir tahmin turu için idealdir.</div>
+    </div>
+
+    <div class="feature-card">
+        <div class="feature-title">🎯 Bil Bakalım</div>
+        <div class="feature-desc">İki kulübün arasında gizemli bir oyuncu belirlenir, siz tahmin etmeye çalışırsınız. 30 saniyelik süre, pas hakları, seviye atlama ve global rekor sistemi vardır. Girişte iki alt mod seçebilirsiniz:
+        <ul>
+            <li><strong>🌍 Genel Mod</strong> — Avrupa ve dünyanın en bilindik kulüplerinden oluşan geniş bir havuz.</li>
+            <li><strong>🇹🇷 Türkiye Ligi Modu</strong> — sadece Süper Lig kulüpleri ve tarihi öneme sahip Türk takımlarından oluşan, daha zorlu bir mod.</li>
+        </ul>
+        </div>
+    </div>
+
+    <div class="feature-card">
+        <div class="feature-title">🏆 Arkadaşla Yarış</div>
+        <div class="feature-desc">Bir arkadaşınızla aynı soruyu aynı anda çözersiniz — kim önce doğru bilirse o turu kazanır. Oda kodu oluşturup arkadaşınıza gönderirsiniz, hesap açmaya gerek yoktur.</div>
+    </div>
+
+    <h2>🎭 Ek Özellikler</h2>
+    <ul>
+        <li><strong>Maskeleme Modu:</strong> Arama sonuçlarındaki oyuncu isimlerini gizleyip, kendi kendinize tahmin oyunu oynamanızı sağlar (Çaylak/Usta zorluk seviyeleri).</li>
+        <li><strong>Yıl Filtresi:</strong> Sonuçları belirli bir yıldan önce/sonra ile sınırlayabilirsiniz.</li>
+        <li><strong>Tema Seçimi:</strong> Yeşil, Gün Batımı, Gece Mavisi ve Açık tema arasında geçiş yapabilirsiniz.</li>
+        <li><strong>Paylaş:</strong> Aramanızı arkadaşlarınızla tek linkle paylaşabilirsiniz.</li>
+    </ul>
+
+    <h2>📊 Veriler Nereden Geliyor</h2>
+    <p>Transfer geçmişi ve oyuncu bilgileri, halka açık futbol veritabanlarından derlenmektedir. Kulüp logoları ve stadyum görselleri TheSportsDB ve Wikimedia Commons gibi kaynaklardan sağlanmaktadır.</p>
+
+    <div class="footer-note">
+        TransferKolik — Developed with ❤️ by mertyagiz
+    </div>
+</div>
+</body>
+</html>
