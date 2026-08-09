@@ -2548,6 +2548,15 @@
         'Sivasspor', 'Eyüpspor', 'Kocaelispor'
     ];
 
+    // 🇹🇷 "Türkiye Ligi Modu" havuzu — Süper Lig'in tamamı + son yıllarda düşen
+    // ama tarihi öneme sahip kulüpler (şimdilik Bursaspor — 2010 şampiyonu).
+    // İleride başka önemli düşen kulüpler de eklenebilir.
+    const turkiyeLigiPool = [...superLigClubs, 'Bursaspor'];
+
+    // 🏆 Süper Lig tarihinde şampiyonluk yaşamış SADECE 5 kulüp var — Türkiye
+    // Ligi Modu'nda ilk 3 soru bu havuzdan geliyor, temiz bir ısınma turu olsun diye.
+    const turkiyeChampions = ['Galatasaray', 'Fenerbahçe', 'Beşiktaş', 'Trabzonspor', 'Bursaspor'];
+
     // 🟢 "Kolay Kulüpler" — Avrupa'nın en bilindik takımları (stadyum verimizin
     // de olduğu 17 kulüple aynı liste). Oyuna YENİ başlayan (henüz 3 doğru
     // bilmemiş) kullanıcılar için ilk sorular bu havuzdan geliyor — kolaydan
@@ -2621,6 +2630,7 @@
     }
 
     let playerModeActive = false;
+    let quizMode = 'genel'; // 🇹🇷 'genel' | 'turkiye' — Bil Bakalım'a girerken seçiliyor
     let photoVisibleByDefault = true; // 🖼️ Kullanıcının son tercihi — yeni sorularda da bu geçerli olacak
 
     // 🎯 Quiz skor + kronometre — sadece Quiz'na TAZE girişte sıfırlanır,
@@ -3079,6 +3089,53 @@
         const maxAttempts = 12; // 💡 tekrar kontrolü için biraz daha fazla deneme payı
         let found = null;
         let isCountryMix = false;
+
+        // 🇹🇷 Türkiye Ligi Modu — tamamen ayrı, basit bir mantık: ilk 3 soru
+        // 5 şampiyon kulüpten, sonrası tüm Türkiye Ligi havuzundan. Ülke
+        // karışımı YOK (saf kulüp-kulüp), Genel Mod'un mantığına hiç dokunmuyor.
+        if (quizMode === 'turkiye') {
+            const inChampionsPhase = quizScore < 3;
+            const inTurkiyeMediumPhase = !inChampionsPhase && quizScore < 6;
+            const nonChampionClubs = turkiyeLigiPool.filter(c => !turkiyeChampions.includes(c));
+
+            for (let i = 0; i < maxAttempts; i++) {
+                let pick;
+                if (inChampionsPhase) {
+                    pick = fisherYatesShuffle(turkiyeChampions).slice(0, 2);
+                } else if (inTurkiyeMediumPhase) {
+                    // 🟡 Bir taraf şampiyon havuzundan, diğer taraf geri kalan
+                    // kulüplerden — tam zora düşmeden yumuşak bir köprü.
+                    const champion = turkiyeChampions[Math.floor(Math.random() * turkiyeChampions.length)];
+                    const other = nonChampionClubs[Math.floor(Math.random() * nonChampionClubs.length)];
+                    pick = fisherYatesShuffle([champion, other]);
+                } else {
+                    pick = fisherYatesShuffle(turkiyeLigiPool).slice(0, 2);
+                }
+                try {
+                    const res = await fetch(`/playerMode?clubs=${encodeURIComponent(pick.join(','))}&isCountry=0,0`);
+                    if (res.ok) {
+                        const candidate = await res.json();
+                        const cleanCandidateName = candidate.playerName.replace(/\s*\(\d+\)\s*/g, "").trim();
+                        const bothVeryOld = candidate.clubs && candidate.clubs.length === 2 &&
+                            candidate.clubs.every(c => {
+                                const y = seasonToYear(c.season);
+                                return y !== null && y < 2000;
+                            });
+                        const seenRecently = recentQuizPlayers.includes(cleanCandidateName) || isPlayerRecentlySeen(cleanCandidateName);
+                        if ((!seenRecently && !bothVeryOld) || i === maxAttempts - 1) {
+                            found = candidate;
+                            recentQuizPlayers.push(cleanCandidateName);
+                            if (recentQuizPlayers.length > MAX_RECENT_QUIZ_PLAYERS) recentQuizPlayers.shift();
+                            saveRecentPlayerToStorage(cleanCandidateName);
+                            break;
+                        }
+                    }
+                } catch (e) {
+                    // sessizce bir sonraki denemeye geç
+                }
+            }
+            return { found, isCountryMix: false };
+        }
 
         // 🟢🟡 Üç kademeli zorluk: skor 3'e kadar KOLAY (17 bilindik kulüp),
         // 3-10 arası ORTA (egzotik/dar bağlantılı ~10 kulüp çıkarılmış hâli),
@@ -3927,8 +3984,8 @@
                         <div class="player-mode-clubs">${clubsHtml}</div>
                         <div class="player-mode-avatar${(state.imageUrl && !state.imageUrl.includes('default.jpg')) ? ' photo-loading' : ''}" id="duelAvatar">
                             ${(state.imageUrl && !state.imageUrl.includes('default.jpg'))
-            ? `<img src="${state.imageUrl}" alt="" class="photo-fade-in" onload="this.closest('.player-mode-avatar').classList.remove('photo-loading')" onerror="hideDuelAvatar()">`
-            : `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                ? `<img src="${state.imageUrl}" alt="" class="photo-fade-in" onload="this.closest('.player-mode-avatar').classList.remove('photo-loading')" onerror="hideDuelAvatar()">`
+                                : `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                                     <circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="1.4"/>
                                     <path d="M4 20c0-4.4 3.6-7 8-7s8 2.6 8 7" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
                                    </svg>`}
@@ -4106,10 +4163,10 @@
         const winnerText = state.bothPassed
             ? '🏳️ İkiniz de pas geçti, kimse bilemedi!'
             : state.timedOut
-                ? '⏱️ Süre doldu, kimse bilemedi!'
-                : (state.roundWinner === duelPlayerName
-                    ? '🎉 Bu turu SEN kazandın!'
-                    : `😅 Bu turu ${escapeHtml(state.roundWinner)} kazandı.`);
+            ? '⏱️ Süre doldu, kimse bilemedi!'
+            : (state.roundWinner === duelPlayerName
+                ? '🎉 Bu turu SEN kazandın!'
+                : `😅 Bu turu ${escapeHtml(state.roundWinner)} kazandı.`);
 
         statusEl.innerHTML = `
             <div class="quiz-win-title" style="font-size: 1.1rem; margin-top: 16px;">${winnerText}</div>
@@ -4163,11 +4220,39 @@
             tableHead.style.display = 'none';
             document.getElementById('duelModeBtn').style.display = 'none';
             document.getElementById('resultsTable').innerHTML = ''; // 💡 eski "İki kulüp seçip Ara'ya basın" mesajı anında kaybolsun
-            startQuizScoreTimer();
-            await fetchQuizHighScore(); // 🏆 ilk render'dan önce güncel rekoru çek
-            await startPlayerMode(false); // Quiz'a ilk giriş, ses yok
-            scrollToResultsArea(); // sadece ilk girişte, tekrarlanmıyor
+            renderQuizModeSelectScreen(); // 🇹🇷 Genel Mod / Türkiye Ligi Modu seçimi
         });
+    }
+
+    // 🇹🇷 Bil Bakalım'a girince önce mod seçtiriyoruz — Genel Mod (hiç değişmedi,
+    // eskisi gibi) ya da Türkiye Ligi Modu (yeni, daha zorlu, saf Türk futbolu).
+    function renderQuizModeSelectScreen() {
+        const resultsTable = document.getElementById("resultsTable");
+        resultsTable.innerHTML = `
+            <tr>
+                <td colspan="5" style="padding: 40px 24px; text-align: center;">
+                    <div class="player-mode-card">
+                        <div class="quiz-win-title" style="font-size: 1.3rem;">🎮 Hangi modda oynamak istersin?</div>
+                        <button id="selectGenelModeBtn" class="btn-search" style="width: 100%; margin-bottom: 12px;">🌍 Genel Mod</button>
+                        <button id="selectTurkiyeModeBtn" class="toolbar-btn" style="width: 100%;">🇹🇷 Türkiye Ligi Modu</button>
+                        <div style="font-size: 0.72rem; color: rgba(var(--fg-rgb), 0.5); margin-top: 10px;">
+                            Türkiye Ligi Modu daha zorlu — sadece Süper Lig + tarihi kulüpler.
+                        </div>
+                    </div>
+                </td>
+            </tr>
+        `;
+
+        document.getElementById('selectGenelModeBtn').addEventListener('click', () => beginQuiz('genel'));
+        document.getElementById('selectTurkiyeModeBtn').addEventListener('click', () => beginQuiz('turkiye'));
+    }
+
+    async function beginQuiz(mode) {
+        quizMode = mode;
+        startQuizScoreTimer();
+        await fetchQuizHighScore(); // 🏆 ilk render'dan önce güncel rekoru çek
+        await startPlayerMode(false); // Quiz'a ilk giriş, ses yok
+        scrollToResultsArea();
     }
 
     function setupAutocomplete(inputId, dropdownId) {
