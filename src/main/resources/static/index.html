@@ -1572,6 +1572,11 @@
             y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
         })(window, document, "clarity", "script", "xrkri8jyvj");
     </script>
+    <!-- 📢 Google AdSense — site doğrulama kodu. Onaydan sonra Otomatik
+         Reklamlar (Auto Ads) AdSense panelinden kapatılıp, sadece elle
+         yerleştirilen reklam birimleri kullanılacak. -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3295787676113049"
+         crossorigin="anonymous"></script>
 </head>
 <body>
 
@@ -1605,6 +1610,7 @@
 
                     <button id="soundToggleBtn" class="level-option-btn">🔊 Ses</button>
                     <button id="shareBtn" class="level-option-btn">🔗 Paylaş</button>
+                    <button id="contactBtn" class="level-option-btn">📧 İletişim</button>
 
                     <div class="toolbar-wrapper" id="hunterModeWrapper">
                         <button id="hunterModeBtn" class="level-option-btn" title="Oyuncu isimlerini gizleyip eğlenceli bir tahmin oyununa çevirir">
@@ -1745,7 +1751,7 @@
 </div>
 
 <div class="footer-signature">
-    Developed with ❤️ by <span>mertyagiz</span>
+    Developed with ❤️ by <span>mertyagiz</span> · <a href="/gizlilik.html" style="color: inherit; opacity: 0.6; text-decoration: none;">Gizlilik Politikası</a>
 </div>
 
 <script>
@@ -2423,6 +2429,20 @@
                 showToast('Link kopyalandı! 🔗');
             }).catch(() => {
                 showToast('Kopyalanamadı, tarayıcı izin vermedi.');
+            });
+        });
+    }
+
+    // 📧 İletişim — e-postayı panoya kopyalıyor, ayrıca istenirse mail
+    // uygulaması açılsın diye mailto: linkini de arka planda tetikliyoruz.
+    function setupContactButton() {
+        const CONTACT_EMAIL = 'transferkolik.bilgi@gmail.com';
+        document.getElementById('contactBtn').addEventListener('click', () => {
+            document.getElementById('utilityMenuPanel').classList.remove('open');
+            navigator.clipboard.writeText(CONTACT_EMAIL).then(() => {
+                showToast(`📧 ${CONTACT_EMAIL} panoya kopyalandı!`, 3000);
+            }).catch(() => {
+                showToast(`📧 İletişim: ${CONTACT_EMAIL}`, 4000);
             });
         });
     }
@@ -4856,6 +4876,7 @@
         setupHunterModePanel();
         setupYearFilter();
         setupShareButton();
+        setupContactButton();
         setupSoundToggle();
         setupUtilityMenu();
         setupLuckyMode();
