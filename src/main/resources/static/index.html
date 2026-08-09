@@ -1424,6 +1424,13 @@
         }
 
         @media (max-width: 650px) {
+            .footer-signature {
+                text-align: center;
+                font-size: 0.6rem;
+                letter-spacing: 0.3px;
+                padding: 0 4px;
+            }
+
             body {
                 padding: 20px 10px;
             }
@@ -1609,9 +1616,6 @@
                     </div>
 
                     <button id="soundToggleBtn" class="level-option-btn">🔊 Ses</button>
-                    <button id="shareBtn" class="level-option-btn">🔗 Paylaş</button>
-                    <button id="contactBtn" class="level-option-btn">📧 İletişim</button>
-                    <a href="/hakkimizda.html" class="level-option-btn" style="display: block; text-decoration: none; text-align: left;">ℹ️ Hakkımızda</a>
 
                     <div class="toolbar-wrapper" id="hunterModeWrapper">
                         <button id="hunterModeBtn" class="level-option-btn" title="Oyuncu isimlerini gizleyip eğlenceli bir tahmin oyununa çevirir">
@@ -1649,6 +1653,13 @@
                             </div>
                         </div>
                     </div>
+
+                    <div style="border-top: 1px solid rgba(var(--fg-rgb), 0.1); margin: 6px 0;"></div>
+
+                    <button id="shareBtn" class="level-option-btn">🔗 Paylaş</button>
+                    <button id="contactBtn" class="level-option-btn">📧 İletişim</button>
+                    <a href="/hakkimizda.html" class="level-option-btn" style="display: block; text-decoration: none; text-align: left;">ℹ️ Hakkımızda</a>
+                    <a href="/kullanim-sartlari.html" class="level-option-btn" style="display: block; text-decoration: none; text-align: left;">📜 Kullanım Şartları</a>
                 </div>
             </div>
         </div>
@@ -1752,7 +1763,7 @@
 </div>
 
 <div class="footer-signature">
-    Developed with ❤️ by <span>mertyagiz</span> · <a href="/hakkimizda.html" style="color: inherit; opacity: 0.6; text-decoration: none;">Hakkımızda</a> · <a href="/gizlilik.html" style="color: inherit; opacity: 0.6; text-decoration: none;">Gizlilik Politikası</a>
+    Developed with ❤️ by <span>mertyagiz</span> · <a href="/hakkimizda.html" style="color: inherit; opacity: 0.6; text-decoration: none;">Hakkımızda</a> · <a href="/kullanim-sartlari.html" style="color: inherit; opacity: 0.6; text-decoration: none;">Kullanım Şartları</a> · <a href="/gizlilik.html" style="color: inherit; opacity: 0.6; text-decoration: none;">Gizlilik Politikası</a>
 </div>
 
 <script>
@@ -4374,6 +4385,23 @@
         });
     }
 
+    const THEME_STORAGE_KEY = 'transferkolik_theme';
+
+    // 🎨 Sayfa yüklenirken (tema anahtarı çizilmeden önce) kaydedilmiş temayı
+    // uyguluyoruz — hem index.html hem gizlilik/hakkımızda/kullanım şartları
+    // sayfaları aynı fonksiyonu (kopyalanmış hâliyle) kullanıyor.
+    function applySavedTheme() {
+        try {
+            const saved = localStorage.getItem(THEME_STORAGE_KEY);
+            if (saved && saved !== 'green') {
+                document.body.classList.add('theme-' + saved);
+            }
+            return saved || 'green';
+        } catch (e) {
+            return 'green';
+        }
+    }
+
     function setupThemeSwitcher() {
         const btn = document.getElementById('themeSwitcherBtn');
         const panel = document.getElementById('themeSwitcherPanel');
@@ -4388,6 +4416,12 @@
             }
         });
 
+        // 💡 Sayfa yüklenirken zaten uygulanmış temaya göre doğru butonu "active" işaretliyoruz
+        const currentTheme = localStorage.getItem(THEME_STORAGE_KEY) || 'green';
+        document.querySelectorAll('.theme-btn').forEach(b => {
+            b.classList.toggle('active', b.dataset.theme === currentTheme);
+        });
+
         document.querySelectorAll('.theme-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 document.body.classList.remove('theme-sunset', 'theme-night', 'theme-light');
@@ -4395,6 +4429,8 @@
                 if (theme === 'sunset') document.body.classList.add('theme-sunset');
                 if (theme === 'night') document.body.classList.add('theme-night');
                 if (theme === 'light') document.body.classList.add('theme-light');
+
+                try { localStorage.setItem(THEME_STORAGE_KEY, theme); } catch (e) { /* sessizce geç */ }
 
                 document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
@@ -4862,6 +4898,7 @@
         history.scrollRestoration = 'manual';
     }
     window.scrollTo(0, 0);
+    applySavedTheme(); // 🎨 mümkün olduğunca erken, göz kırpması (yeşil an) olmasın diye
 
     window.onload = () => {
         window.scrollTo(0, 0);

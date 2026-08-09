@@ -6,118 +6,66 @@
     <title>Hakkımızda | TransferKolik</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        :root {
+            --light-green-rgb: 143, 174, 152;
+            --accent-gold: #c9a961;
+            --fg-rgb: 242, 240, 236;
+            --surface-strong-rgb: 20, 23, 15;
+            --bg-gradient: linear-gradient(180deg, #14190f 0%, #1c2318 100%);
         }
-
+        body.theme-sunset {
+            --light-green-rgb: 207, 154, 118;
+            --accent-gold: #dcb373;
+            --bg-gradient: linear-gradient(180deg, #241209 0%, #2e180d 100%);
+        }
+        body.theme-night {
+            --light-green-rgb: 139, 152, 207;
+            --accent-gold: #a3b6e6;
+            --bg-gradient: linear-gradient(180deg, #0e111c 0%, #151a2a 100%);
+        }
+        body.theme-light {
+            --light-green-rgb: 95, 138, 108;
+            --accent-gold: #9c7a35;
+            --fg-rgb: 26, 28, 24;
+            --surface-strong-rgb: 255, 255, 255;
+            --bg-gradient: linear-gradient(180deg, #faf9f6 0%, #f1efe9 100%);
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         body {
-            background: linear-gradient(180deg, #14190f 0%, #1c2318 100%);
-            color: rgb(242, 240, 236);
+            background: var(--bg-gradient);
+            color: rgb(var(--fg-rgb));
             min-height: 100vh;
             padding: 40px 20px;
             display: flex;
             flex-direction: column;
             align-items: center;
+            transition: background 0.4s ease, color 0.4s ease;
         }
-
-        .container {
-            width: 100%;
-            max-width: 800px;
-            background: rgba(242, 240, 236, 0.025);
-            border: 1px solid rgba(242, 240, 236, 0.09);
-            border-radius: 10px;
-            padding: 40px;
-        }
-
-        a.back-link {
-            display: inline-block;
-            margin-bottom: 24px;
-            color: #c9a961;
-            text-decoration: none;
-            font-size: 0.85rem;
-            font-weight: 600;
-        }
-
-        a.back-link:hover {
-            text-decoration: underline;
-        }
-
-        h1 {
-            font-size: 1.6rem;
-            font-weight: 800;
-            color: #c9a961;
-            margin-bottom: 8px;
-        }
-
-        .subtitle {
-            font-size: 0.88rem;
-            color: rgba(242, 240, 236, 0.6);
-            margin-bottom: 28px;
-        }
-
-        h2 {
-            font-size: 1.1rem;
-            font-weight: 700;
-            color: rgb(242, 240, 236);
-            margin-top: 30px;
-            margin-bottom: 10px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        p, li {
-            font-size: 0.92rem;
-            line-height: 1.75;
-            color: rgba(242, 240, 236, 0.85);
-        }
-
-        ul {
-            margin: 10px 0 10px 20px;
-        }
-
-        li {
-            margin-bottom: 8px;
-        }
-
-        .feature-card {
-            background: rgba(143, 174, 152, 0.06);
-            border: 1px solid rgba(143, 174, 152, 0.25);
-            border-radius: 6px;
-            padding: 16px 18px;
-            margin-bottom: 14px;
-        }
-
-        .feature-title {
-            font-size: 0.95rem;
-            font-weight: 700;
-            color: #c9a961;
-            margin-bottom: 6px;
-        }
-
-        .feature-desc {
-            font-size: 0.87rem;
-            color: rgba(242, 240, 236, 0.78);
-            line-height: 1.65;
-        }
-
-        strong {
-            color: #c9a961;
-        }
-
-        .footer-note {
-            margin-top: 36px;
-            padding-top: 20px;
-            border-top: 1px solid rgba(242, 240, 236, 0.09);
-            font-size: 0.78rem;
-            color: rgba(242, 240, 236, 0.5);
-        }
+        .container { width: 100%; max-width: 800px; background: rgba(var(--fg-rgb), 0.025); border: 1px solid rgba(var(--fg-rgb), 0.09); border-radius: 10px; padding: 40px; }
+        a.back-link { display: inline-block; margin-bottom: 24px; color: var(--accent-gold); text-decoration: none; font-size: 0.85rem; font-weight: 600; }
+        a.back-link:hover { text-decoration: underline; }
+        h1 { font-size: 1.6rem; font-weight: 800; color: var(--accent-gold); margin-bottom: 8px; }
+        .subtitle { font-size: 0.88rem; color: rgba(var(--fg-rgb), 0.6); margin-bottom: 28px; }
+        h2 { font-size: 1.1rem; font-weight: 700; color: rgb(var(--fg-rgb)); margin-top: 30px; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+        p, li { font-size: 0.92rem; line-height: 1.75; color: rgba(var(--fg-rgb), 0.85); }
+        ul { margin: 10px 0 10px 20px; }
+        li { margin-bottom: 8px; }
+        .feature-card { background: rgba(var(--light-green-rgb), 0.06); border: 1px solid rgba(var(--light-green-rgb), 0.25); border-radius: 6px; padding: 16px 18px; margin-bottom: 14px; }
+        .feature-title { font-size: 0.95rem; font-weight: 700; color: var(--accent-gold); margin-bottom: 6px; }
+        .feature-desc { font-size: 0.87rem; color: rgba(var(--fg-rgb), 0.78); line-height: 1.65; }
+        strong { color: var(--accent-gold); }
+        .footer-note { margin-top: 36px; padding-top: 20px; border-top: 1px solid rgba(var(--fg-rgb), 0.09); font-size: 0.78rem; color: rgba(var(--fg-rgb), 0.5); }
     </style>
 </head>
 <body>
+<script>
+    try {
+        const savedTheme = localStorage.getItem('transferkolik_theme');
+        if (savedTheme && savedTheme !== 'green') {
+            document.body.classList.add('theme-' + savedTheme);
+        }
+    } catch (e) {}
+</script>
 <div class="container">
     <a href="/" class="back-link">← Ana Sayfaya Dön</a>
     <h1>⚽ TransferKolik Hakkında</h1>

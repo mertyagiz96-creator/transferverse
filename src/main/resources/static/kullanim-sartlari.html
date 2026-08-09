@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kullanım Şartları | TransferKolik</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --light-green-rgb: 143, 174, 152;
+            --accent-gold: #c9a961;
+            --fg-rgb: 242, 240, 236;
+            --surface-strong-rgb: 20, 23, 15;
+            --bg-gradient: linear-gradient(180deg, #14190f 0%, #1c2318 100%);
+        }
+        body.theme-sunset {
+            --light-green-rgb: 207, 154, 118;
+            --accent-gold: #dcb373;
+            --bg-gradient: linear-gradient(180deg, #241209 0%, #2e180d 100%);
+        }
+        body.theme-night {
+            --light-green-rgb: 139, 152, 207;
+            --accent-gold: #a3b6e6;
+            --bg-gradient: linear-gradient(180deg, #0e111c 0%, #151a2a 100%);
+        }
+        body.theme-light {
+            --light-green-rgb: 95, 138, 108;
+            --accent-gold: #9c7a35;
+            --fg-rgb: 26, 28, 24;
+            --surface-strong-rgb: 255, 255, 255;
+            --bg-gradient: linear-gradient(180deg, #faf9f6 0%, #f1efe9 100%);
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body {
+            background: var(--bg-gradient);
+            color: rgb(var(--fg-rgb));
+            min-height: 100vh;
+            padding: 40px 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transition: background 0.4s ease, color 0.4s ease;
+        }
+        .container { width: 100%; max-width: 800px; background: rgba(var(--fg-rgb), 0.025); border: 1px solid rgba(var(--fg-rgb), 0.09); border-radius: 10px; padding: 40px; }
+        a.back-link { display: inline-block; margin-bottom: 24px; color: var(--accent-gold); text-decoration: none; font-size: 0.85rem; font-weight: 600; }
+        a.back-link:hover { text-decoration: underline; }
+        h1 { font-size: 1.6rem; font-weight: 800; color: var(--accent-gold); margin-bottom: 8px; }
+        .updated { font-size: 0.78rem; color: rgba(var(--fg-rgb), 0.5); margin-bottom: 28px; }
+        h2 { font-size: 1.05rem; font-weight: 700; color: rgb(var(--fg-rgb)); margin-top: 28px; margin-bottom: 10px; }
+        p, li { font-size: 0.92rem; line-height: 1.7; color: rgba(var(--fg-rgb), 0.85); }
+        ul { margin: 10px 0 10px 20px; }
+        li { margin-bottom: 6px; }
+        strong { color: var(--accent-gold); }
+        .footer-note { margin-top: 36px; padding-top: 20px; border-top: 1px solid rgba(var(--fg-rgb), 0.09); font-size: 0.78rem; color: rgba(var(--fg-rgb), 0.5); }
+    </style>
+</head>
+<body>
+<script>
+    try {
+        const savedTheme = localStorage.getItem('transferkolik_theme');
+        if (savedTheme && savedTheme !== 'green') {
+            document.body.classList.add('theme-' + savedTheme);
+        }
+    } catch (e) {}
+</script>
+<div class="container">
+    <a href="/" class="back-link">← Ana Sayfaya Dön</a>
+    <h1>Kullanım Şartları</h1>
+    <div class="updated">Son güncelleme: Ağustos 2026</div>
+
+    <p>TransferKolik'i ("site") kullanarak aşağıdaki şartları kabul etmiş sayılırsınız. Lütfen bu sayfayı dikkatlice okuyun.</p>
+
+    <h2>1. Hizmetin Tanımı</h2>
+    <p>TransferKolik, futbol transfer geçmişi araması, kulüpler/oyuncular arası ortak nokta bulma ve bununla ilgili tahmin oyunları (Bil Bakalım, Arkadaşla Yarış, Rastgele Eşleşme) sunan, tamamen <strong>ücretsiz</strong> bir web sitesidir. Hesap oluşturmaya gerek yoktur.</p>
+
+    <h2>2. Kullanım Kuralları</h2>
+    <p>Siteyi kullanırken şunları yapmamayı kabul edersiniz:</p>
+    <ul>
+        <li>Siteye zarar verecek, aşırı yüklenmesine sebep olacak otomatik araçlar (bot, kazıyıcı vb.) ile erişmek.</li>
+        <li>Sitenin verilerini izinsiz olarak toplu şekilde kopyalayıp başka bir üründe/serviste yeniden satmak veya dağıtmak.</li>
+        <li>Arkadaşla Yarış modunda hakaret içeren, uygunsuz kullanıcı adları kullanmak.</li>
+        <li>Sitenin güvenliğini aşmaya çalışmak veya yetkisiz erişim sağlamaya çalışmak.</li>
+    </ul>
+
+    <h2>3. Veri Doğruluğu Hakkında Önemli Not</h2>
+    <p>Sitedeki transfer geçmişi, oyuncu bilgileri ve istatistikler, halka açık kaynaklardan derlenmiştir ve <strong>belirli bir tarihte alınmış bir görüntüyü (snapshot)</strong> yansıtır. Bu nedenle:</p>
+    <ul>
+        <li>Çok yakın zamanda gerçekleşen transferler veride henüz yer almayabilir.</li>
+        <li>Nadiren, veride hata veya eksiklik bulunabilir.</li>
+        <li>Site, verilerin %100 doğru veya güncel olduğunu garanti etmez. Bilgiler "olduğu gibi" (as-is) sunulmaktadır.</li>
+    </ul>
+
+    <h2>4. Fikri Mülkiyet</h2>
+    <p>Kulüp logoları, oyuncu fotoğrafları ve stadyum görselleri, ilgili üçüncü taraf kaynaklardan (Transfermarkt, TheSportsDB, Wikimedia Commons) sağlanmaktadır ve bu kaynakların kendi telif haklarına tabidir. TransferKolik, bu görseller üzerinde mülkiyet iddiasında bulunmaz.</p>
+
+    <h2>5. Sorumluluk Sınırlaması</h2>
+    <p>TransferKolik, site kullanımından doğabilecek doğrudan veya dolaylı zararlardan sorumlu tutulamaz. Site, herhangi bir garanti verilmeksizin, "olduğu gibi" sunulmaktadır.</p>
+
+    <h2>6. Reklamlar</h2>
+    <p>Site, Google AdSense aracılığıyla reklam gösterebilir. Reklamlarla ilgili detaylar için <a href="/gizlilik.html" style="color:var(--accent-gold);">Gizlilik Politikası</a> sayfamıza bakabilirsiniz.</p>
+
+    <h2>7. Değişiklikler</h2>
+    <p>Bu kullanım şartları önceden haber verilmeksizin güncellenebilir. Siteyi kullanmaya devam etmeniz, güncellenmiş şartları kabul ettiğiniz anlamına gelir.</p>
+
+    <h2>8. İletişim</h2>
+    <p>Sorularınız için: <strong>transferkolik.bilgi@gmail.com</strong></p>
+
+    <div class="footer-note">
+        TransferKolik — Developed with ❤️ by mertyagiz
+    </div>
+</div>
+</body>
+</html>
