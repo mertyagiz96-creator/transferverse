@@ -10,7 +10,7 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import kotlinx.serialization.Serializable
 
-@Serializable data class CreateRoomRequest(val playerName: String, val winTarget: Int = 5, val maskingHintEnabled: Boolean = false)
+@Serializable data class CreateRoomRequest(val playerName: String, val winTarget: Int = 5, val maskingHintEnabled: Boolean = false, val duelMode: String = "genel")
 @Serializable data class JoinRoomRequest(val roomCode: String, val playerName: String)
 @Serializable data class DuelAnswerRequest(val roomCode: String, val playerName: String, val guess: String)
 @Serializable data class DuelPassRequest(val roomCode: String, val playerName: String)
@@ -111,7 +111,7 @@ fun main() {
             // endpoint'e dokunmuyor. Polling tabanlı basit gerçek-zamanlı yarışma.
             post("/duel/create") {
                 val body = call.receive<CreateRoomRequest>()
-                val room = DuelManager.createRoom(body.playerName, body.winTarget, body.maskingHintEnabled)
+                val room = DuelManager.createRoom(body.playerName, body.winTarget, body.maskingHintEnabled, body.duelMode)
                 call.respond(DuelManager.toState(room))
             }
 

@@ -55,7 +55,7 @@ sealed class JoinResult {
     object RoomNotFound : JoinResult()
 }
 
-class DuelRoom(val roomCode: String, val player1Name: String, val winTarget: Int, val maskingHintEnabled: Boolean) {
+class DuelRoom(val roomCode: String, val player1Name: String, val winTarget: Int, val maskingHintEnabled: Boolean, val duelMode: String = "genel") {
     var player2Name: String? = null
     var player1Score = 0
     var player2Score = 0
@@ -128,6 +128,19 @@ object DuelManager {
         "Bayern Munich", "Borussia Dortmund", "Paris SG", "Ajax"
     )
 
+    // 🇹🇷 "Türkiye Ligi Modu" havuzu (Duel) — frontend'deki solo modla aynı:
+    // Süper Lig'in tamamı + Bursaspor. İlk 3 tur, Süper Lig tarihinde şampiyonluk
+    // yaşamış SADECE 5 kulüpten (ısınma turu) geliyor.
+    private val turkiyeLigiPool = listOf(
+        "Galatasaray", "Fenerbahce", "Besiktas", "Trabzonspor",
+        "Basaksehir", "Adana Demirspor", "Alanyaspor", "Antalyaspor",
+        "Caykur Rizespor", "Gaziantep FK", "Goztepe", "Hatayspor",
+        "Kasimpasa", "Kayserispor", "Konyaspor", "Samsunspor",
+        "Sivasspor", "Eyupspor", "Kocaelispor", "Bursaspor"
+    )
+    private val turkiyeChampions = listOf("Galatasaray", "Fenerbahce", "Besiktas", "Trabzonspor", "Bursaspor")
+    private const val TURKIYE_CHAMPIONS_ROUND_COUNT = 3
+
     private val countryPool = listOf(
         "Turkiye", "England", "Germany", "France", "Spain", "Italy", "Netherlands", "Portugal",
         "Brazil", "Argentina", "Croatia", "Serbia", "Belgium", "Sweden", "Norway",
@@ -135,13 +148,14 @@ object DuelManager {
         "Scotland", "Wales", "Uruguay", "Colombia", "Mexico"
     )
 
-    fun createRoom(player1Name: String, winTarget: Int, maskingHintEnabled: Boolean): DuelRoom {
+    fun createRoom(player1Name: String, winTarget: Int, maskingHintEnabled: Boolean, duelMode: String = "genel"): DuelRoom {
         var code: String
         do {
             code = generateCode()
         } while (rooms.containsKey(code))
         val validTarget = if (winTarget == 10) 10 else 5
-        val room = DuelRoom(code, player1Name.ifBlank { "Oyuncu 1" }, validTarget, maskingHintEnabled)
+        val validMode = if (duelMode == "turkiye") "turkiye" else "genel"
+        val room = DuelRoom(code, player1Name.ifBlank { "Oyuncu 1" }, validTarget, maskingHintEnabled, validMode)
         rooms[code] = room
         return room
     }
@@ -361,6 +375,35 @@ object DuelManager {
         room.player2Passed = false
         room.bothPassed = false
         room.roundStartTime = System.currentTimeMillis()
+
+        // 🇹🇷 Türkiye Ligi Modu — tamamen ayrı, basit bir dal: ilk 3 tur 5
+        // şampiyon kulüpten, sonrası tüm Türkiye Ligi havuzundan. Ülke karışımı
+        // YOK, Genel Mod'un mantığına hiç dokunmuyor.
+        if (room.duelMode == "turkiye") {
+            val inChampionsPhase = room.roundNumber <= TURKIYE_CHAMPIONS_ROUND_COUNT
+            val pool = if (inChampionsPhase) turkiyeChampions else turkiyeLigiPool
+
+            var found: MultiClubPlayerResult? = null
+            var attempts = 0
+            while (attempts < 12) {
+                val terms: List<Pair<String, Boolean>> = pool.shuffled().take(2).map { it to false }
+                val candidate = DatabaseClient.fetchPlayerAcrossClubs(terms)
+                attempts++
+                if (candidate != null) {
+                    val cleanName = candidate.playerName.replace(Regex("\\s*\\(\\d+\\)\\s*$"), "").trim()
+                    if (!room.recentPlayerNames.contains(cleanName) || attempts >= 12) {
+                        found = candidate
+                        room.recentPlayerNames.add(cleanName)
+                        if (room.recentPlayerNames.size > 6) room.recentPlayerNames.removeAt(0)
+                        break
+                    }
+                }
+            }
+            room.currentQuestion = found
+            room.isCountryMix = false
+            room.noMatchFound = (found == null)
+            return
+        }
 
         // 🟢 İlk EASY_PHASE_ROUND_COUNT tur (varsayılan 3), sadece en bilindik
         // 17 kulüpten geliyor — ısınma turu. Bu fazda ülke karışımı da kapalı,

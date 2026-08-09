@@ -3324,7 +3324,7 @@
             const hasRealPhoto = found.imageUrl && !found.imageUrl.includes('default.jpg');
             const showPhotoNow = hasRealPhoto && photoVisibleByDefault;
             const initialAvatarInner = showPhotoNow
-                ? `<img src="${found.imageUrl}" alt="" class="photo-fade-in" onload="revealQuestionWithPhoto()" onerror="handlePlayerPhotoError(this); revealQuestionWithPhoto();">`
+                ? `<img id="playerModeInitialPhoto" src="${found.imageUrl}" alt="" class="photo-fade-in" onload="revealQuestionWithPhoto()" onerror="handlePlayerPhotoError(this); revealQuestionWithPhoto();">`
                 : genericAvatarSvg;
             const avatarHtml = `
                 <div class="player-mode-avatar${showPhotoNow ? ' photo-loading' : ''}" id="playerModeAvatar" data-photo="${hasRealPhoto ? found.imageUrl : ''}">
@@ -3585,6 +3585,19 @@
 
         if (found) startQuizQuestionTimer(); // ⏱️ geçerli bir soru varsa 30sn'lik geri sayımı başlat
 
+        // 🛡️ Fotoğraf yüklemesi 5 saniyede sonuçlanmazsa (ne başarı ne hata —
+        // Transfermarkt bazen sessizce "asılı" kalabiliyor), kendimiz devreye
+        // girip yedek kaynağı deniyoruz. Kullanıcı "Oyuncuyu Göster"e basmayı
+        // beklemek zorunda kalmıyor.
+        if (found && hasRealPhoto && showPhotoNow) {
+            setTimeout(() => {
+                const imgEl = document.getElementById('playerModeInitialPhoto');
+                if (imgEl && !imgEl.complete) {
+                    handlePlayerPhotoError(imgEl);
+                }
+            }, 5000);
+        }
+
         // 🛡️ Güvenlik payı: onload/onerror her nasılsa hiç tetiklenmezse, soru
         // sonsuza kadar gizli kalmasın diye 2.5 saniye sonra yine de gösteriyoruz.
         if (found) {
@@ -3734,12 +3747,24 @@
                             <button id="duelTarget5Btn" class="toolbar-btn active" data-target="5">İlk 5'e Yarış</button>
                             <button id="duelTarget10Btn" class="toolbar-btn" data-target="10">İlk 10'a Yarış</button>
                         </div>
+                        <div style="font-size: 0.68rem; text-transform: uppercase; letter-spacing: 1px; color: rgba(var(--fg-rgb), 0.5); margin-bottom: 8px;">
+                            Hangi kulüp havuzu?
+                        </div>
+                        <div class="player-mode-hint-row" style="margin-bottom: 16px;">
+                            <button id="duelModeGenelBtn" class="toolbar-btn active" data-mode="genel">🌍 Genel Ligler</button>
+                            <button id="duelModeTurkiyeBtn" class="toolbar-btn" data-mode="turkiye">🇹🇷 Türkiye Ligi</button>
+                        </div>
                         <button id="duelMaskingToggleBtn" class="toolbar-btn" style="width: 100%; margin-bottom: 16px;">🎭 Maskeleme Yardımı: Kapalı</button>
                         <button id="duelCreateBtn" class="btn-search" style="width: 100%; margin-bottom: 20px;">Yeni Oda Kur</button>
-                        <div class="player-mode-guess-row">
+                        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px;">
+                            <div style="flex: 1; height: 1px; background: rgba(var(--fg-rgb), 0.15);"></div>
+                            <span style="font-size: 0.68rem; text-transform: uppercase; letter-spacing: 1.2px; color: rgba(var(--fg-rgb), 0.45);">veya</span>
+                            <div style="flex: 1; height: 1px; background: rgba(var(--fg-rgb), 0.15);"></div>
+                        </div>
+                        <div class="player-mode-guess-row" style="margin-bottom: 12px;">
                             <input type="text" id="duelJoinCodeInput" placeholder="Oda kodu (örn: A3F9)" autocomplete="off">
                         </div>
-                        <button id="duelJoinBtn" class="toolbar-btn" style="width: 100%;">Odaya Katıl</button>
+                        <button id="duelJoinBtn" class="btn-search" style="width: 100%;">Odaya Katıl</button>
                         <div style="font-size: 0.72rem; color: rgba(var(--fg-rgb), 0.5); margin-top: 8px;">
                             (Odaya katılırken hedef skoru seçmenize gerek yok, odayı kuran belirledi)
                         </div>
@@ -3760,6 +3785,20 @@
             selectedWinTarget = 10;
             target10Btn.classList.add('active');
             target5Btn.classList.remove('active');
+        });
+
+        let selectedDuelMode = 'genel';
+        const modeGenelBtn = document.getElementById('duelModeGenelBtn');
+        const modeTurkiyeBtn = document.getElementById('duelModeTurkiyeBtn');
+        modeGenelBtn.addEventListener('click', () => {
+            selectedDuelMode = 'genel';
+            modeGenelBtn.classList.add('active');
+            modeTurkiyeBtn.classList.remove('active');
+        });
+        modeTurkiyeBtn.addEventListener('click', () => {
+            selectedDuelMode = 'turkiye';
+            modeTurkiyeBtn.classList.add('active');
+            modeGenelBtn.classList.remove('active');
         });
 
         let selectedMaskingHint = false;
@@ -3788,7 +3827,7 @@
                 const res = await fetch('/duel/create', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ playerName: name, winTarget: selectedWinTarget, maskingHintEnabled: selectedMaskingHint })
+                    body: JSON.stringify({ playerName: name, winTarget: selectedWinTarget, maskingHintEnabled: selectedMaskingHint, duelMode: selectedDuelMode })
                 });
                 const state = await res.json();
                 duelRoomCode = state.roomCode;
