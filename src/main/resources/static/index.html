@@ -4233,8 +4233,8 @@
                 <td colspan="5" style="padding: 40px 24px; text-align: center;">
                     <div class="player-mode-card">
                         <div class="quiz-win-title" style="font-size: 1.3rem;">🎮 Hangi modda oynamak istersin?</div>
-                        <button id="selectGenelModeBtn" class="toolbar-btn" style="width: 100%; margin-bottom: 12px;">🌍 Genel Mod</button>
-                        <button id="selectTurkiyeModeBtn" class="toolbar-btn" style="width: 100%;">🇹🇷 Türkiye Ligi Modu</button>
+                        <button id="selectGenelModeBtn" class="toolbar-btn" style="width: 100%; margin-bottom: 12px; padding: 16px 14px; font-size: 0.82rem;">🌍 Genel Mod</button>
+                        <button id="selectTurkiyeModeBtn" class="toolbar-btn" style="width: 100%; padding: 16px 14px; font-size: 0.82rem;">🇹🇷 Türkiye Ligi Modu</button>
                         <div style="font-size: 0.72rem; color: rgba(var(--fg-rgb), 0.5); margin-top: 10px;">
                             Türkiye Ligi Modu daha zorlu — sadece Süper Lig + tarihi kulüpler.
                         </div>
@@ -4243,8 +4243,19 @@
             </tr>
         `;
 
-        document.getElementById('selectGenelModeBtn').addEventListener('click', () => beginQuiz('genel'));
-        document.getElementById('selectTurkiyeModeBtn').addEventListener('click', () => beginQuiz('turkiye'));
+        const genelBtn = document.getElementById('selectGenelModeBtn');
+        const turkiyeBtn = document.getElementById('selectTurkiyeModeBtn');
+
+        // 🔒 Bir moda basılınca ikisini de anında kilitliyoruz — hızlıca iki
+        // farklı moda art arda basılırsa iki ayrı başlatma süreci aynı anda
+        // çalışıp skoru/rekoru karıştırmasın diye.
+        function lockModeButtons() {
+            genelBtn.disabled = true;
+            turkiyeBtn.disabled = true;
+        }
+
+        genelBtn.addEventListener('click', () => { lockModeButtons(); beginQuiz('genel'); });
+        turkiyeBtn.addEventListener('click', () => { lockModeButtons(); beginQuiz('turkiye'); });
     }
 
     async function beginQuiz(mode) {
