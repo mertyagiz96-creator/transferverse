@@ -2894,6 +2894,10 @@
         if (restartBtnEl) restartBtnEl.disabled = true;
         const hintsBtn = document.getElementById('quizHintsBtn');
         if (hintsBtn) hintsBtn.disabled = true;
+        // 🔒 Ana Menü de dahil — yeni soru yüklenirken buna basılırsa, geç gelen
+        // soru idle ekranıyla çakışıp "yarış durumu" yaratıyordu.
+        const homeBtnEl = document.getElementById('homeMenuBtn');
+        if (homeBtnEl) homeBtnEl.disabled = true;
     }
 
     function handleQuizQuestionTimeout() {
@@ -3354,6 +3358,9 @@
         topLoader.style.display = "flex";
         const questionData = await fetchQuizQuestionData();
         topLoader.style.display = "none";
+        // 🛡️ Bekleme sırasında Ana Menü'ye geçilmişse (buton artık kilitli olsa
+        // da ek bir güvenlik payı olarak), soruyu hiç render etmiyoruz.
+        if (!playerModeActive) return;
         renderQuizQuestion(questionData, playSound);
     }
 
@@ -3363,6 +3370,10 @@
         resultsTable.innerHTML = ""; // 💡 eski içerik (liste ya da önceki quiz kartı) anında kaybolsun
         const tableWrapperEl = document.querySelector('.table-wrapper');
         if (tableWrapperEl) tableWrapperEl.scrollLeft = 0;
+        // 🔓 Yeni soru artık hazır — statik bir eleman olduğu için (kart gibi
+        // yeniden çizilmiyor) Ana Menü'yü burada elle tekrar aktif ediyoruz.
+        const homeBtnRestore = document.getElementById('homeMenuBtn');
+        if (homeBtnRestore) homeBtnRestore.disabled = false;
         if (playSound) playSearchSound();
         currentQuestionSolved = false; // 🎫 her yeni soru için sıfırdan başlıyor
         currentPlayers = [];
@@ -4625,8 +4636,29 @@
     async function beginQuiz(mode) {
         quizMode = mode;
         startQuizScoreTimer();
-        await fetchQuizHighScore(); // 🏆 ilk render'dan önce güncel rekoru çek
-        await startPlayerMode(false); // Quiz'a ilk giriş, ses yok
+        // 🔒 İlk soru yüklenene kadar "Ana Menü"yü kilitliyoruz — o sırada
+        // basılırsa, geç gelen soru ile idle ekranı çakışıp "yarış durumu"
+        // (iki ekranın aynı anda render olması) yaratıyordu.
+        const homeMenuBtnLock = document.getElementById('homeMenuBtn');
+        if (homeMenuBtnLock) homeMenuBtnLock.disabled = true;
+
+        // 🚀 Rekoru (artık Supabase'e giden bir ağ isteği) ve ilk soruyu AYNI ANDA
+        // (paralel) çekiyoruz — art arda beklersek, kullanıcı loader'ı görmeden
+        // önce sessizce Supabase'i bekliyormuş gibi bir gecikme hissi yaratıyordu.
+        const topLoader = document.getElementById("topLoader");
+        topLoader.style.display = "flex";
+        const [, questionData] = await Promise.all([
+            fetchQuizHighScore(),
+            fetchQuizQuestionData()
+        ]);
+        topLoader.style.display = "none";
+        if (homeMenuBtnLock) homeMenuBtnLock.disabled = false;
+
+        // 🛡️ Güvenlik payı: bu bekleme sırasında yine de Ana Menü'ye geçilmişse
+        // (ör. çok hızlı bir başka etkileşimle), soruyu HİÇ render etmiyoruz.
+        if (!playerModeActive) return;
+
+        renderQuizQuestion(questionData, false); // Quiz'a ilk giriş, ses yok
         scrollToResultsArea();
     }
 
