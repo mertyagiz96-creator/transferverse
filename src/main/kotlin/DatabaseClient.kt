@@ -2,6 +2,15 @@ import java.io.File
 import java.sql.Connection
 import java.sql.DriverManager
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.encodeToString
+import io.ktor.client.*
+import io.ktor.client.engine.cio.*
+import io.ktor.client.plugins.*
+import io.ktor.client.request.*
+import io.ktor.client.statement.*
+import io.ktor.http.*
+import kotlinx.serialization.json.*
 
 // 💡 "Oyuncu Modu" için yeni, izole veri sınıfları — mevcut Player sınıfına ya da
 // başka bir endpoint'e hiç dokunmuyor, tamamen ek/ayrı bir yapı.
@@ -15,6 +24,10 @@ data class MultiClubPlayerResult(
     val clubs: List<ClubSeason>,
     val imageUrl: String? = null // 💡 YENİ: Cevap açıldıktan sonra göstermek için
 )
+
+// 🏆 Supabase'e YAZILAN skor kaydı — Postgres sütun adı `score` (tek sütun, tek satır).
+@Serializable
+data class SupabaseHighScoreInsert(val id: Int = 1, val score: Int)
 
 object DatabaseClient {
 
@@ -141,58 +154,73 @@ object DatabaseClient {
     private const val POOL_SIZE = 6
     private val connectionPool: java.util.concurrent.BlockingQueue<Connection> by lazy { createConnectionPool() }
 
-    // 🏆 Bil Bakalım global rekoru — tek satırlık küçük bir tablo, sunucu ilk
-    // ayağa kalkarken yoksa otomatik oluşturuluyor. Not: sunucunun dosya sistemi
-    // geçici (ephemeral), her yeni deploy'da bu tablo (ve rekor) sıfırlanır.
-    init {
-        try {
-            withConnection { conn ->
-                conn.createStatement().use { stmt ->
-                    stmt.execute(
-                        """
-                        CREATE TABLE IF NOT EXISTS quiz_high_score (
-                            id INTEGER PRIMARY KEY CHECK (id = 1),
-                            score INTEGER NOT NULL DEFAULT 0
-                        )
-                        """.trimIndent()
-                    )
-                    stmt.execute("INSERT OR IGNORE INTO quiz_high_score (id, score) VALUES (1, 14)")
-                }
-            }
-        } catch (e: Exception) {
-            println("🔥 quiz_high_score tablo oluşturma HATASI: ${e.message}")
-        }
+    // 🏆 Bil Bakalım global rekoru — artık SQLite'ta DEĞİL, Supabase'in ücretsiz
+    // Postgres'inde tutuluyor (REST API üzerinden). Render'ın free tier'ı kalıcı
+    // disk sunmadığı için SQLite'taki rekor her uyku/deploy/restart sonrası
+    // sıfırlanıyordu — Supabase gerçekten kalıcı, ücretsiz bir dış servis.
+    // NetKalan'daki quiz_records liderlik tablosuyla AYNI kanıtlanmış yöntem,
+    // burada sadece tek bir sayı (leaderboard değil) tutuluyor.
+    private val supabaseUrl = System.getenv("SUPABASE_URL")?.trimEnd('/')
+    private val supabaseKey = System.getenv("SUPABASE_KEY")
+
+    private val httpClient = HttpClient(CIO) {
+        install(HttpTimeout) { requestTimeoutMillis = 15_000 }
     }
 
-    fun fetchQuizHighScore(): Int {
+    fun fetchQuizHighScore(): Int = kotlinx.coroutines.runBlocking { fetchQuizHighScoreSuspend() }
+
+    fun submitQuizScore(score: Int): Int = kotlinx.coroutines.runBlocking { submitQuizScoreSuspend(score) }
+
+    private suspend fun fetchQuizHighScoreSuspend(): Int {
+        if (supabaseUrl == null || supabaseKey == null) {
+            println("⚠️ SUPABASE_URL / SUPABASE_KEY ayarlanmamış, rekor devre dışı (varsayılan 14 dönüyor).")
+            return 14
+        }
         return try {
-            withConnection { conn ->
-                conn.prepareStatement("SELECT score FROM quiz_high_score WHERE id = 1").use { stmt ->
-                    stmt.executeQuery().use { rs -> if (rs.next()) rs.getInt("score") else 0 }
-                }
+            val response: HttpResponse = httpClient.get("$supabaseUrl/rest/v1/quiz_highscore") {
+                header("apikey", supabaseKey)
+                header("Authorization", "Bearer $supabaseKey")
+                parameter("select", "score")
+                parameter("id", "eq.1")
+                parameter("limit", "1")
             }
+            val body = response.bodyAsText()
+            val rows = Json.parseToJsonElement(body).jsonArray
+            if (rows.isEmpty()) 14 else (rows[0].jsonObject["score"]?.jsonPrimitive?.int ?: 14)
         } catch (e: Exception) {
-            println("🔥 fetchQuizHighScore HATASI: ${e.message}")
-            0
+            println("🔥 Supabase rekor okuma hatası: ${e.message}")
+            14
         }
     }
 
     // 📈 Skoru gönderir, mevcut rekordan büyükse günceller — her durumda sonuçtaki
-    // (güncel) rekoru döndürür.
-    fun submitQuizScore(score: Int): Int {
+    // (güncel) rekoru döndürür. Supabase'te "upsert" (varsa güncelle, yoksa oluştur)
+    // için Prefer: resolution=merge-duplicates header'ı kullanılıyor.
+    private suspend fun submitQuizScoreSuspend(score: Int): Int {
+        val current = fetchQuizHighScoreSuspend()
+        if (supabaseUrl == null || supabaseKey == null) {
+            return maxOf(current, score)
+        }
+        if (score <= current) {
+            return current
+        }
         return try {
-            withConnection { conn ->
-                conn.prepareStatement("UPDATE quiz_high_score SET score = MAX(score, ?) WHERE id = 1").use { stmt ->
-                    stmt.setInt(1, score)
-                    stmt.executeUpdate()
-                }
-                conn.prepareStatement("SELECT score FROM quiz_high_score WHERE id = 1").use { stmt ->
-                    stmt.executeQuery().use { rs -> if (rs.next()) rs.getInt("score") else score }
-                }
+            val response = httpClient.post("$supabaseUrl/rest/v1/quiz_highscore") {
+                header("apikey", supabaseKey)
+                header("Authorization", "Bearer $supabaseKey")
+                header("Content-Type", "application/json")
+                header("Prefer", "resolution=merge-duplicates")
+                setBody(Json.encodeToString(SupabaseHighScoreInsert(1, score)))
             }
-        } catch (e: Exception) {
-            println("🔥 submitQuizScore HATASI: ${e.message}")
+            if (!response.status.isSuccess()) {
+                val errorBody = response.bodyAsText()
+                println("🔥 Supabase rekor yazma hatası: HTTP ${response.status} — $errorBody")
+                return current
+            }
             score
+        } catch (e: Exception) {
+            println("🔥 Supabase rekor yazma hatası: ${e.message}")
+            current
         }
     }
 
@@ -225,7 +253,7 @@ object DatabaseClient {
         if (!dbFile.exists()) {
             throw IllegalStateException(
                 "❌ football.db bulunamadı: ${dbFile.absolutePath}. " +
-                        "Local çalıştırıyorsanız dosyayı proje kök dizinine kopyalayın."
+                "Local çalıştırıyorsanız dosyayı proje kök dizinine kopyalayın."
             )
         }
 
@@ -501,7 +529,7 @@ object DatabaseClient {
             resultList.filter { player ->
                 val transfers = playerAllTransfers[player.transferId] ?: emptyList()
                 transfers.any { (f, t, _) -> isExactClubMatch(f, resolvedClubTerm) || isExactClubMatch(t, resolvedClubTerm) } ||
-                        isPrimaryCountryMatch(player.nationality, clubOrCountry, mappedCountry)
+                    isPrimaryCountryMatch(player.nationality, clubOrCountry, mappedCountry)
             }
         } else {
             resultList
@@ -634,12 +662,12 @@ object DatabaseClient {
 
             val ok1 = if (exact1) {
                 transfers.any { (f, t, _) -> isExactClubMatch(f, resolvedClubTerm1) || isExactClubMatch(t, resolvedClubTerm1) } ||
-                        isPrimaryCountryMatch(player.nationality, param1, mappedCountry1)
+                    isPrimaryCountryMatch(player.nationality, param1, mappedCountry1)
             } else true
 
             val ok2 = if (exact2) {
                 transfers.any { (f, t, _) -> isExactClubMatch(f, resolvedClubTerm2) || isExactClubMatch(t, resolvedClubTerm2) } ||
-                        isPrimaryCountryMatch(player.nationality, param2, mappedCountry2)
+                    isPrimaryCountryMatch(player.nationality, param2, mappedCountry2)
             } else true
 
             ok1 && ok2

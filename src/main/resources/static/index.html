@@ -895,6 +895,23 @@
             align-items: center;
             gap: 11px;
             text-decoration: none;
+            animation: logoEntrance 0.9s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes logoEntrance {
+            0% { opacity: 0; transform: translateY(-8px) scale(0.96); }
+            60% { opacity: 1; }
+            100% { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        .logo-badge {
+            animation: logoBadgeGlow 1.4s ease-out;
+        }
+
+        @keyframes logoBadgeGlow {
+            0% { box-shadow: 0 0 0 0 rgba(var(--accent-gold-rgb), 0); }
+            35% { box-shadow: 0 0 14px 3px rgba(var(--accent-gold-rgb), 0.5); }
+            100% { box-shadow: 0 0 0 0 rgba(var(--accent-gold-rgb), 0); }
         }
 
         .logo-badge {
@@ -1001,6 +1018,18 @@
             margin-bottom: 34px;
             overflow: visible;
             transition: border-color 0.6s ease;
+        }
+
+        .daily-question-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            gap: 14px;
+            background: rgba(var(--fg-rgb), 0.02);
+            padding: 22px;
+            border-radius: 4px;
+            border: 1px solid rgba(var(--fg-rgb), 0.1);
         }
 
         .input-group {
@@ -1424,6 +1453,11 @@
         }
 
         @media (max-width: 650px) {
+            .daily-question-box {
+                padding: 16px 12px;
+                gap: 10px;
+            }
+
             .footer-signature {
                 text-align: center;
                 font-size: 0.6rem;
@@ -1656,10 +1690,17 @@
 
                     <div style="border-top: 1px solid rgba(var(--fg-rgb), 0.1); margin: 6px 0;"></div>
 
-                    <button id="shareBtn" class="level-option-btn">🔗 Paylaş</button>
-                    <button id="contactBtn" class="level-option-btn">📧 İletişim</button>
-                    <a href="/hakkimizda.html" class="level-option-btn" style="display: block; text-decoration: none; text-align: left;">ℹ️ Hakkımızda</a>
-                    <a href="/kullanim-sartlari.html" class="level-option-btn" style="display: block; text-decoration: none; text-align: left;">📜 Kullanım Şartları</a>
+                    <div class="toolbar-wrapper" id="moreMenuWrapper">
+                        <button id="moreMenuBtn" class="level-option-btn" title="Paylaş, İletişim ve daha fazlası">
+                            Diğer
+                        </button>
+                        <div id="moreMenuPanel" class="year-filter-panel">
+                            <button id="shareBtn" class="level-option-btn">🔗 Paylaş</button>
+                            <button id="contactBtn" class="level-option-btn">📧 İletişim</button>
+                            <a href="/hakkimizda.html" class="level-option-btn" style="display: block; text-decoration: none; text-align: left;">ℹ️ Hakkımızda</a>
+                            <a href="/kullanim-sartlari.html" class="level-option-btn" style="display: block; text-decoration: none; text-align: left;">📜 Kullanım Şartları</a>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1678,6 +1719,14 @@
     </div>
 
     <p class="subtitle">İki Kulüp Arasındaki Ortak Oyuncular veya Kulüp / Ülke Araması</p>
+
+    <div id="dailyQuestionCard" style="display: block; width: 100%; max-width: 1150px; margin-bottom: 20px;">
+        <div class="daily-question-box">
+            <div style="font-size: 0.68rem; text-transform: uppercase; letter-spacing: 1.2px; color: rgba(var(--fg-rgb), 0.5); font-weight: 700;">
+                📅 Günün Sorusu hazırlanıyor...
+            </div>
+        </div>
+    </div>
 
     <div id="topLoader" class="top-loader">
         <div class="loader-track">
@@ -1715,7 +1764,7 @@
 
     <div class="table-wrapper">
         <table>
-            <thead id="resultsTableHead">
+            <thead id="resultsTableHead" style="display: none;">
             <tr>
                 <th>Oyuncu Adı</th>
                 <th>Mevki</th>
@@ -1758,7 +1807,12 @@
                 <span class="quiz-stat-value" id="quizWinFinalTime">00:00</span>
             </div>
         </div>
-        <button id="newQuizGameBtn" class="btn-search" style="width: 100%;">🔄 Yeni Oyun</button>
+        <button id="newQuizGameBtn" class="btn-search" style="width: 100%; margin-bottom: 14px;">🔄 Yeni Oyun</button>
+        <div style="background: linear-gradient(135deg, rgba(var(--accent-gold-rgb), 0.14), rgba(var(--light-green-rgb), 0.1)); border: 1px solid rgba(var(--accent-gold-rgb), 0.4); border-radius: 8px; padding: 16px;">
+            <div style="font-size: 0.85rem; font-weight: 700; color: var(--accent-gold); margin-bottom: 4px;">🎯 Skorunu Kanıtla!</div>
+            <div style="font-size: 0.76rem; color: rgba(var(--fg-rgb), 0.7); margin-bottom: 12px;">Bu skoru geçebilecek biri var mı? Arkadaşına meydan oku, görelim.</div>
+            <button id="challengeFriendBtn" class="btn-search" style="width: 100%;">Meydan Oku 🔥</button>
+        </div>
     </div>
 </div>
 
@@ -2415,6 +2469,24 @@
         });
     }
 
+    // ⋯ "Diğer" alt menüsü — Paylaş/İletişim/Hakkımızda/Kullanım Şartları'nı
+    // tek bir buton altında toplayıp, diğer alt panellerle (Tema/Maskeleme/Yıl
+    // Filtresi) aynı açılır-kapanır mantığını kullanıyor.
+    function setupMoreMenu() {
+        const btn = document.getElementById('moreMenuBtn');
+        const panel = document.getElementById('moreMenuPanel');
+
+        btn.addEventListener('click', () => {
+            panel.classList.toggle('open');
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('#moreMenuWrapper')) {
+                panel.classList.remove('open');
+            }
+        });
+    }
+
     function setupSoundToggle() {
         const btn = document.getElementById('soundToggleBtn');
         btn.addEventListener('click', () => {
@@ -2921,6 +2993,23 @@
 
     // 🏆 9 doğru bilince oyunu bitirip son skoru/süreyi net gösteren ekran —
     // "Yeni Oyun" ile her şey sıfırdan başlıyor.
+    // 🎯 Meydan Oku — mevcut skoru ve modu (Genel/Türkiye Ligi) bir linke
+    // gömüp panoya kopyalıyor. Link açıldığında (window.onload'daki kontrol)
+    // "seni X skorla meydan okudu" bildirimi çıkar.
+    function buildAndCopyChallengeLink(score, mode) {
+        const url = new URL(window.location.href);
+        url.search = '';
+        url.searchParams.set('challenge', '1');
+        url.searchParams.set('score', String(score));
+        url.searchParams.set('mode', mode);
+
+        navigator.clipboard.writeText(url.toString()).then(() => {
+            showToast('🎯 Meydan okuma linki kopyalandı! Arkadaşına gönder.', 3200);
+        }).catch(() => {
+            showToast('Kopyalanamadı, tarayıcı izin vermedi.');
+        });
+    }
+
     function showQuizWinScreen() {
         clearInterval(quizTimerInterval);
         quizTimerInterval = null;
@@ -2932,6 +3021,11 @@
         document.getElementById('quizWinFinalScore').textContent = String(finalScore);
         document.getElementById('quizWinFinalTime').textContent = finalTime;
         document.getElementById('quizWinOverlay').style.display = 'flex';
+
+        const challengeBtn = document.getElementById('challengeFriendBtn');
+        if (challengeBtn) {
+            challengeBtn.addEventListener('click', () => buildAndCopyChallengeLink(finalScore, quizMode));
+        }
 
         const newGameBtn = document.getElementById('newQuizGameBtn');
         if (newGameBtn) {
@@ -2975,7 +3069,7 @@
             <tr>
                 <td colspan="5" style="padding: 40px 24px;">
                     <div class="player-mode-card">
-                        <div class="quiz-win-title">❌ Pas Hakkın Bitti!</div>
+                        <div class="quiz-win-title">🏁 Pas Hakkın Bitti!</div>
                         <div class="quiz-stats-bar">
                             <div class="quiz-stat-box">
                                 <span class="quiz-stat-label">Skor</span>
@@ -2986,11 +3080,21 @@
                                 <span class="quiz-stat-value">${finalTime}</span>
                             </div>
                         </div>
-                        <button id="newQuizGameBtn" class="btn-search">🔄 Yeni Oyun</button>
+                        <button id="newQuizGameBtn" class="btn-search" style="width: 100%; margin-bottom: 14px;">🔄 Yeni Oyun</button>
+                        <div style="background: linear-gradient(135deg, rgba(var(--accent-gold-rgb), 0.14), rgba(var(--light-green-rgb), 0.1)); border: 1px solid rgba(var(--accent-gold-rgb), 0.4); border-radius: 8px; padding: 16px;">
+                            <div style="font-size: 0.85rem; font-weight: 700; color: var(--accent-gold); margin-bottom: 4px;">🎯 ${finalScore} Puanla Meydan Oku!</div>
+                            <div style="font-size: 0.76rem; color: rgba(var(--fg-rgb), 0.7); margin-bottom: 12px;">Bu skoru geçebilecek biri var mı? Arkadaşına gönder, görelim.</div>
+                            <button id="challengeFriendBtn" class="btn-search" style="width: 100%;">Meydan Oku 🔥</button>
+                        </div>
                     </div>
                 </td>
             </tr>
         `;
+
+        const challengeBtn = document.getElementById('challengeFriendBtn');
+        if (challengeBtn) {
+            challengeBtn.addEventListener('click', () => buildAndCopyChallengeLink(finalScore, quizMode));
+        }
 
         const newGameBtn = document.getElementById('newQuizGameBtn');
         if (newGameBtn) {
@@ -3619,6 +3723,8 @@
         stopQuizScoreTimer();
         stopQuizQuestionTimer();
         document.querySelector('.search-card').style.display = '';
+        const dqcExit = document.getElementById('dailyQuestionCard');
+        if (dqcExit && dqcExit.innerHTML) dqcExit.style.display = 'block';
         document.getElementById('luckyModeBtn').style.display = '';
         document.getElementById('hunterModeWrapper').style.display = '';
         document.getElementById('yearFilterWrapper').style.display = '';
@@ -3684,6 +3790,172 @@
         return (str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     }
 
+    // 📅 GÜNÜN SORUSU — herkese aynı gün aynı kulüp çifti çıksın diye tarihi
+    // "tohum" olarak kullanıyoruz. Süre/rekor tamamen GERÇEK — kimse cevaplamadıysa
+    // dürüstçe "ilk sen ol" diyoruz, sahte bir sayı asla göstermiyoruz.
+    const DAILY_QUESTION_STORAGE_KEY = 'transferkolik_daily_question';
+    const DAILY_BEST_TIME_STORAGE_KEY = 'transferkolik_daily_best_time';
+    let dailyQuestionStartTime = null;
+    let dailyQuestionSolved = false;
+
+    function getTodayDateString() {
+        const d = new Date();
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    }
+
+    function seededHash(str) {
+        let hash = 0;
+        for (let i = 0; i < str.length; i++) {
+            hash = ((hash << 5) - hash) + str.charCodeAt(i);
+            hash |= 0;
+        }
+        return Math.abs(hash);
+    }
+
+    function pickDailyClubPair() {
+        const seed = seededHash(getTodayDateString());
+        const pool = easyClubs; // 💡 bilindik/kolay kulüplerden — günlük soru zorlayıcı olmasın
+        const idx1 = seed % pool.length;
+        let idx2 = (seed * 7 + 13) % pool.length;
+        if (idx2 === idx1) idx2 = (idx2 + 1) % pool.length;
+        return [pool[idx1], pool[idx2]];
+    }
+
+    // 🚀 Sayfanın ana akışını hiç bekletmeden (arka planda, asenkron) günün
+    // sorusunu çekiyoruz — aynı gün içinde tekrar ziyarette API'yi tekrar
+    // yormamak için localStorage'da (bugünün tarihiyle) önbelleğe alıyoruz.
+    async function loadDailyQuestion() {
+        const today = getTodayDateString();
+        try {
+            const raw = localStorage.getItem(DAILY_QUESTION_STORAGE_KEY);
+            if (raw) {
+                const parsed = JSON.parse(raw);
+                if (parsed.date === today && parsed.data) {
+                    renderDailyQuestionCard(parsed.data);
+                    return;
+                }
+            }
+        } catch (e) { /* sessizce geç, yeniden çekeriz */ }
+
+        const [club1, club2] = pickDailyClubPair();
+        try {
+            const res = await fetch(`/playerMode?clubs=${encodeURIComponent([club1, club2].join(','))}&isCountry=0,0`);
+            if (res.ok) {
+                const data = await res.json();
+                try {
+                    localStorage.setItem(DAILY_QUESTION_STORAGE_KEY, JSON.stringify({ date: today, data }));
+                } catch (e) { /* sessizce geç */ }
+                renderDailyQuestionCard(data);
+            }
+        } catch (e) {
+            // sessizce geç — kart hiç görünmez, ana akış hiç etkilenmez
+        }
+    }
+
+    function getDailyBestTimeText(today) {
+        try {
+            const raw = localStorage.getItem(DAILY_BEST_TIME_STORAGE_KEY);
+            if (raw) {
+                const parsed = JSON.parse(raw);
+                if (parsed.date === today && parsed.seconds) {
+                    return `⏱️ Bugünkü kişisel rekorun: ${parsed.seconds} saniye`;
+                }
+            }
+        } catch (e) { /* sessizce geç */ }
+        return '🏁 Bugün henüz çözmedin, ilk seferini dene!';
+    }
+
+    function renderDailyQuestionCard(found) {
+        const container = document.getElementById('dailyQuestionCard');
+        if (!container || !found || !found.clubs || found.clubs.length !== 2) return;
+
+        dailyQuestionSolved = false;
+        dailyQuestionStartTime = Date.now();
+
+        const cleanFullName = found.playerName.replace(/\s*\(\d+\)\s*/g, "").trim();
+        const [clubA, clubB] = found.clubs;
+        const today = getTodayDateString();
+
+        function clubBlockHtml(club) {
+            const flag = getFlagEmoji(club.club);
+            const iconHtml = flag
+                ? `<span style="font-size: 2.2rem;">${flag}</span>`
+                : (() => {
+                    const logoUrl = getClubLogo(club.club);
+                    return logoUrl ? `<img src="${logoUrl}" alt="" style="width:48px;height:48px;object-fit:contain;" onerror="this.remove()">` : '';
+                })();
+            const seasonHtml = (club.season && club.season !== '-')
+                ? `<span style="font-size:0.66rem; font-weight:700; letter-spacing:0.5px; color: var(--light-green); text-transform: uppercase;">${escapeHtml(club.season)}</span>`
+                : '';
+            return `
+                <div style="display:flex; flex-direction:column; align-items:center; gap:6px; min-width: 80px;">
+                    ${iconHtml}
+                    <span style="font-size:0.78rem; font-weight:700; color: rgb(var(--fg-rgb));">${escapeHtml(club.club)}</span>
+                    ${seasonHtml}
+                </div>
+            `;
+        }
+
+        container.style.display = 'block';
+        container.innerHTML = `
+            <div class="daily-question-box">
+                <div style="font-size: 0.72rem; text-transform: uppercase; letter-spacing: 1.2px; color: var(--accent-gold); font-weight: 700;">
+                    📅 Günün Sorusu — İki takımda da oynayan oyuncu kim?
+                </div>
+                <div style="display:flex; align-items:center; gap: 20px; justify-content:center;">
+                    ${clubBlockHtml(clubA)}
+                    <span style="opacity:0.5; font-weight:800; font-size: 0.95rem; color: rgb(var(--fg-rgb));">VS</span>
+                    ${clubBlockHtml(clubB)}
+                </div>
+                <div style="width:100%; max-width:320px; display:flex; gap:8px;">
+                    <input type="text" id="dailyGuessInput" placeholder="Tahminini yaz..." autocomplete="off" style="flex:1; padding:10px 12px; border-radius:3px; border:1px solid rgba(var(--fg-rgb),0.18); background:rgba(var(--fg-rgb),0.02); color:rgb(var(--fg-rgb)); font-size: 0.9rem; outline: none;">
+                    <span id="dailyGuessCheck" class="guess-check">✔️</span>
+                </div>
+                <div id="dailyQuestionStatus" style="font-size:0.78rem; font-weight: 600; color: rgb(var(--fg-rgb));">${getDailyBestTimeText(today)}</div>
+            </div>
+        `;
+
+        const guessInput = document.getElementById('dailyGuessInput');
+        if (guessInput) {
+            guessInput.addEventListener('input', () => {
+                if (dailyQuestionSolved) return;
+                const guessNormalized = normalizeGuess(guessInput.value);
+                const realNormalized = normalizeGuess(cleanFullName);
+                const words = cleanFullName.trim().split(/\s+/);
+                const surname = words[words.length - 1];
+                const surnameNormalized = normalizeGuess(surname);
+
+                if (guessNormalized.length > 0 && (guessNormalized === realNormalized || guessNormalized === surnameNormalized)) {
+                    dailyQuestionSolved = true;
+                    guessInput.disabled = true;
+                    guessInput.classList.add('correct');
+                    const dailyCheck = document.getElementById('dailyGuessCheck');
+                    if (dailyCheck) dailyCheck.style.display = 'flex';
+                    playCorrectSound();
+
+                    const elapsedSeconds = Math.max(1, Math.round((Date.now() - dailyQuestionStartTime) / 1000));
+                    const statusEl = document.getElementById('dailyQuestionStatus');
+                    let isNewBest = false;
+
+                    try {
+                        const raw = localStorage.getItem(DAILY_BEST_TIME_STORAGE_KEY);
+                        const parsed = raw ? JSON.parse(raw) : null;
+                        if (!parsed || parsed.date !== today || elapsedSeconds < parsed.seconds) {
+                            isNewBest = true;
+                            localStorage.setItem(DAILY_BEST_TIME_STORAGE_KEY, JSON.stringify({ date: today, seconds: elapsedSeconds }));
+                        }
+                    } catch (e) { /* sessizce geç */ }
+
+                    if (statusEl) {
+                        statusEl.textContent = isNewBest
+                            ? `🎉 Doğru! ${elapsedSeconds} saniyede buldun — bugünkü yeni kişisel rekorun!`
+                            : `✅ Doğru! ${elapsedSeconds} saniyede buldun.`;
+                    }
+                }
+            });
+        }
+    }
+
     function setupDuelMode() {
         const btn = document.getElementById('duelModeBtn');
         btn.addEventListener('click', () => {
@@ -3699,6 +3971,8 @@
         duelActive = true;
         document.getElementById('duelModeBtn').classList.add('active');
         document.querySelector('.search-card').style.display = 'none';
+        const dqcEnter = document.getElementById('dailyQuestionCard');
+        if (dqcEnter) dqcEnter.style.display = 'none';
         document.getElementById('luckyModeBtn').style.display = 'none';
         document.getElementById('hunterModeWrapper').style.display = 'none';
         document.getElementById('yearFilterWrapper').style.display = 'none';
@@ -3720,6 +3994,8 @@
 
         document.getElementById('duelModeBtn').classList.remove('active');
         document.querySelector('.search-card').style.display = '';
+        const dqcDuelExit = document.getElementById('dailyQuestionCard');
+        if (dqcDuelExit && dqcDuelExit.innerHTML) dqcDuelExit.style.display = 'block';
         document.getElementById('luckyModeBtn').style.display = '';
         document.getElementById('hunterModeWrapper').style.display = '';
         document.getElementById('yearFilterWrapper').style.display = '';
@@ -4283,6 +4559,8 @@
             btn.classList.add('active');
             document.getElementById('homeMenuBtn').style.display = '';
             searchCard.style.display = 'none';
+            const dqcPlayerEnter = document.getElementById('dailyQuestionCard');
+            if (dqcPlayerEnter) dqcPlayerEnter.style.display = 'none';
             luckyBtn.style.display = 'none';
             hunterWrapper.style.display = 'none';
             yearWrapper.style.display = 'none';
@@ -4681,6 +4959,8 @@
         if (!input1 || !input2) return; // 💡 tahmin modu sadece İKİ kulüp de doluyken anlamlı
 
         const resultsTable = document.getElementById("resultsTable");
+        const headElGuess = document.getElementById('resultsTableHead');
+        if (headElGuess) headElGuess.style.display = '';
         resultsTable.innerHTML = "<tr><td colspan='5' style='text-align:center; padding:20px;'>🕵️ Tahmin etmeye başlayın, doğru yazdıkça oyuncular burada belirecek...</td></tr>";
         const tableWrapperEl = document.querySelector('.table-wrapper');
         if (tableWrapperEl) tableWrapperEl.scrollLeft = 0;
@@ -4693,6 +4973,10 @@
             const response = await fetch(url);
             const players = await response.json();
 
+            // 🛡️ Aynı güvenlik payı — bekleme sırasında başka bir moda geçilmişse
+            // (Bil Bakalım/Arkadaşla Yarış), sonucu hiç göstermiyoruz.
+            if (playerModeActive || duelActive) return;
+
             currentPlayers = players || [];
             currentFilteredPlayers = currentPlayers.filter(passesYearFilter);
 
@@ -4700,7 +4984,9 @@
                 resultsTable.innerHTML = "<tr><td colspan='5' style='text-align:center; padding:20px;'>Kriterlere uygun oyuncu bulunamadı.</td></tr>";
             }
         } catch (error) {
-            resultsTable.innerHTML = `<tr><td colspan='5' style='text-align:center; color:#ff8a80; padding:20px;'>Hata: ${error.message}</td></tr>`;
+            if (!playerModeActive && !duelActive) {
+                resultsTable.innerHTML = `<tr><td colspan='5' style='text-align:center; color:#ff8a80; padding:20px;'>Hata: ${error.message}</td></tr>`;
+            }
         }
 
         hasSearchedCurrentPair = true;
@@ -4852,6 +5138,9 @@
         const resultsTable = document.getElementById("resultsTable");
         resultsTable.innerHTML = "";
 
+        const headEl = document.getElementById('resultsTableHead');
+        if (headEl) headEl.style.display = '';
+
         // 💡 Yeni her aramada tablo sola dayalı başlasın — önceki aramadan kalan
         // yatay kaydırma konumu (örn. tarihleri görmek için sağa kaydırılmışsa) miras kalmasın.
         const tableWrapperEl = document.querySelector('.table-wrapper');
@@ -4888,7 +5177,9 @@
     // kendi "Ara"ya basar.
     function showIdleSearchState() {
         const resultsTable = document.getElementById("resultsTable");
-        resultsTable.innerHTML = "<tr><td colspan='5' style='text-align:center; padding:20px;'>İki kulüp/ülke seçip 'Ara'ya basın.</td></tr>";
+        resultsTable.innerHTML = "";
+        const headEl = document.getElementById('resultsTableHead');
+        if (headEl) headEl.style.display = 'none';
         currentPlayers = [];
         currentFilteredPlayers = [];
     }
@@ -4907,6 +5198,14 @@
         topLoader.style.display = "flex";
         if (playSound) playSearchSound();
 
+        // 🔒 Arama sürerken Bil Bakalım/Arkadaşla Yarış'a geçilirse, geç gelen
+        // arama sonucu o ekranı ezebiliyordu — arama boyunca bu butonları
+        // geçici olarak kilitliyoruz.
+        const playerBtnLock = document.getElementById('playerModeBtn');
+        const duelBtnLock = document.getElementById('duelModeBtn');
+        if (playerBtnLock) playerBtnLock.disabled = true;
+        if (duelBtnLock) duelBtnLock.disabled = true;
+
         try {
             let url = input1 && input2
                 ? `/commonPlayers?club1=${encodeURIComponent(input1)}&club2=${encodeURIComponent(input2)}`
@@ -4915,6 +5214,11 @@
             const response = await fetch(url);
             const players = await response.json();
 
+            // 🛡️ Güvenlik payı: bu bekleme sırasında yine de başka bir moda
+            // geçilmişse (örn. çok hızlı tıklama), sonucu HİÇ göstermiyoruz —
+            // o ekranı ezmesin diye.
+            if (playerModeActive || duelActive) return;
+
             currentPlayers = players || [];
             renderPlayersTable(currentPlayers);
             hasSearchedCurrentPair = true;
@@ -4922,9 +5226,13 @@
             document.getElementById('mainGuessRow').style.display = 'none';
 
         } catch (error) {
-            resultsTable.innerHTML = `<tr><td colspan='5' style='text-align:center; color:#ff8a80; padding:20px;'>Hata: ${error.message}</td></tr>`;
+            if (!playerModeActive && !duelActive) {
+                resultsTable.innerHTML = `<tr><td colspan='5' style='text-align:center; color:#ff8a80; padding:20px;'>Hata: ${error.message}</td></tr>`;
+            }
         } finally {
             topLoader.style.display = "none";
+            if (playerBtnLock) playerBtnLock.disabled = false;
+            if (duelBtnLock) duelBtnLock.disabled = false;
         }
     }
 
@@ -4947,6 +5255,7 @@
         loadSuggestions();
         loadClubLogos();
         preloadStadiumPhotos(); // 🏟️ stadyum modu geciktirmesin diye önceden önbelleğe al
+        loadDailyQuestion(); // 📅 arka planda, ana akışı hiç bekletmeden
         setupAutocomplete("club1Input", "club1Dropdown");
         setupAutocomplete("club2Input", "club2Dropdown");
         setupThemeSwitcher();
@@ -4956,6 +5265,7 @@
         setupContactButton();
         setupSoundToggle();
         setupUtilityMenu();
+        setupMoreMenu();
         setupLuckyMode();
         setupPlayerMode();
         setupDuelMode();
@@ -4966,6 +5276,18 @@
         showIdleSearchState();
         document.getElementById('playerModeBtn').disabled = false;
         document.getElementById('duelModeBtn').disabled = false;
+
+        // 🎯 Meydan okuma linkiyle gelindiyse (arkadaş paylaştıysa), davetkar
+        // bir bildirim gösteriyoruz — link ile hiçbir otomatik yönlendirme
+        // yapmıyoruz, kullanıcı isterse kendi Bil Bakalım'a girer.
+        const challengeParams = new URLSearchParams(window.location.search);
+        if (challengeParams.get('challenge') === '1') {
+            const challengeScore = challengeParams.get('score');
+            const challengeMode = challengeParams.get('mode') === 'turkiye' ? 'Türkiye Ligi Modu' : 'Genel Mod';
+            if (challengeScore) {
+                showToast(`🎯 Bir arkadaşın seni ${challengeScore} skorla meydan okudu! (${challengeMode}) Yenebilir misin?`, 6000);
+            }
+        }
     };
 </script>
 </body>
