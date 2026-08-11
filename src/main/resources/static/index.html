@@ -2910,7 +2910,7 @@
         const depleted = useQuizPass(); // 🎫 süre dolması, çözülmeden atlanan soru gibi pas hakkı tüketiyor
         if (depleted) return; // useQuizPass zaten oyun bitti ekranını gösterdi
         showToast('⏱️ Süre doldu!', 1800);
-        startPlayerMode(false); // otomatik geçiş, ses yok
+        startPlayerMode(false).then(() => scrollToResultsArea()); // otomatik geçiş, ses yok
     }
 
     function incrementQuizScore() {
@@ -3681,6 +3681,7 @@
                             if (playerModeActive) {
                                 const questionData = await prefetchPromise;
                                 renderQuizQuestion(questionData, false); // otomatik geçiş, ses yok
+                                scrollToResultsArea(); // 📱 mobilde klavye kapanınca kayan sayfayı düzeltiyor
                             }
                         }, 2000);
                     }
@@ -3798,15 +3799,29 @@
     function scrollToResultsArea() {
         // 💡 Kart yerine doğrudan skor çubuğunu (Skor/Pas/Süre/Rekor) hedefliyoruz —
         // kullanıcı her yeni soruda hemen bunu görsün, aşağı kaydırmak zorunda kalmasın.
-        const target = document.querySelector('.quiz-stats-bar') || document.querySelector('.player-mode-card');
-        if (target) {
-            setTimeout(() => {
-                const header = document.querySelector('.site-header');
-                const headerHeight = header ? header.offsetHeight : 70;
-                const targetTop = target.getBoundingClientRect().top + window.scrollY - headerHeight - 12;
-                window.scrollTo({ top: Math.max(0, targetTop), behavior: 'smooth' });
-            }, 50);
+        function calcTargetTop() {
+            const target = document.querySelector('.quiz-stats-bar') || document.querySelector('.player-mode-card');
+            if (!target) return null;
+            const header = document.querySelector('.site-header');
+            const headerHeight = header ? header.offsetHeight : 70;
+            return Math.max(0, target.getBoundingClientRect().top + window.scrollY - headerHeight - 12);
         }
+
+        setTimeout(() => {
+            const top = calcTargetTop();
+            if (top !== null) window.scrollTo({ top, behavior: 'smooth' });
+        }, 50);
+
+        // 🔁 Geç yüklenen kulüp logoları/fotoğrafları sayfayı kaydırmış olabilir —
+        // 400ms sonra konumu tekrar kontrol ediyoruz, ama SADECE gerçek bir sapma
+        // varsa (20px'den fazla) ve SESSİZCE (animasyonsuz) düzeltiyoruz — göze
+        // batan "iki kere kayma" hissi olmasın diye.
+        setTimeout(() => {
+            const top = calcTargetTop();
+            if (top !== null && Math.abs(window.scrollY - top) > 20) {
+                window.scrollTo({ top, behavior: 'auto' });
+            }
+        }, 400);
     }
 
     // 🏠 Ana Menü'ye dönünce, arama kutularının hemen görünmesi için yukarı kaydırıyoruz.
