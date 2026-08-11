@@ -1776,7 +1776,7 @@
         </table>
     </div>
 
-    <div style="margin-top: 40px; padding-top: 30px; border-top: 1px solid rgba(var(--fg-rgb), 0.09); font-size: 0.88rem; line-height: 1.75; color: rgba(var(--fg-rgb), 0.75);">
+    <div id="aboutContentSection" style="margin-top: 40px; padding-top: 30px; border-top: 1px solid rgba(var(--fg-rgb), 0.09); font-size: 0.88rem; line-height: 1.75; color: rgba(var(--fg-rgb), 0.75);">
         <h2 style="font-size: 1.15rem; font-weight: 800; color: var(--accent-gold); margin-bottom: 14px;">TransferKolik Nedir?</h2>
         <p style="margin-bottom: 14px;">
             TransferKolik, futbolseverlerin bir oyuncunun kariyeri boyunca hangi kulüplerde ve milli takımda forma giydiğini kolayca araştırabildiği, Türkçe ve Türk futboluna odaklanmış ücretsiz bir platformdur. İki kulüp veya ülke ismi girerek, o iki takımda ortak oynamış tüm futbolcuları saniyeler içinde bulabilirsiniz — hem eski günlerin efsanelerini hatırlamak hem de bugünün transferlerini takip etmek için pratik bir araçtır.
@@ -3034,6 +3034,10 @@
         quizTimerInterval = null;
         stopQuizQuestionTimer();
 
+        // 🔓 Aynı güvenlik payı — kazanınca da Ana Menü'nün kilitli kalmadığından emin olalım
+        const homeBtnWin = document.getElementById('homeMenuBtn');
+        if (homeBtnWin) homeBtnWin.disabled = false;
+
         const finalScore = quizScore;
         const finalTime = quizStartTime ? formatElapsedTime(Date.now() - quizStartTime) : '00:00';
 
@@ -3079,6 +3083,12 @@
         clearInterval(quizTimerInterval);
         quizTimerInterval = null;
         stopQuizQuestionTimer();
+
+        // 🔓 Oyun gerçekten bitti — kullanıcı isterse Ana Menü'ye dönebilsin diye
+        // tekrar aktif ediyoruz (soru yüklenirken kilitlemiştik, o kilit burada
+        // hiç açılmıyordu çünkü bu ekrana geçiş doğrudan oluyordu).
+        const homeBtnGameOver = document.getElementById('homeMenuBtn');
+        if (homeBtnGameOver) homeBtnGameOver.disabled = false;
 
         const finalScore = quizScore;
         const finalTime = quizStartTime ? formatElapsedTime(Date.now() - quizStartTime) : '00:00';
@@ -3751,6 +3761,8 @@
         document.querySelector('.search-card').style.display = '';
         const dqcExit = document.getElementById('dailyQuestionCard');
         if (dqcExit && dqcExit.innerHTML) dqcExit.style.display = 'block';
+        const aboutExit = document.getElementById('aboutContentSection');
+        if (aboutExit) aboutExit.style.display = '';
         document.getElementById('luckyModeBtn').style.display = '';
         document.getElementById('hunterModeWrapper').style.display = '';
         document.getElementById('yearFilterWrapper').style.display = '';
@@ -3787,10 +3799,10 @@
         const target = document.querySelector('.player-mode-card');
         if (target) {
             setTimeout(() => {
-                const header = document.querySelector('.site-header');
-                const headerHeight = header ? header.offsetHeight : 70;
-                const targetTop = target.getBoundingClientRect().top + window.scrollY - headerHeight - 12;
-                window.scrollTo({ top: Math.max(0, targetTop), behavior: 'smooth' });
+                // 💡 Native scrollIntoView + CSS'teki scroll-margin-top (90px) sayesinde
+                // header'ın altında, kartın EN ÜSTÜNDEN başlayarak görünüyor — sayfanın
+                // altına başka içerik eklensin/çıkarılsın, bu hesaplama etkilenmiyor.
+                target.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }, 50);
         }
     }
@@ -3999,6 +4011,8 @@
         document.querySelector('.search-card').style.display = 'none';
         const dqcEnter = document.getElementById('dailyQuestionCard');
         if (dqcEnter) dqcEnter.style.display = 'none';
+        const aboutEnter = document.getElementById('aboutContentSection');
+        if (aboutEnter) aboutEnter.style.display = 'none';
         document.getElementById('luckyModeBtn').style.display = 'none';
         document.getElementById('hunterModeWrapper').style.display = 'none';
         document.getElementById('yearFilterWrapper').style.display = 'none';
@@ -4022,6 +4036,8 @@
         document.querySelector('.search-card').style.display = '';
         const dqcDuelExit = document.getElementById('dailyQuestionCard');
         if (dqcDuelExit && dqcDuelExit.innerHTML) dqcDuelExit.style.display = 'block';
+        const aboutDuelExit = document.getElementById('aboutContentSection');
+        if (aboutDuelExit) aboutDuelExit.style.display = '';
         document.getElementById('luckyModeBtn').style.display = '';
         document.getElementById('hunterModeWrapper').style.display = '';
         document.getElementById('yearFilterWrapper').style.display = '';
@@ -4587,6 +4603,8 @@
             searchCard.style.display = 'none';
             const dqcPlayerEnter = document.getElementById('dailyQuestionCard');
             if (dqcPlayerEnter) dqcPlayerEnter.style.display = 'none';
+            const aboutPlayerEnter = document.getElementById('aboutContentSection');
+            if (aboutPlayerEnter) aboutPlayerEnter.style.display = 'none';
             luckyBtn.style.display = 'none';
             hunterWrapper.style.display = 'none';
             yearWrapper.style.display = 'none';
