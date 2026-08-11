@@ -3823,14 +3823,28 @@
     // 📱 Mobilde Bil Bakalım/Arkadaşla Yarış'a girince kullanıcı elle aşağı
     // kaydırmak zorunda kalmasın diye, soru alanına otomatik kaydırıyoruz.
     function scrollToResultsArea() {
+        console.log('🔍 scrollToResultsArea çağrıldı');
         const target = document.querySelector('.player-mode-card');
+        console.log('🔍 target bulundu mu:', !!target);
         if (target) {
             setTimeout(() => {
                 const header = document.querySelector('.site-header');
                 const headerHeight = header ? header.offsetHeight : 70;
                 const targetTop = target.getBoundingClientRect().top + window.scrollY - headerHeight - 12;
+                console.log('🔍 hesaplanan targetTop:', targetTop, '| şu anki window.scrollY:', window.scrollY);
                 window.scrollTo({ top: Math.max(0, targetTop), behavior: 'smooth' });
+                // 🛡️ Ek güvence: hesaplama her nasılsa yanlış çıkarsa bile, en azından
+                // sabit bir miktar aşağı kaydırıyoruz — hiçbir şey olmamasındansa iyidir.
+                setTimeout(() => {
+                    console.log('🔍 200ms sonra window.scrollY:', window.scrollY);
+                    if (window.scrollY < 50) {
+                        console.log('🔍 Hâlâ en üstteyiz, yedek olarak window.scrollBy deniyoruz');
+                        window.scrollBy(0, 400);
+                    }
+                }, 200);
             }, 50);
+        } else {
+            console.log('🔍 .player-mode-card BULUNAMADI — bu yüzden hiç kaydırma denenmedi!');
         }
     }
 
