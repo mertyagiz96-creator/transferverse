@@ -2318,19 +2318,30 @@
         const actionBtn = document.getElementById('installBannerActionBtn');
         const closeBtn = document.getElementById('installBannerCloseBtn');
 
+        // 🛡️ Bildirim görünürken sayfanın en altına ekstra boşluk ekliyoruz —
+        // sabit (fixed) konumlu bildirim, oyun butonlarının üstüne binmesin diye.
+        function showBanner() {
+            banner.style.display = 'flex';
+            document.body.style.paddingBottom = (banner.offsetHeight + 12) + 'px';
+        }
+        function hideBanner() {
+            banner.style.display = 'none';
+            document.body.style.paddingBottom = '';
+        }
+
         const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
         let deferredPrompt = null;
 
         if (isIOS) {
             messageEl.textContent = '📲 Uygulama gibi kullanmak için: Paylaş simgesine dokunup "Ana Ekrana Ekle"yi seçin.';
-            banner.style.display = 'flex';
+            showBanner();
         } else {
             window.addEventListener('beforeinstallprompt', (e) => {
                 e.preventDefault();
                 deferredPrompt = e;
                 messageEl.textContent = '📲 TransferKolik\'i telefonunuza uygulama gibi ekleyin';
                 actionBtn.style.display = 'inline-flex';
-                banner.style.display = 'flex';
+                showBanner();
             });
         }
 
@@ -2340,11 +2351,11 @@
                 await deferredPrompt.userChoice;
                 deferredPrompt = null;
             }
-            banner.style.display = 'none';
+            hideBanner();
         });
 
         closeBtn.addEventListener('click', () => {
-            banner.style.display = 'none';
+            hideBanner();
             localStorage.setItem('installBannerDismissed', 'true');
         });
     }
@@ -2997,7 +3008,7 @@
 
         // 💡 Tüm mesajlar TEK bir toast'ta birleşiyor — biri diğerini ezmesin diye
         if (messageParts.length > 0) {
-            showToast(messageParts.join(' '), 4800);
+            showToast(messageParts.join(' '), 3800);
         }
     }
 
