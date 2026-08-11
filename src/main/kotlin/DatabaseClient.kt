@@ -26,8 +26,11 @@ data class MultiClubPlayerResult(
 )
 
 // 🏆 Supabase'e YAZILAN skor kaydı — Postgres sütun adı `score` (tek sütun, tek satır).
+// ⚠️ ÖNEMLİ: id'ye varsayılan değer VERİLMEMELİ — kotlinx.serialization, değeri
+// varsayılanla aynıysa alanı JSON'a hiç eklemiyor, bu da Supabase'e "id" alanı
+// olmadan giden bir istek gönderip "null value in column id" hatasına yol açıyordu.
 @Serializable
-data class SupabaseHighScoreInsert(val id: Int = 1, val score: Int)
+data class SupabaseHighScoreInsert(val id: Int, val score: Int)
 
 object DatabaseClient {
 
