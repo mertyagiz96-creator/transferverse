@@ -3415,6 +3415,8 @@
         currentPlayers = [];
 
         let bodyHtml;
+        let hasRealPhoto = false; // 💡 fonksiyon genelinde erişilebilir olsun diye üstte tanımlıyoruz
+        let showPhotoNow = false;
         if (!found) {
             bodyHtml = `<div class="player-mode-title">😅 Uygun bir eşleşme bulunamadı.</div>`;
         } else {
@@ -3487,8 +3489,8 @@
             }).join('<div class="vs-divider"></div>');
             const clubListHtml = `<div class="vs-layout">${vsSidesHtml}</div>`;
 
-            const hasRealPhoto = found.imageUrl && !found.imageUrl.includes('default.jpg');
-            const showPhotoNow = hasRealPhoto && photoVisibleByDefault;
+            hasRealPhoto = found.imageUrl && !found.imageUrl.includes('default.jpg');
+            showPhotoNow = hasRealPhoto && photoVisibleByDefault;
             const initialAvatarInner = showPhotoNow
                 ? `<img id="playerModeInitialPhoto" src="${found.imageUrl}" alt="" class="photo-fade-in" onload="revealQuestionWithPhoto()" onerror="handlePlayerPhotoError(this); revealQuestionWithPhoto();">`
                 : genericAvatarSvg;
@@ -3823,28 +3825,23 @@
     // 📱 Mobilde Bil Bakalım/Arkadaşla Yarış'a girince kullanıcı elle aşağı
     // kaydırmak zorunda kalmasın diye, soru alanına otomatik kaydırıyoruz.
     function scrollToResultsArea() {
-        console.log('🔍 scrollToResultsArea çağrıldı');
         const target = document.querySelector('.player-mode-card');
-        console.log('🔍 target bulundu mu:', !!target);
         if (target) {
             setTimeout(() => {
                 const header = document.querySelector('.site-header');
                 const headerHeight = header ? header.offsetHeight : 70;
-                const targetTop = target.getBoundingClientRect().top + window.scrollY - headerHeight - 12;
-                console.log('🔍 hesaplanan targetTop:', targetTop, '| şu anki window.scrollY:', window.scrollY);
-                window.scrollTo({ top: Math.max(0, targetTop), behavior: 'smooth' });
-                // 🛡️ Ek güvence: hesaplama her nasılsa yanlış çıkarsa bile, en azından
-                // sabit bir miktar aşağı kaydırıyoruz — hiçbir şey olmamasındansa iyidir.
+                const targetTop = Math.max(0, target.getBoundingClientRect().top + window.scrollY - headerHeight - 12);
+                window.scrollTo({ top: targetTop, behavior: 'smooth' });
+                // 🛡️ Güvenlik payı: SADECE ana kaydırma gerçekten başarısız olduysa
+                // (hedeften hâlâ belirgin şekilde uzaktaysak) devreye giriyor —
+                // animasyon hâlâ sürüyorken üstüne binip fazladan kaymasın diye
+                // yeterince geç (600ms) kontrol ediyoruz.
                 setTimeout(() => {
-                    console.log('🔍 200ms sonra window.scrollY:', window.scrollY);
-                    if (window.scrollY < 50) {
-                        console.log('🔍 Hâlâ en üstteyiz, yedek olarak window.scrollBy deniyoruz');
-                        window.scrollBy(0, 400);
+                    if (Math.abs(window.scrollY - targetTop) > 40) {
+                        window.scrollTo({ top: targetTop, behavior: 'auto' });
                     }
-                }, 200);
+                }, 600);
             }, 50);
-        } else {
-            console.log('🔍 .player-mode-card BULUNAMADI — bu yüzden hiç kaydırma denenmedi!');
         }
     }
 
