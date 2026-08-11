@@ -3823,27 +3823,15 @@
     // 📱 Mobilde Bil Bakalım/Arkadaşla Yarış'a girince kullanıcı elle aşağı
     // kaydırmak zorunda kalmasın diye, soru alanına otomatik kaydırıyoruz.
     function scrollToResultsArea() {
-        // 💡 Kart yerine doğrudan skor çubuğunu (Skor/Pas/Süre/Rekor) hedefliyoruz.
-        // 🛡️ ACİL DÜZELTME: karmaşık {top, behavior:'smooth'} nesnesi bazı mobil
-        // tarayıcılarda sessizce çalışmıyor olabilir — en temel, garantili yönteme
-        // (window.scrollTo(x, y)) döndük.
-        function calcTargetTop() {
-            const target = document.querySelector('.quiz-stats-bar') || document.querySelector('.player-mode-card');
-            if (!target) return null;
-            const header = document.querySelector('.site-header');
-            const headerHeight = header ? header.offsetHeight : 70;
-            return Math.max(0, Math.round(target.getBoundingClientRect().top + window.scrollY - headerHeight - 12));
+        const target = document.querySelector('.player-mode-card');
+        if (target) {
+            setTimeout(() => {
+                const header = document.querySelector('.site-header');
+                const headerHeight = header ? header.offsetHeight : 70;
+                const targetTop = target.getBoundingClientRect().top + window.scrollY - headerHeight - 12;
+                window.scrollTo({ top: Math.max(0, targetTop), behavior: 'smooth' });
+            }, 50);
         }
-
-        function attempt() {
-            const top = calcTargetTop();
-            if (top !== null) window.scrollTo(0, top);
-        }
-
-        attempt();
-        setTimeout(attempt, 100);
-        setTimeout(attempt, 350);
-        setTimeout(attempt, 700);
     }
 
     // 🏠 Ana Menü'ye dönünce, arama kutularının hemen görünmesi için yukarı kaydırıyoruz.
