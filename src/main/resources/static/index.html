@@ -3796,13 +3796,15 @@
     // 📱 Mobilde Bil Bakalım/Arkadaşla Yarış'a girince kullanıcı elle aşağı
     // kaydırmak zorunda kalmasın diye, soru alanına otomatik kaydırıyoruz.
     function scrollToResultsArea() {
-        const target = document.querySelector('.player-mode-card');
+        // 💡 Kart yerine doğrudan skor çubuğunu (Skor/Pas/Süre/Rekor) hedefliyoruz —
+        // kullanıcı her yeni soruda hemen bunu görsün, aşağı kaydırmak zorunda kalmasın.
+        const target = document.querySelector('.quiz-stats-bar') || document.querySelector('.player-mode-card');
         if (target) {
             setTimeout(() => {
-                // 💡 Native scrollIntoView + CSS'teki scroll-margin-top (90px) sayesinde
-                // header'ın altında, kartın EN ÜSTÜNDEN başlayarak görünüyor — sayfanın
-                // altına başka içerik eklensin/çıkarılsın, bu hesaplama etkilenmiyor.
-                target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                const header = document.querySelector('.site-header');
+                const headerHeight = header ? header.offsetHeight : 70;
+                const targetTop = target.getBoundingClientRect().top + window.scrollY - headerHeight - 12;
+                window.scrollTo({ top: Math.max(0, targetTop), behavior: 'smooth' });
             }, 50);
         }
     }
