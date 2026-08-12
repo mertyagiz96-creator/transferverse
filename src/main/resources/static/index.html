@@ -427,7 +427,7 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
+            justify-content: flex-start;
             gap: 10px;
             padding: 10px 12px;
             min-width: 0;
@@ -2105,7 +2105,7 @@
             const teamName = box.dataset.teamName;
             const logoUrl = getBasketballLogo(teamName);
             if (logoUrl) {
-                box.innerHTML = `<img src="${logoUrl}" alt="" class="club-logo-icon" onerror="this.remove()">`;
+                box.innerHTML = `<img src="${logoUrl}" alt="" style="height:100%;width:auto;max-width:100%;object-fit:contain;" onerror="this.remove()">`;
             }
         });
     }
@@ -3220,9 +3220,7 @@
         if (newGameBtn) {
             newGameBtn.addEventListener('click', async () => {
                 document.getElementById('quizWinOverlay').style.display = 'none';
-                startQuizScoreTimer();
-                await startPlayerMode();
-                scrollToResultsArea();
+                renderQuizModeSelectScreen(); // 💡 farklı bir lig/spor seçebilsin diye direkt aynı modda başlatmıyoruz
             });
         }
     }
@@ -3294,9 +3292,7 @@
         const newGameBtn = document.getElementById('newQuizGameBtn');
         if (newGameBtn) {
             newGameBtn.addEventListener('click', async () => {
-                startQuizScoreTimer();
-                await startPlayerMode();
-                scrollToResultsArea();
+                renderQuizModeSelectScreen(); // 💡 farklı bir lig/spor seçebilsin diye
             });
         }
     }
@@ -3446,8 +3442,8 @@
                             found: {
                                 playerName: chosen.name,
                                 clubs: [
-                                    { club: team1, season: chosen.team1Season || '-' },
-                                    { club: team2, season: chosen.team2Season || '-' }
+                                    { club: team1, season: stripBbSeasonPrefix(chosen.team1Season) || '-' },
+                                    { club: team2, season: stripBbSeasonPrefix(chosen.team2Season) || '-' }
                                 ],
                                 imageUrl: null,
                                 position: null
@@ -3687,7 +3683,11 @@
                         iconHtml = logoUrl ? `<img src="${logoUrl}" alt="" class="vs-club-logo-img" onerror="this.remove()">` : '';
                     }
                 }
-                return `<div class="vs-side"><div class="vs-icon-box" data-club-name="${c.club.replace(/"/g, '&quot;')}">${iconHtml}</div><span class="vs-club-name">${nameLabel}</span>${seasonHtml}</div>`;
+                const iconBoxClass = isBasketballQuestion ? 'vs-icon-box bb-logo-box' : 'vs-icon-box';
+                const iconBoxDataAttr = isBasketballQuestion
+                    ? `data-team-name="${c.club.replace(/"/g, '&quot;')}"`
+                    : `data-club-name="${c.club.replace(/"/g, '&quot;')}"`;
+                return `<div class="vs-side"><div class="${iconBoxClass}" ${iconBoxDataAttr}>${iconHtml}</div><span class="vs-club-name">${nameLabel}</span>${seasonHtml}</div>`;
             }).join('<div class="vs-divider"></div>');
             const clubListHtml = `<div class="vs-layout">${vsSidesHtml}</div>`;
 
@@ -3698,8 +3698,10 @@
             const initialAvatarInner = showPhotoNow
                 ? `<img id="playerModeInitialPhoto" src="${effectivePhotoUrl}" alt="" class="photo-fade-in" onload="revealQuestionWithPhoto()" onerror="handlePlayerPhotoError(this); revealQuestionWithPhoto();">`
                 : genericAvatarSvg;
+            const avatarExtraClass = isBasketballQuestion ? ' bb-player-photo-box' : '';
+            const avatarDataAttr = isBasketballQuestion ? `data-player-name="${safeName}"` : '';
             const avatarHtml = `
-                <div class="player-mode-avatar${showPhotoNow ? ' photo-loading' : ''}" id="playerModeAvatar" data-photo="${hasRealPhoto ? effectivePhotoUrl : ''}">
+                <div class="player-mode-avatar${showPhotoNow ? ' photo-loading' : ''}${avatarExtraClass}" id="playerModeAvatar" ${avatarDataAttr} data-photo="${hasRealPhoto ? effectivePhotoUrl : ''}">
                     ${initialAvatarInner}
                 </div>
             `;
@@ -3838,7 +3840,7 @@
                 revealPlayerModeAvatar();
 
                 const positionEl = document.getElementById('playerModePosition');
-                if (positionEl) {
+                if (positionEl && quizMode !== 'nba' && quizMode !== 'eurobasket') {
                     positionEl.textContent = 'Mevki: ' + positionEl.dataset.real;
                     positionEl.classList.add('revealed');
                     positionEl.style.display = 'block';
@@ -3944,14 +3946,8 @@
         const restartBtn = document.getElementById('restartQuizGameBtn');
         if (restartBtn) {
             restartBtn.addEventListener('click', () => {
-                showConfirmDialog('Skorun ve pas hakların sıfırlanacak, emin misin?', async () => {
-                    disableAllQuestionButtons(); // 🔒 tüm butonlar, sadece kendisi değil
-                    restartBtn.textContent = '⏳ Yükleniyor...';
-                    const ballEl = document.getElementById('celebrationBall');
-                    if (ballEl) ballEl.classList.add('roll-immediate');
-                    startQuizScoreTimer();
-                    await startPlayerMode();
-                    scrollToResultsArea();
+                showConfirmDialog('Skorun ve pas hakların sıfırlanacak, emin misin?', () => {
+                    renderQuizModeSelectScreen(); // 💡 farklı bir lig/spor seçebilsin diye
                 });
             });
         }
@@ -4202,10 +4198,14 @@
         const today = getTodayDateString();
         const bbBestKey = DAILY_BEST_TIME_STORAGE_KEY + '_bb_' + currentBasketballLeague;
 
-        function teamBlockHtml(teamName) {
+        function teamBlockHtml(teamName, season) {
             const logoUrl = getBasketballLogo(teamName);
             const iconHtml = logoUrl
                 ? `<img src="${logoUrl}" alt="" class="club-logo-icon" style="width:58px;height:58px;object-fit:contain;" onerror="this.remove()">`
+                : '';
+            const cleanSeason = stripBbSeasonPrefix(season);
+            const seasonHtml = (cleanSeason && cleanSeason !== '-')
+                ? `<span style="font-size:0.66rem; font-weight:700; letter-spacing:0.5px; color: var(--light-green); text-transform: uppercase;">${escapeHtml(cleanSeason)}</span>`
                 : '';
             return `
                 <div style="display:flex; flex-direction:column; align-items:center; gap:6px; width: 100px; flex-shrink: 0;">
@@ -4213,6 +4213,7 @@
                         ${iconHtml || '<span style="font-size:2.7rem;">🏀</span>'}
                     </div>
                     <span style="font-size:0.78rem; font-weight:700; color: rgb(var(--fg-rgb)); text-align:center; line-height:1.25; word-break: break-word;">${escapeHtml(teamName)}</span>
+                    ${seasonHtml}
                 </div>
             `;
         }
@@ -4235,9 +4236,9 @@
                     📅 Günün Sorusu (${currentBasketballLeague === 'nba' ? '🇺🇸 NBA' : '🌍 Avrupa'}) — İki takımda da oynayan oyuncu kim?
                 </div>
                 <div style="display:flex; align-items:flex-start; gap: 20px; justify-content:center;">
-                    ${teamBlockHtml(data.team1)}
+                    ${teamBlockHtml(data.team1, data.player && data.player.team1Season)}
                     <span style="opacity:0.5; font-weight:800; font-size: 0.95rem; color: rgb(var(--fg-rgb)); margin-top: 16px;">VS</span>
-                    ${teamBlockHtml(data.team2)}
+                    ${teamBlockHtml(data.team2, data.player && data.player.team2Season)}
                 </div>
                 <div style="width:100%; max-width:320px; display:flex; gap:8px;">
                     <input type="text" id="dailyGuessInput" placeholder="Tahminini yaz..." autocomplete="off" style="flex:1; padding:10px 12px; border-radius:3px; border:1px solid rgba(var(--fg-rgb),0.18); background:rgba(var(--fg-rgb),0.02); color:rgb(var(--fg-rgb)); font-size: 0.9rem; outline: none;">
@@ -5096,12 +5097,21 @@
     // genelde İngilizce/orijinal isimleriyle kayıtlı (örn. "Marseille"), ama
     // kullanıcılar Türkçe okunuşuyla arayabiliyor (örn. "Marsilya"). Anahtar:
     // normalize edilmiş Türkçe takma ad, değer: aranacak gerçek isim parçası.
+    // 🏀 EuroLeague/EuroCup sezon kodları "E2016"/"U2019" gibi geliyor (E/U =
+    // yarışma kodu) — kullanıcıya sadece yılı ("2016") gösteriyoruz, daha temiz.
+    // NBA zaten düz yıl olduğu için (örn. "2016") dokunmuyoruz.
+    function stripBbSeasonPrefix(season) {
+        if (!season) return season;
+        return String(season).replace(/^[EU](?=\d{4}$)/, '');
+    }
+
     const clubNicknameAliases = {
         'marsilya': 'marseille',
         'münih': 'munich',
         'napoli': 'napoli',
         'milano': 'milan',
-        'lizbon': 'sporting',
+        'lizbon': 'sporting cp',
+        'lisbon': 'sporting cp',
     };
 
     function expandQueryWithAliases(normalizedQuery) {
@@ -5811,10 +5821,10 @@
             compCell.innerHTML = `<span class="badge-position">🏆 ${escapeHtml(competitionDisplay)}</span>`;
 
             const s1Cell = row.insertCell();
-            s1Cell.innerHTML = `<span class="badge-season">${escapeHtml(player.team1Season || '-')}</span>`;
+            s1Cell.innerHTML = `<span class="badge-season">${escapeHtml(stripBbSeasonPrefix(player.team1Season) || '-')}</span>`;
 
             const s2Cell = row.insertCell();
-            s2Cell.innerHTML = `<span class="badge-season">${escapeHtml(player.team2Season || '-')}</span>`;
+            s2Cell.innerHTML = `<span class="badge-season">${escapeHtml(stripBbSeasonPrefix(player.team2Season) || '-')}</span>`;
         });
     }
 
