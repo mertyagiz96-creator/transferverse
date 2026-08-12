@@ -9,6 +9,8 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import kotlinx.serialization.Serializable
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 
 @Serializable data class CreateRoomRequest(val playerName: String, val winTarget: Int = 5, val maskingHintEnabled: Boolean = false, val duelMode: String = "genel")
 @Serializable data class JoinRoomRequest(val roomCode: String, val playerName: String)
@@ -19,6 +21,12 @@ import kotlinx.serialization.Serializable
 
 fun main() {
     val port = System.getenv("PORT")?.toIntOrNull() ?: 8080
+
+    // 🚀 Sunucu ayağa kalkarken, basketbol logolarını arka planda (sunucuyu
+    // hiç bekletmeden) önceden yükleyip önbelleğe alıyoruz.
+    GlobalScope.launch {
+        DatabaseClient.preloadAllBasketballLogos()
+    }
 
     embeddedServer(Netty, port = port, host = "0.0.0.0") {
         install(ContentNegotiation) {
@@ -31,6 +39,61 @@ fun main() {
             get("/suggestions") {
                 val suggestions = DatabaseClient.fetchAllUniqueSuggestions()
                 call.respond(suggestions)
+            }
+
+            // 🏀 Basketbol — futboldan tamamen ayrı, izole uç noktalar.
+            get("/basketball/suggestions") {
+                val suggestions = DatabaseClient.fetchAllBasketballSuggestions()
+                call.respond(suggestions)
+            }
+
+            get("/basketball/commonPlayers") {
+                val team1 = call.request.queryParameters["team1"]
+                val team2 = call.request.queryParameters["team2"]
+                if (team1.isNullOrBlank() || team2.isNullOrBlank()) {
+                    call.respond(emptyList<DatabaseClient.BasketballPlayerResult>())
+                    return@get
+                }
+                val common = DatabaseClient.fetchCommonBasketballPlayers(team1, team2)
+                call.respond(common)
+            }
+
+            // 🏀 NBA — Avrupa basketbolundan ayrı endpoint'ler.
+            get("/nba/suggestions") {
+                call.respond(DatabaseClient.fetchAllNbaSuggestions())
+            }
+
+            get("/nba/commonPlayers") {
+                val team1 = call.request.queryParameters["team1"]
+                val team2 = call.request.queryParameters["team2"]
+                if (team1.isNullOrBlank() || team2.isNullOrBlank()) {
+                    call.respond(emptyList<DatabaseClient.BasketballPlayerResult>())
+                    return@get
+                }
+                val common = DatabaseClient.fetchCommonNbaPlayers(team1, team2)
+                call.respond(common)
+            }
+
+            // 🖼️ Basketbol logo/foto — sunucu üzerinden TheSportsDB'ye gidiyor,
+            // tarayıcıdaki CORS sorununu tamamen bypass ediyor.
+            get("/basketball/teamLogo") {
+                val name = call.request.queryParameters["name"]
+                if (name.isNullOrBlank()) {
+                    call.respond(mapOf("logo" to null))
+                    return@get
+                }
+                val logo = DatabaseClient.fetchBasketballTeamLogo(name)
+                call.respond(mapOf("logo" to logo))
+            }
+
+            get("/basketball/playerPhoto") {
+                val name = call.request.queryParameters["name"]
+                if (name.isNullOrBlank()) {
+                    call.respond(mapOf("photo" to null))
+                    return@get
+                }
+                val photo = DatabaseClient.fetchBasketballPlayerPhoto(name)
+                call.respond(mapOf("photo" to photo))
             }
 
             // 🖼️ YENİ: Kulüp logoları — frontend sayfa yüklenirken bir kez çekip

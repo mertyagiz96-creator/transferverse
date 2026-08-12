@@ -142,6 +142,7 @@
             gap: 8px;
             margin-bottom: 22px;
             padding-bottom: 18px;
+            padding-right: 40px;
             border-bottom: 1px solid rgba(var(--fg-rgb), 0.08);
             flex-wrap: wrap;
         }
@@ -1551,6 +1552,7 @@
                 grid-template-columns: 1fr 1fr;
                 gap: 8px;
                 justify-content: stretch;
+                padding-right: 0;
             }
 
             .toolbar-left-group {
@@ -1734,13 +1736,17 @@
         <span>Transferler Taranıyor...</span>
     </div>
 
-    <div style="display: flex; justify-content: flex-end; margin-bottom: 10px;">
-        <button id="luckyModeBtn" class="toolbar-btn" title="Rastgele iki takım/ülke seçer, aramayı siz başlatırsınız — tahmin oyunu için ideal">
-            🎲 Rastgele Eşleşme
-        </button>
+    <div id="sportToggleWrapper" style="display: flex; justify-content: flex-end; gap: 8px; margin-bottom: 14px;">
+        <button id="sportFootballBtn" class="toolbar-btn active" data-sport="football">⚽ Futbol</button>
+        <button id="sportBasketballBtn" class="toolbar-btn" data-sport="basketball">🏀 Basketbol</button>
     </div>
 
-    <div class="search-card">
+    <div class="search-card" style="position: relative;">
+        <div style="grid-column: 1 / -1; display: flex; justify-content: flex-end; margin-bottom: -6px;">
+            <button id="luckyModeBtn" class="toolbar-btn" style="font-size: 0.62rem; padding: 6px 10px;" title="Rastgele iki takım/ülke seçer, aramayı siz başlatırsınız — tahmin oyunu için ideal">
+                🎲 Rastgele Eşleşme
+            </button>
+        </div>
         <div class="input-group">
             <label for="club1Input">1. Kulüp veya Ülke <span id="club1LogoIcon" class="input-logo-icon"></span></label>
             <input id="club1Input" type="text" autocomplete="off" placeholder="Örn: Galatasaray veya Türkiye" value="Galatasaray">
@@ -1766,8 +1772,8 @@
             <thead id="resultsTableHead" style="display: none;">
             <tr>
                 <th>Oyuncu Adı</th>
-                <th>Mevki</th>
-                <th>Uyruk</th>
+                <th id="colMevki">Mevki</th>
+                <th id="colUyruk">Uyruk</th>
                 <th>1. Kulüp / Ülke Sezonu</th>
                 <th>2. Kulüp / Ülke Sezonu</th>
             </tr>
@@ -1777,6 +1783,9 @@
     </div>
 
     <div id="aboutContentSection" style="margin-top: 40px; padding-top: 30px; border-top: 1px solid rgba(var(--fg-rgb), 0.09); font-size: 0.88rem; line-height: 1.75; color: rgba(var(--fg-rgb), 0.75);">
+        <p id="basketballCoverageNote" style="display: none; font-size: 0.76rem; color: rgba(var(--fg-rgb), 0.5); margin-bottom: 6px;">
+            🏀 Basketbol modu EuroLeague, EuroCup ve NBA takımlarını içerir.
+        </p>
         <h2 style="font-size: 1.15rem; font-weight: 800; color: var(--accent-gold); margin-bottom: 14px;">TransferKolik Nedir?</h2>
         <p style="margin-bottom: 22px;">
             TransferKolik, futbolseverlerin bir oyuncunun kariyeri boyunca hangi kulüplerde ve milli takımda forma giydiğini kolayca araştırabildiği, Türkçe ve Türk futboluna odaklanmış ücretsiz bir platformdur. İki kulüp veya ülke ismi girerek, o iki takımda ortak oynamış tüm futbolcuları saniyeler içinde bulabilirsiniz — hem eski günlerin efsanelerini hatırlamak hem de bugünün transferlerini takip etmek için pratik bir araçtır. Aşağıda, sitedeki her modu ve özelliği daha ayrıntılı anlatıyoruz.
@@ -1863,6 +1872,12 @@
 
 <script>
     let allSuggestions = [];
+    let currentSport = 'football'; // 🏀 'football' | 'basketball'
+    let basketballSuggestions = [];
+    let basketballSuggestionsLoaded = false;
+    let currentBasketballLeague = 'europe'; // 'europe' | 'nba'
+    let nbaSuggestions = [];
+    let nbaSuggestionsLoaded = false;
     let currentPlayers = [];
     let currentFilteredPlayers = []; // 🕵️ Ana moddaki tahmin kutusu bu listeye bakıyor
     let hunterModeOn = false;
@@ -2039,6 +2054,110 @@
         }
         delete sportsDbFetchInProgress[key];
         return null;
+    }
+
+    // 🏀 Basketbol logoları — futboldakiyle BİREBİR aynı tembel (lazy) mantık,
+    // ayrı bir önbellek (sportsDbBasketballLogos) kullanıyor. TheSportsDB'ye
+    // &s=Basketball parametresiyle sorgulanıyor, yanlışlıkla aynı isimli bir
+    // futbol takımının logosu gelmesin diye.
+    let sportsDbBasketballLogos = {};
+    let sportsDbBasketballFetchInProgress = {};
+
+    async function fetchSportsDbBasketballLogo(teamName) {
+        const key = normalize(teamName);
+        if (sportsDbBasketballLogos[key]) return sportsDbBasketballLogos[key];
+        if (sportsDbBasketballFetchInProgress[key]) return null;
+
+        sportsDbBasketballFetchInProgress[key] = true;
+        try {
+            // 💡 Artık TheSportsDB'ye DOĞRUDAN değil, kendi sunucumuz üzerinden
+            // gidiyoruz — tarayıcıdaki CORS sorununu tamamen bypass ediyor.
+            const res = await fetch(`/basketball/teamLogo?name=${encodeURIComponent(teamName)}`);
+            if (res.ok) {
+                const data = await res.json();
+                if (data && data.logo) {
+                    sportsDbBasketballLogos[key] = data.logo;
+                    delete sportsDbBasketballFetchInProgress[key];
+                    refreshVisibleBasketballIcons();
+                    if (typeof refreshClubLogoIcons === 'function') refreshClubLogoIcons();
+                    return data.logo;
+                }
+            }
+        } catch (e) {
+            // sessizce geç
+        }
+        delete sportsDbBasketballFetchInProgress[key];
+        return null;
+    }
+
+    function getBasketballLogo(teamName) {
+        if (!teamName) return null;
+        const key = normalize(teamName);
+        if (sportsDbBasketballLogos[key]) return sportsDbBasketballLogos[key];
+        fetchSportsDbBasketballLogo(teamName); // 💡 arka planda tembel istek, sonucu beklemeden devam
+        return null;
+    }
+
+    // 🖼️ Logo geç gelirse, ekranda zaten açık olan basketbol satırlarını geriye dönük dolduruyor
+    function refreshVisibleBasketballIcons() {
+        document.querySelectorAll('.bb-logo-box[data-team-name]').forEach(box => {
+            if (box.querySelector('img')) return; // 💡 sadece gerçek bir logo zaten varsa atla, emoji yedek sayılmasın
+            const teamName = box.dataset.teamName;
+            const logoUrl = getBasketballLogo(teamName);
+            if (logoUrl) {
+                box.innerHTML = `<img src="${logoUrl}" alt="" class="club-logo-icon" onerror="this.remove()">`;
+            }
+        });
+    }
+
+    // 🏀 Oyuncu fotoğrafları — futboldaki listelemeye benzesin diye, TheSportsDB'nin
+    // oyuncu arama uç noktasını kullanıyoruz. Dürüst not: Avrupa'nın daha az
+    // tanınan oyuncuları için kapsam zayıf olabilir (kulüp logolarında olduğu gibi),
+    // NBA yıldızları için daha güçlü olması bekleniyor. "Elde varsa göster" mantığı.
+    let bbSportsDbPlayerPhotos = {};
+    let bbSportsDbPlayerPhotoFetchInProgress = {};
+
+    async function fetchSportsDbPlayerPhoto(playerName) {
+        const key = normalize(playerName);
+        if (bbSportsDbPlayerPhotos[key]) return bbSportsDbPlayerPhotos[key];
+        if (bbSportsDbPlayerPhotoFetchInProgress[key]) return null;
+
+        bbSportsDbPlayerPhotoFetchInProgress[key] = true;
+        try {
+            const res = await fetch(`/basketball/playerPhoto?name=${encodeURIComponent(playerName)}`);
+            if (res.ok) {
+                const data = await res.json();
+                if (data && data.photo) {
+                    bbSportsDbPlayerPhotos[key] = data.photo;
+                    delete bbSportsDbPlayerPhotoFetchInProgress[key];
+                    refreshVisibleBasketballPlayerPhotos();
+                    return data.photo;
+                }
+            }
+        } catch (e) {
+            // sessizce geç
+        }
+        delete bbSportsDbPlayerPhotoFetchInProgress[key];
+        return null;
+    }
+
+    function getBasketballPlayerPhoto(playerName) {
+        if (!playerName) return null;
+        const key = normalize(playerName);
+        if (bbSportsDbPlayerPhotos[key]) return bbSportsDbPlayerPhotos[key];
+        fetchSportsDbPlayerPhoto(playerName);
+        return null;
+    }
+
+    function refreshVisibleBasketballPlayerPhotos() {
+        document.querySelectorAll('.bb-player-photo-box[data-player-name]').forEach(box => {
+            if (box.querySelector('img')) return;
+            const playerName = box.dataset.playerName;
+            const photoUrl = getBasketballPlayerPhoto(playerName);
+            if (photoUrl) {
+                box.innerHTML = `<img src="${photoUrl}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" onerror="if(this.parentElement) this.parentElement.innerHTML='👤'">`;
+            }
+        });
     }
 
     // 🚀 Sayfa yüklenirken, havuzumuzdaki TÜM kulüpler için arka planda (aceleye
@@ -2256,6 +2375,12 @@
             function updateIcon() {
                 const value = input.value.trim();
 
+                if (currentSport === 'basketball') {
+                    const logoUrl = getBasketballLogo(value);
+                    icon.innerHTML = logoUrl ? `<img src="${logoUrl}" alt="" onerror="if(this.parentElement) this.parentElement.innerHTML=''">` : '';
+                    return;
+                }
+
                 const flag = getFlagEmoji(value);
                 if (flag) {
                     icon.innerHTML = `<span class="input-flag-icon">${flag}</span>`;
@@ -2263,7 +2388,7 @@
                 }
 
                 const logoUrl = getClubLogo(value);
-                icon.innerHTML = logoUrl ? `<img src="${logoUrl}" alt="" onerror="this.parentElement.innerHTML=''">` : '';
+                icon.innerHTML = logoUrl ? `<img src="${logoUrl}" alt="" onerror="if(this.parentElement) this.parentElement.innerHTML=''">` : '';
             }
 
             input.addEventListener('input', updateIcon);
@@ -2739,6 +2864,10 @@
 
     function setupLuckyMode() {
         document.getElementById('luckyModeBtn').addEventListener('click', () => {
+            if (currentSport === 'basketball') {
+                pickRandomBasketballMatch();
+                return;
+            }
             let club1, secondPick;
 
             // 💡 %10 ihtimalle: İKİ taraf da Süper Lig havuzundan, birbirleriyle
@@ -3801,6 +3930,8 @@
         document.querySelector('.search-card').style.display = '';
         const dqcExit = document.getElementById('dailyQuestionCard');
         if (dqcExit && dqcExit.innerHTML) dqcExit.style.display = 'block';
+        const sportToggleExit1 = document.getElementById('sportToggleWrapper');
+        if (sportToggleExit1) sportToggleExit1.style.display = 'flex';
         const aboutExit = document.getElementById('aboutContentSection');
         if (aboutExit) aboutExit.style.display = '';
         document.getElementById('luckyModeBtn').style.display = '';
@@ -3912,6 +4043,9 @@
     // sorusunu çekiyoruz — aynı gün içinde tekrar ziyarette API'yi tekrar
     // yormamak için localStorage'da (bugünün tarihiyle) önbelleğe alıyoruz.
     async function loadDailyQuestion() {
+        if (currentSport === 'basketball') {
+            return loadDailyQuestionBasketball();
+        }
         const today = getTodayDateString();
         try {
             const raw = localStorage.getItem(DAILY_QUESTION_STORAGE_KEY);
@@ -3929,6 +4063,7 @@
             const res = await fetch(`/playerMode?clubs=${encodeURIComponent([club1, club2].join(','))}&isCountry=0,0`);
             if (res.ok) {
                 const data = await res.json();
+                if (currentSport !== 'football') return; // 🛡️ bu arada basketbola geçilmişse kartı ezme
                 try {
                     localStorage.setItem(DAILY_QUESTION_STORAGE_KEY, JSON.stringify({ date: today, data }));
                 } catch (e) { /* sessizce geç */ }
@@ -3936,6 +4071,155 @@
             }
         } catch (e) {
             // sessizce geç — kart hiç görünmez, ana akış hiç etkilenmez
+        }
+    }
+
+    // 🏀 Günün Sorusu — Basketbol versiyonu. Aynı ruhta: tarihi tohum olarak
+    // kullanıp iki takım seçiyor, /basketball/commonPlayers'tan dönen isimlerden
+    // birini rastgele alıp soruyu kuruyor. Foto zaten futbolda da yoktu, sorun değil.
+    async function loadDailyQuestionBasketball() {
+        const today = getTodayDateString();
+        // 🎲 Hangi ligden geleceğini de tarihe göre (herkese aynı gün aynı)
+        // belirliyoruz — kullanıcı seçmiyor, ama her gün doğal olarak değişiyor.
+        const leagueSeed = seededHash(today + '-bb-league');
+        const todaysLeague = (leagueSeed % 2 === 0) ? 'europe' : 'nba';
+        currentBasketballLeague = todaysLeague; // 💡 render fonksiyonu başlıkta bunu kullanıyor
+
+        const storageKey = DAILY_QUESTION_STORAGE_KEY + '_bb_' + todaysLeague;
+        try {
+            const raw = localStorage.getItem(storageKey);
+            if (raw) {
+                const parsed = JSON.parse(raw);
+                if (parsed.date === today && parsed.data) {
+                    renderDailyQuestionCardBasketball(parsed.data);
+                    return;
+                }
+            }
+        } catch (e) { /* sessizce geç */ }
+
+        if (todaysLeague === 'nba') { await loadNbaSuggestions(); } else { await loadBasketballSuggestions(); }
+        const pool = todaysLeague === 'nba' ? nbaSuggestions : basketballSuggestions;
+        if (pool.length < 2) return;
+
+        const seed = seededHash(today + '-bb-' + todaysLeague);
+        const idx1 = seed % pool.length;
+        let idx2 = (seed * 7 + 13) % pool.length;
+        if (idx2 === idx1) idx2 = (idx2 + 1) % pool.length;
+        const team1 = pool[idx1];
+        const team2 = pool[idx2];
+
+        try {
+            const endpoint = todaysLeague === 'nba' ? '/nba/commonPlayers' : '/basketball/commonPlayers';
+            const res = await fetch(`${endpoint}?team1=${encodeURIComponent(team1)}&team2=${encodeURIComponent(team2)}`);
+            if (res.ok) {
+                const players = await res.json();
+                if (currentSport !== 'basketball') return; // 🛡️ bu arada futbola geçilmişse kartı ezme
+                if (players && players.length > 0) {
+                    const chosen = players[Math.floor(Math.random() * players.length)];
+                    const data = { team1, team2, player: chosen };
+                    try {
+                        localStorage.setItem(storageKey, JSON.stringify({ date: today, data }));
+                    } catch (e) { /* sessizce geç */ }
+                    renderDailyQuestionCardBasketball(data);
+                }
+            }
+        } catch (e) {
+            // sessizce geç
+        }
+    }
+
+    function renderDailyQuestionCardBasketball(data) {
+        const container = document.getElementById('dailyQuestionCard');
+        if (!container || !data || !data.player) return;
+
+        dailyQuestionSolved = false;
+        dailyQuestionStartTime = Date.now();
+        const playerName = data.player.name;
+        const today = getTodayDateString();
+        const bbBestKey = DAILY_BEST_TIME_STORAGE_KEY + '_bb_' + currentBasketballLeague;
+
+        function teamBlockHtml(teamName) {
+            const logoUrl = getBasketballLogo(teamName);
+            const iconHtml = logoUrl
+                ? `<img src="${logoUrl}" alt="" class="club-logo-icon" style="width:58px;height:58px;object-fit:contain;" onerror="this.remove()">`
+                : '';
+            return `
+                <div style="display:flex; flex-direction:column; align-items:center; gap:6px; width: 100px; flex-shrink: 0;">
+                    <div class="bb-logo-box" data-team-name="${escapeHtml(teamName)}" style="width:58px;height:58px;display:flex;align-items:center;justify-content:center;">
+                        ${iconHtml || '<span style="font-size:2.7rem;">🏀</span>'}
+                    </div>
+                    <span style="font-size:0.78rem; font-weight:700; color: rgb(var(--fg-rgb)); text-align:center; line-height:1.25; word-break: break-word;">${escapeHtml(teamName)}</span>
+                </div>
+            `;
+        }
+
+        let bestTimeText = '🏁 Bugün henüz çözmedin, ilk seferini dene!';
+        try {
+            const raw = localStorage.getItem(bbBestKey);
+            if (raw) {
+                const parsed = JSON.parse(raw);
+                if (parsed.date === today && parsed.seconds) {
+                    bestTimeText = `⏱️ Bugünkü kişisel rekorun: ${parsed.seconds} saniye`;
+                }
+            }
+        } catch (e) { /* sessizce geç */ }
+
+        container.style.display = 'block';
+        container.innerHTML = `
+            <div class="daily-question-box">
+                <div style="font-size: 0.72rem; text-transform: uppercase; letter-spacing: 1.2px; color: var(--accent-gold); font-weight: 700;">
+                    📅 Günün Sorusu (${currentBasketballLeague === 'nba' ? '🇺🇸 NBA' : '🌍 Avrupa'}) — İki takımda da oynayan oyuncu kim?
+                </div>
+                <div style="display:flex; align-items:flex-start; gap: 20px; justify-content:center;">
+                    ${teamBlockHtml(data.team1)}
+                    <span style="opacity:0.5; font-weight:800; font-size: 0.95rem; color: rgb(var(--fg-rgb)); margin-top: 16px;">VS</span>
+                    ${teamBlockHtml(data.team2)}
+                </div>
+                <div style="width:100%; max-width:320px; display:flex; gap:8px;">
+                    <input type="text" id="dailyGuessInput" placeholder="Tahminini yaz..." autocomplete="off" style="flex:1; padding:10px 12px; border-radius:3px; border:1px solid rgba(var(--fg-rgb),0.18); background:rgba(var(--fg-rgb),0.02); color:rgb(var(--fg-rgb)); font-size: 0.9rem; outline: none;">
+                    <span id="dailyGuessCheck" class="guess-check">✔️</span>
+                </div>
+                <div id="dailyQuestionStatus" style="font-size:0.78rem; font-weight: 600; color: rgb(var(--fg-rgb));">${bestTimeText}</div>
+            </div>
+        `;
+
+        const guessInput = document.getElementById('dailyGuessInput');
+        if (guessInput) {
+            guessInput.addEventListener('input', () => {
+                if (dailyQuestionSolved) return;
+                const guessNormalized = normalizeGuess(guessInput.value);
+                const realNormalized = normalizeGuess(playerName);
+                const words = playerName.trim().split(/\s+/);
+                const surname = words[words.length - 1];
+                const surnameNormalized = normalizeGuess(surname);
+
+                if (guessNormalized.length > 0 && (guessNormalized === realNormalized || guessNormalized === surnameNormalized)) {
+                    dailyQuestionSolved = true;
+                    guessInput.disabled = true;
+                    guessInput.classList.add('correct');
+                    const dailyCheck = document.getElementById('dailyGuessCheck');
+                    if (dailyCheck) dailyCheck.style.display = 'flex';
+                    playCorrectSound();
+
+                    const elapsedSeconds = Math.max(1, Math.round((Date.now() - dailyQuestionStartTime) / 1000));
+                    const statusEl = document.getElementById('dailyQuestionStatus');
+                    let isNewBest = false;
+                    try {
+                        const raw = localStorage.getItem(bbBestKey);
+                        const parsed = raw ? JSON.parse(raw) : null;
+                        if (!parsed || parsed.date !== today || elapsedSeconds < parsed.seconds) {
+                            isNewBest = true;
+                            localStorage.setItem(bbBestKey, JSON.stringify({ date: today, seconds: elapsedSeconds }));
+                        }
+                    } catch (e) { /* sessizce geç */ }
+
+                    if (statusEl) {
+                        statusEl.textContent = isNewBest
+                            ? `🎉 Doğru! ${elapsedSeconds} saniyede buldun — bugünkü yeni kişisel rekorun!`
+                            : `✅ Doğru! ${elapsedSeconds} saniyede buldun.`;
+                    }
+                }
+            });
         }
     }
 
@@ -3975,9 +4259,9 @@
                 ? `<span style="font-size:0.66rem; font-weight:700; letter-spacing:0.5px; color: var(--light-green); text-transform: uppercase;">${escapeHtml(club.season)}</span>`
                 : '';
             return `
-                <div style="display:flex; flex-direction:column; align-items:center; gap:6px; min-width: 80px;">
+                <div style="display:flex; flex-direction:column; align-items:center; gap:6px; width: 100px; flex-shrink: 0;">
                     ${iconHtml}
-                    <span style="font-size:0.78rem; font-weight:700; color: rgb(var(--fg-rgb));">${escapeHtml(club.club)}</span>
+                    <span style="font-size:0.78rem; font-weight:700; color: rgb(var(--fg-rgb)); text-align:center; line-height:1.25; word-break: break-word;">${escapeHtml(club.club)}</span>
                     ${seasonHtml}
                 </div>
             `;
@@ -3989,9 +4273,9 @@
                 <div style="font-size: 0.72rem; text-transform: uppercase; letter-spacing: 1.2px; color: var(--accent-gold); font-weight: 700;">
                     📅 Günün Sorusu — İki takımda da oynayan oyuncu kim?
                 </div>
-                <div style="display:flex; align-items:center; gap: 20px; justify-content:center;">
+                <div style="display:flex; align-items:flex-start; gap: 20px; justify-content:center;">
                     ${clubBlockHtml(clubA)}
-                    <span style="opacity:0.5; font-weight:800; font-size: 0.95rem; color: rgb(var(--fg-rgb));">VS</span>
+                    <span style="opacity:0.5; font-weight:800; font-size: 0.95rem; color: rgb(var(--fg-rgb)); margin-top: 16px;">VS</span>
                     ${clubBlockHtml(clubB)}
                 </div>
                 <div style="width:100%; max-width:320px; display:flex; gap:8px;">
@@ -4060,6 +4344,8 @@
         document.querySelector('.search-card').style.display = 'none';
         const dqcEnter = document.getElementById('dailyQuestionCard');
         if (dqcEnter) dqcEnter.style.display = 'none';
+        const sportToggleEnter2 = document.getElementById('sportToggleWrapper');
+        if (sportToggleEnter2) sportToggleEnter2.style.display = 'none';
         const aboutEnter = document.getElementById('aboutContentSection');
         if (aboutEnter) aboutEnter.style.display = 'none';
         document.getElementById('luckyModeBtn').style.display = 'none';
@@ -4085,6 +4371,8 @@
         document.querySelector('.search-card').style.display = '';
         const dqcDuelExit = document.getElementById('dailyQuestionCard');
         if (dqcDuelExit && dqcDuelExit.innerHTML) dqcDuelExit.style.display = 'block';
+        const sportToggleExit2 = document.getElementById('sportToggleWrapper');
+        if (sportToggleExit2) sportToggleExit2.style.display = 'flex';
         const aboutDuelExit = document.getElementById('aboutContentSection');
         if (aboutDuelExit) aboutDuelExit.style.display = '';
         document.getElementById('luckyModeBtn').style.display = '';
@@ -4135,6 +4423,7 @@
                         <div style="font-size: 0.72rem; color: rgba(var(--fg-rgb), 0.5); margin-top: 8px;">
                             (Odaya katılırken hedef skoru seçmenize gerek yok, odayı kuran belirledi)
                         </div>
+                        <div style="font-size: 0.68rem; color: rgba(var(--fg-rgb), 0.4); margin-top: 14px;">⚽ Bu mod şu an sadece futbol içerir.</div>
                     </div>
                 </td>
             </tr>
@@ -4652,6 +4941,8 @@
             searchCard.style.display = 'none';
             const dqcPlayerEnter = document.getElementById('dailyQuestionCard');
             if (dqcPlayerEnter) dqcPlayerEnter.style.display = 'none';
+            const sportToggleEnter1 = document.getElementById('sportToggleWrapper');
+            if (sportToggleEnter1) sportToggleEnter1.style.display = 'none';
             const aboutPlayerEnter = document.getElementById('aboutContentSection');
             if (aboutPlayerEnter) aboutPlayerEnter.style.display = 'none';
             luckyBtn.style.display = 'none';
@@ -4678,7 +4969,8 @@
                         <button id="selectGenelModeBtn" class="toolbar-btn" style="width: 100%; margin-bottom: 12px; padding: 16px 14px; font-size: 0.82rem;">🌍 Genel Mod</button>
                         <button id="selectTurkiyeModeBtn" class="toolbar-btn" style="width: 100%; padding: 16px 14px; font-size: 0.82rem;">🇹🇷 Türkiye Ligi Modu</button>
                         <div style="font-size: 0.72rem; color: rgba(var(--fg-rgb), 0.5); margin-top: 10px;">
-                            Türkiye Ligi Modu daha zorlu — sadece Süper Lig + tarihi kulüpler.
+                            Türkiye Ligi Modu daha zorlu — sadece Süper Lig + tarihi kulüpler.<br>
+                            ⚽ Bu mod şu an sadece futbol içerir.
                         </div>
                     </div>
                 </td>
@@ -4748,7 +5040,11 @@
             }
 
             const normalizedQuery = normalize(query);
-            const matches = allSuggestions
+            let sourceSuggestions = allSuggestions;
+            if (currentSport === 'basketball') {
+                sourceSuggestions = [...basketballSuggestions, ...nbaSuggestions];
+            }
+            const matches = sourceSuggestions
                 .filter(s => normalize(s).includes(normalizedQuery))
                 .slice(0, 10);
 
@@ -5298,7 +5594,203 @@
         currentFilteredPlayers = [];
     }
 
+    // 🏀 BASKETBOL — futbol mantığına hiç dokunmayan, tamamen ayrı bir yol.
+    async function loadBasketballSuggestions() {
+        if (basketballSuggestionsLoaded) return;
+        try {
+            const res = await fetch('/basketball/suggestions');
+            if (res.ok) {
+                basketballSuggestions = await res.json();
+                basketballSuggestionsLoaded = true;
+            }
+        } catch (e) {
+            console.log("Basketbol önerileri yüklenirken pas geçildi.");
+        }
+    }
+
+    async function loadNbaSuggestions() {
+        if (nbaSuggestionsLoaded) return;
+        try {
+            const res = await fetch('/nba/suggestions');
+            if (res.ok) {
+                nbaSuggestions = await res.json();
+                nbaSuggestionsLoaded = true;
+            }
+        } catch (e) {
+            console.log("NBA önerileri yüklenirken pas geçildi.");
+        }
+    }
+
+    function switchSport(sport) {
+        currentSport = sport;
+        const footballBtn = document.getElementById('sportFootballBtn');
+        const basketballBtn = document.getElementById('sportBasketballBtn');
+        footballBtn.classList.toggle('active', sport === 'football');
+        basketballBtn.classList.toggle('active', sport === 'basketball');
+        const coverageNote = document.getElementById('basketballCoverageNote');
+        if (coverageNote) coverageNote.style.display = (sport === 'basketball') ? 'block' : 'none';
+
+        const colMevki = document.getElementById('colMevki');
+        const colUyruk = document.getElementById('colUyruk');
+        if (sport === 'basketball') {
+            if (colMevki) colMevki.textContent = 'Turnuva';
+            if (colUyruk) colUyruk.style.display = 'none';
+        } else {
+            if (colMevki) colMevki.textContent = 'Mevki';
+            if (colUyruk) colUyruk.style.display = '';
+        }
+
+        const label1 = document.querySelector('label[for="club1Input"]');
+        const label2 = document.querySelector('label[for="club2Input"]');
+        const input1 = document.getElementById('club1Input');
+        const input2 = document.getElementById('club2Input');
+        const luckyBtn = document.getElementById('luckyModeBtn');
+        const dailyCard = document.getElementById('dailyQuestionCard');
+        const aboutSection = document.getElementById('aboutContentSection');
+        const tableHead = document.getElementById('resultsTableHead');
+
+        if (sport === 'basketball') {
+            loadBasketballSuggestions();
+            loadNbaSuggestions();
+            label1.childNodes[0].textContent = '1. Takım ';
+            label2.childNodes[0].textContent = '2. Takım ';
+            input1.placeholder = 'Örn: Fenerbahçe Beko';
+            input2.placeholder = 'Örn: Real Madrid';
+            input1.value = '';
+            input2.value = '';
+            if (typeof refreshClubLogoIcons === 'function') refreshClubLogoIcons();
+            if (luckyBtn) luckyBtn.title = 'Rastgele iki EuroLeague/EuroCup takımı seçer';
+            loadDailyQuestionBasketball(); // 🏀 kartı basketboldan yeniden yükle
+        } else {
+            label1.childNodes[0].textContent = '1. Kulüp veya Ülke ';
+            label2.childNodes[0].textContent = '2. Kulüp veya Ülke ';
+            input1.placeholder = 'Örn: Galatasaray veya Türkiye';
+            input2.placeholder = 'Örn: Kocaelispor veya Almanya';
+            input1.value = '';
+            input2.value = '';
+            if (typeof refreshClubLogoIcons === 'function') refreshClubLogoIcons();
+            if (luckyBtn) luckyBtn.title = 'Rastgele iki takım/ülke seçer, aramayı siz başlatırsınız — tahmin oyunu için ideal';
+            loadDailyQuestion(); // ⚽ kartı futboldan yeniden yükle
+        }
+
+        if (tableHead) tableHead.style.display = 'none';
+        document.getElementById('resultsTable').innerHTML = '';
+        document.getElementById('mainGuessRow').style.display = 'none';
+    }
+
+    function setupSportToggle() {
+        document.getElementById('sportFootballBtn').addEventListener('click', () => switchSport('football'));
+        document.getElementById('sportBasketballBtn').addEventListener('click', () => switchSport('basketball'));
+    }
+
+    function renderBasketballTable(players) {
+        const resultsTable = document.getElementById("resultsTable");
+        resultsTable.innerHTML = "";
+        const tableWrapperEl = document.querySelector('.table-wrapper');
+        if (tableWrapperEl) tableWrapperEl.scrollLeft = 0;
+
+        if (!players || players.length === 0) {
+            resultsTable.innerHTML = "<tr><td colspan='4' style='text-align:center; padding:20px;'>Kriterlere uygun oyuncu bulunamadı.</td></tr>";
+            return;
+        }
+
+        players.forEach(player => {
+            const row = resultsTable.insertRow();
+            const nameCell = row.insertCell();
+            nameCell.style.fontWeight = "600";
+            // 💡 NBA'in kendi resmi ID'si varsa, TheSportsDB'ye hiç gitmeden
+            // doğrudan NBA'in resmi foto CDN'ini kullanıyoruz — daha hızlı, garanti.
+            const photoUrl = player.nbaOfficialId
+                ? `https://cdn.nba.com/headshots/nba/latest/1040x760/${player.nbaOfficialId}.png`
+                : getBasketballPlayerPhoto(player.name);
+            const photoInner = photoUrl ? `<img src="${photoUrl}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" onerror="if(this.parentElement) this.parentElement.innerHTML='👤'">` : '👤';
+            nameCell.innerHTML = `
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <div class="bb-player-photo-box" data-player-name="${escapeHtml(player.name)}" style="width:32px;height:32px;border-radius:50%;background:rgba(var(--fg-rgb),0.08);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:1rem;overflow:hidden;">${photoInner}</div>
+                    <span>${escapeHtml(player.name)}</span>
+                </div>
+            `;
+
+            const compCell = row.insertCell();
+            const competitionDisplay = (player.competition || '').split(',').join(' + ');
+            compCell.innerHTML = `<span class="badge-position">🏆 ${escapeHtml(competitionDisplay)}</span>`;
+
+            const s1Cell = row.insertCell();
+            s1Cell.innerHTML = `<span class="badge-season">${escapeHtml(player.team1Season || '-')}</span>`;
+
+            const s2Cell = row.insertCell();
+            s2Cell.innerHTML = `<span class="badge-season">${escapeHtml(player.team2Season || '-')}</span>`;
+        });
+    }
+
+    // 🎲 Basketbol'un Rastgele Eşleşme'si — EuroLeague/EuroCup ayrımı yapmadan,
+    // zaten yüklü olan basketballSuggestions'tan iki farklı takım seçiyor.
+    function pickRandomBasketballMatch() {
+        // 🎲 Hangi ligden geleceğini kendi içimizde rastgele seçiyoruz (%50-%50) —
+        // kullanıcı bir şey seçmiyor, ama NBA-NBA ya da Avrupa-Avrupa eşleşmesi
+        // garanti (asla karışmıyor).
+        const useNba = Math.random() < 0.5 && nbaSuggestionsLoaded && nbaSuggestions.length >= 2;
+        const pool = useNba ? nbaSuggestions : basketballSuggestions;
+        const poolLoaded = useNba ? nbaSuggestionsLoaded : basketballSuggestionsLoaded;
+        if (!poolLoaded || pool.length < 2) {
+            showToast('Takımlar henüz yükleniyor, birazdan tekrar deneyin...');
+            return;
+        }
+        const team1 = pool[Math.floor(Math.random() * pool.length)];
+        let team2;
+        do {
+            team2 = pool[Math.floor(Math.random() * pool.length)];
+        } while (team2 === team1);
+
+        document.getElementById('club1Input').value = team1;
+        document.getElementById('club2Input').value = team2;
+        document.getElementById('resultsTable').innerHTML = '';
+        document.getElementById('resultsTableHead').style.display = 'none';
+        if (typeof refreshClubLogoIcons === 'function') refreshClubLogoIcons();
+    }
+
+    async function searchBasketballPlayers(playSound = true) {
+        const input1 = document.getElementById("club1Input").value.trim();
+        const input2 = document.getElementById("club2Input").value.trim();
+        const resultsTable = document.getElementById("resultsTable");
+        const topLoader = document.getElementById("topLoader");
+        const tableHead = document.getElementById('resultsTableHead');
+
+        if (!input1 || !input2) {
+            resultsTable.innerHTML = "<tr><td colspan='5' style='text-align:center; padding:20px;'>Lütfen her iki takımı da yazın.</td></tr>";
+            return;
+        }
+
+        topLoader.style.display = "flex";
+        if (playSound) playSearchSound();
+
+        try {
+            // 🏀 Manuel arama artık hem Avrupa hem NBA'i AYNI ANDA dener,
+            // kullanıcı hangi ligde olduğunu seçmek zorunda kalmıyor.
+            const [euRes, nbaRes] = await Promise.all([
+                fetch(`/basketball/commonPlayers?team1=${encodeURIComponent(input1)}&team2=${encodeURIComponent(input2)}`),
+                fetch(`/nba/commonPlayers?team1=${encodeURIComponent(input1)}&team2=${encodeURIComponent(input2)}`)
+            ]);
+            const euPlayers = euRes.ok ? await euRes.json() : [];
+            const nbaPlayers = nbaRes.ok ? await nbaRes.json() : [];
+            const players = [...euPlayers, ...nbaPlayers];
+            if (currentSport !== 'basketball') return; // 🛡️ bu arada futbola geçilmişse gösterme
+
+            if (tableHead) tableHead.style.display = '';
+            renderBasketballTable(players);
+        } catch (error) {
+            if (currentSport === 'basketball') {
+                resultsTable.innerHTML = `<tr><td colspan='5' style='text-align:center; color:#ff8a80; padding:20px;'>Hata: ${error.message}</td></tr>`;
+            }
+        } finally {
+            topLoader.style.display = "none";
+        }
+    }
+
     async function searchPlayers(playSound = true) {
+        if (currentSport === 'basketball') {
+            return searchBasketballPlayers(playSound);
+        }
         const input1 = document.getElementById("club1Input").value.trim();
         const input2 = document.getElementById("club2Input").value.trim();
         const resultsTable = document.getElementById("resultsTable");
@@ -5381,6 +5873,7 @@
         setupUtilityMenu();
         setupMoreMenu();
         setupLuckyMode();
+        setupSportToggle();
         setupPlayerMode();
         setupDuelMode();
         setupHomeMenuButton();

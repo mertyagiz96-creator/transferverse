@@ -236,6 +236,406 @@ object DatabaseClient {
         return pool
     }
 
+    // 🏀 Basketbol — football.db'den TAMAMEN AYRI, ikinci bir veritabanı
+    // (basketball.db). EuroLeague + EuroCup verisi, "oyuncu-sezon-takım"
+    // şeklinde. Mevki/uyruk verisi YOK (kaynakta bulunmuyor) — sadece
+    // "iki takımda da oynayan oyuncu" sorgusu için kullanılıyor.
+    private const val BB_POOL_SIZE = 3
+    private val bbConnectionPool: java.util.concurrent.BlockingQueue<Connection> by lazy { createBbConnectionPool() }
+
+    private fun createBbConnectionPool(): java.util.concurrent.BlockingQueue<Connection> {
+        val pool: java.util.concurrent.BlockingQueue<Connection> =
+            java.util.concurrent.ArrayBlockingQueue(BB_POOL_SIZE)
+        repeat(BB_POOL_SIZE) {
+            pool.put(createBbConnection())
+        }
+        return pool
+    }
+
+    private fun <T> withBbConnection(block: (Connection) -> T): T {
+        val conn = bbConnectionPool.take()
+        try {
+            return block(conn)
+        } finally {
+            bbConnectionPool.put(conn)
+        }
+    }
+
+    private fun createBbConnection(): Connection {
+        val dbFile = File("basketball.db")
+        if (!dbFile.exists()) {
+            throw IllegalStateException(
+                "❌ basketball.db bulunamadı: ${dbFile.absolutePath}. " +
+                        "Local çalıştırıyorsanız dosyayı proje kök dizinine kopyalayın."
+            )
+        }
+        val conn = DriverManager.getConnection("jdbc:sqlite:${dbFile.absolutePath}")
+        conn.createStatement().use { stmt ->
+            stmt.execute("PRAGMA journal_mode=WAL;")
+            stmt.execute("PRAGMA busy_timeout=5000;")
+        }
+        return conn
+    }
+
+    // 🏀 Öneri (autocomplete) listesi — benzersiz takım isimleri.
+    fun fetchAllBasketballSuggestions(): List<String> {
+        val suggestions = mutableSetOf<String>()
+        try {
+            withBbConnection { conn ->
+                // 💡 Sadece son 5 sezonun (2021-2025) HEPSİNDE oynamış takımları
+                // öneriyoruz (herhangi birinde değil) — arada boşluk (gap year)
+                // olan takımların o dönemki transfer verisini kaçırma riskini
+                // en aza indiriyor. İstikrarlı biçimde uzun süre bu kupalarda
+                // olan takımlar, muhtemelen daha eski yıllarda da iyi kapsanmış olur.
+                val years = listOf("2021", "2022", "2023", "2024", "2025")
+                val conditions = years.joinToString(" AND ") {
+                    "EXISTS (SELECT 1 FROM bb_players b2 WHERE b2.team_name = b.team_name AND b2.season_code LIKE '%$it')"
+                }
+                conn.prepareStatement(
+                    "SELECT DISTINCT team_name FROM bb_players b WHERE $conditions"
+                ).use { stmt ->
+                    stmt.executeQuery().use { rs ->
+                        while (rs.next()) {
+                            val name = rs.getString("team_name")
+                            if (!name.isNullOrBlank() && !isYouthClub(name)) {
+                                suggestions.add(name)
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            println("🔥 fetchAllBasketballSuggestions HATASI: ${e.message}")
+        }
+        return suggestions.sorted()
+    }
+
+    @Serializable
+    data class BasketballPlayerResult(
+        val name: String,
+        val team1Season: String?,
+        val team2Season: String?,
+        val competition: String,
+        val nbaOfficialId: String? = null // 💡 varsa, NBA'in kendi resmi foto CDN'inde kullanılıyor
+    )
+
+    // 🏀 NBA — Avrupa basketbolundan (EuroLeague/EuroCup) TAMAMEN AYRI bir havuz,
+    // aynı basketball.db içinde ama farklı tablo (nba_players). 1947-2026 arası,
+    // BAA/NBA/ABA liglerini kapsıyor. Rastgele eşleşmede Avrupa ile karışmasın diye
+    // ayrı endpoint'ler kullanılıyor.
+    fun fetchAllNbaSuggestions(): List<String> {
+        val suggestions = mutableSetOf<String>()
+        try {
+            withBbConnection { conn ->
+                // 💡 team_name = team_abbr olanlar, tam ismini ÇÖZEMEDİĞİMİZ eski/
+                // lağvedilmiş takımlar (örn. "SDC", "NOH" gibi ham kısaltmalar) —
+                // bunları öneri/rastgele havuzundan çıkarıyoruz, çirkin/anlamsız
+                // görünüyorlardı. Gerçek verileri hâlâ duruyor, sadece önerilmiyorlar.
+                conn.prepareStatement(
+                    "SELECT DISTINCT team_name FROM nba_players WHERE team_name != team_abbr"
+                ).use { stmt ->
+                    stmt.executeQuery().use { rs ->
+                        while (rs.next()) {
+                            val name = rs.getString("team_name")
+                            if (!name.isNullOrBlank()) suggestions.add(name)
+                        }
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            println("🔥 fetchAllNbaSuggestions HATASI: ${e.message}")
+        }
+        return suggestions.sorted()
+    }
+
+    fun fetchCommonNbaPlayers(team1: String, team2: String): List<BasketballPlayerResult> {
+        val std1 = team1.toStandardSearch()
+        val std2 = team2.toStandardSearch()
+
+        val sql = """
+            SELECT p1.player_id, p1.name,
+                   MIN(p1.season) as season1, MIN(p2.season) as season2, p1.league,
+                   MAX(p1.nba_official_id) as nba_official_id
+            FROM nba_players p1
+            JOIN nba_players p2 ON p1.player_id = p2.player_id
+            WHERE (p1.team_name_std LIKE ? OR p1.team_abbr_std LIKE ?)
+              AND (p2.team_name_std LIKE ? OR p2.team_abbr_std LIKE ?)
+            GROUP BY p1.player_id, p1.name
+        """.trimIndent()
+
+        val results = mutableListOf<BasketballPlayerResult>()
+        try {
+            withBbConnection { conn ->
+                conn.prepareStatement(sql).use { stmt ->
+                    stmt.setString(1, "%$std1%")
+                    stmt.setString(2, "%$std1%")
+                    stmt.setString(3, "%$std2%")
+                    stmt.setString(4, "%$std2%")
+                    stmt.executeQuery().use { rs ->
+                        while (rs.next()) {
+                            results.add(
+                                BasketballPlayerResult(
+                                    name = rs.getString("name"),
+                                    team1Season = rs.getString("season1"),
+                                    team2Season = rs.getString("season2"),
+                                    competition = rs.getString("league"),
+                                    nbaOfficialId = rs.getString("nba_official_id")
+                                )
+                            )
+                        }
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            println("🔥 fetchCommonNbaPlayers HATASI: ${e.message}")
+        }
+        return results.sortedByDescending { it.team1Season?.toIntOrNull() ?: 0 }
+    }
+
+    // 🖼️ Basketbol logo/foto — TARAYICIDAN DEĞİL, SUNUCUDAN TheSportsDB'ye
+    // istek atıyoruz. Tarayıcıdan atılan istekler CORS'a takılıyordu (TheSportsDB'nin
+    // ücretsiz anahtarı bunu desteklemiyor gibi görünüyor); sunucudan sunucuya
+    // istekte CORS diye bir kavram yok, bu yüzden garanti çalışıyor.
+    // 🛡️ Sunucu tarafında, TÜM kullanıcılar için PAYLAŞILAN önbellek — bir takım
+    // bir kez bulunduktan sonra bir daha ASLA TheSportsDB'ye sorulmuyor. Ücretsiz
+    // anahtarın paylaşılan hız sınırını (rate limit) korumak için kritik.
+    private val basketballLogoCache = java.util.concurrent.ConcurrentHashMap<String, String>()
+    private val basketballPhotoCache = java.util.concurrent.ConcurrentHashMap<String, String>()
+
+    // 🚀 Uygulama açılışında, TÜM basketbol takımlarının (Avrupa + NBA, toplam
+    // ~50-55 takım) logolarını ÖNCEDEN çekip önbelleğe alıyoruz — futbolun
+    // stadyum fotoğrafı ön-yükleme mantığıyla aynı. Böylece hiçbir kullanıcı
+    // "önce boş, sonra doluyor" gecikmesi yaşamıyor, her şey baştan hazır.
+    suspend fun preloadAllBasketballLogos() {
+        try {
+            val europeTeams = fetchAllBasketballSuggestions()
+            val nbaTeams = fetchAllNbaSuggestions()
+            val allTeams = (europeTeams + nbaTeams).distinct()
+            println("🏀 ${allTeams.size} takımın logosu önceden yükleniyor...")
+            var found = 0
+            for (team in allTeams) {
+                val logo = fetchBasketballTeamLogo(team)
+                if (logo != null) found++
+                kotlinx.coroutines.delay(600) // 💡 hız sınırını zorlamayalım diye aralıklı
+            }
+            println("🏀 Logo ön-yükleme tamamlandı: $found / ${allTeams.size} bulundu.")
+        } catch (e: Exception) {
+            println("🔥 preloadAllBasketballLogos HATASI: ${e.message}")
+        }
+    }
+
+    suspend fun fetchBasketballTeamLogo(teamName: String): String? {
+        val cacheKey = teamName.trim().lowercase()
+        basketballLogoCache[cacheKey]?.let { return it }
+
+        // 🗄️ Kalıcı veritabanı kontrolü — RAM önbelleği sunucu her uyandığında
+        // sıfırlanıyordu (Render'ın ücretsiz katmanı uykuya dalıp uyanıyor),
+        // ama bu tablo diskte duruyor, hiç kaybolmuyor.
+        try {
+            val cachedUrl = withBbConnection { conn ->
+                var result: String? = null
+                conn.prepareStatement("SELECT logo_url FROM bb_team_logos WHERE team_name_std = ?").use { stmt ->
+                    stmt.setString(1, cacheKey)
+                    stmt.executeQuery().use { rs ->
+                        if (rs.next()) {
+                            result = rs.getString("logo_url")
+                        }
+                    }
+                }
+                result
+            }
+            if (cachedUrl != null) {
+                basketballLogoCache[cacheKey] = cachedUrl
+                return cachedUrl
+            }
+        } catch (e: Exception) {
+            println("🔥 bb_team_logos okuma hatası: ${e.message}")
+        }
+
+        // 💡 Artık sonuç KALICI olarak veritabanına yazılıyor — bir takım için
+        // fazladan deneme yapmanın maliyeti sadece BİR KEZ ödeniyor (o takım bir
+        // daha hiç aranmıyor). Bu yüzden daha kapsamlı deneyebiliriz: hem orijinal
+        // hem Title Case, her ikisinde de kelime kelime kırparak (sponsor/şehir
+        // isimleri genelde sonda oluyor).
+        val titleCased = teamName.trim().split(Regex("\\s+")).joinToString(" ") {
+            it.lowercase().replaceFirstChar { c -> c.uppercase() }
+        }
+        val nameVariants = listOf(teamName.trim(), titleCased).distinct()
+        val attempts = mutableListOf<String>()
+        for (variant in nameVariants) {
+            val words = variant.split(Regex("\\s+"))
+            var i = words.size
+            while (i >= 1) {
+                attempts.add(words.subList(0, i).joinToString(" "))
+                i--
+            }
+        }
+
+        for (attempt in attempts.distinct()) {
+            kotlinx.coroutines.delay(150) // 💡 aynı takım içindeki denemeler arasında da küçük bir ara
+            try {
+                val response = httpClient.get("https://www.thesportsdb.com/api/v1/json/123/searchteams.php") {
+                    parameter("t", attempt)
+                }
+                if (response.status.isSuccess()) {
+                    val body = response.bodyAsText()
+                    val root = Json.parseToJsonElement(body).jsonObject
+                    val teamsElement = root["teams"]
+                    if (teamsElement != null && teamsElement !is JsonNull) {
+                        val teams = teamsElement.jsonArray
+                        val basketballTeam = teams.map { it.jsonObject }.firstOrNull {
+                            (it["strSport"]?.jsonPrimitive?.contentOrNull ?: "").equals("Basketball", ignoreCase = true)
+                        }
+                        val badge = basketballTeam?.get("strTeamBadge")?.jsonPrimitive?.contentOrNull
+                            ?: basketballTeam?.get("strBadge")?.jsonPrimitive?.contentOrNull
+                        if (!badge.isNullOrBlank()) {
+                            basketballLogoCache[cacheKey] = badge
+                            try {
+                                withBbConnection { conn ->
+                                    conn.prepareStatement("INSERT OR REPLACE INTO bb_team_logos (team_name_std, logo_url) VALUES (?, ?)").use { stmt ->
+                                        stmt.setString(1, cacheKey)
+                                        stmt.setString(2, badge)
+                                        stmt.executeUpdate()
+                                    }
+                                }
+                            } catch (e: Exception) {
+                                println("🔥 bb_team_logos yazma hatası: ${e.message}")
+                            }
+                            return badge
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                println("🔥 fetchBasketballTeamLogo hata ($attempt): ${e.message}")
+            }
+        }
+        return null
+    }
+
+    suspend fun fetchBasketballPlayerPhoto(playerName: String): String? {
+        val cacheKey = playerName.trim().lowercase()
+        basketballPhotoCache[cacheKey]?.let { return it }
+
+        try {
+            val cachedUrl = withBbConnection { conn ->
+                var result: String? = null
+                conn.prepareStatement("SELECT photo_url FROM bb_player_photos WHERE player_name_std = ?").use { stmt ->
+                    stmt.setString(1, cacheKey)
+                    stmt.executeQuery().use { rs ->
+                        if (rs.next()) {
+                            result = rs.getString("photo_url")
+                        }
+                    }
+                }
+                result
+            }
+            if (cachedUrl != null) {
+                basketballPhotoCache[cacheKey] = cachedUrl
+                return cachedUrl
+            }
+        } catch (e: Exception) {
+            println("🔥 bb_player_photos okuma hatası: ${e.message}")
+        }
+
+        // 💡 TheSportsDB'nin dokümantasyonu isimleri ALT ÇİZGİLİ gösteriyor
+        // (örn. "Danny_Welbeck") — normal boşluklu format tam eşleşmeyebiliyordu.
+        // İkisini de deniyoruz.
+        val nameVariants = listOf(playerName.trim(), playerName.trim().replace(Regex("\\s+"), "_")).distinct()
+        for (variant in nameVariants) {
+            try {
+                val response = httpClient.get("https://www.thesportsdb.com/api/v1/json/123/searchplayers.php") {
+                    parameter("p", variant)
+                }
+                if (response.status.isSuccess()) {
+                    val body = response.bodyAsText()
+                    val root = Json.parseToJsonElement(body).jsonObject
+                    val playersElement = root["player"]
+                    if (playersElement != null && playersElement !is JsonNull) {
+                        val first = playersElement.jsonArray.firstOrNull()?.jsonObject
+                        val photo = first?.get("strCutout")?.jsonPrimitive?.contentOrNull
+                            ?: first?.get("strThumb")?.jsonPrimitive?.contentOrNull
+                        if (!photo.isNullOrBlank()) {
+                            basketballPhotoCache[cacheKey] = photo
+                            try {
+                                withBbConnection { conn ->
+                                    conn.prepareStatement("INSERT OR REPLACE INTO bb_player_photos (player_name_std, photo_url) VALUES (?, ?)").use { stmt ->
+                                        stmt.setString(1, cacheKey)
+                                        stmt.setString(2, photo)
+                                        stmt.executeUpdate()
+                                    }
+                                }
+                            } catch (e: Exception) {
+                                println("🔥 bb_player_photos yazma hatası: ${e.message}")
+                            }
+                            return photo
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                println("🔥 fetchBasketballPlayerPhoto hata ($variant): ${e.message}")
+            }
+        }
+        return null
+    }
+
+    // 🏀 İki takımda da oynamış oyuncuları buluyor — futboldaki fetchCommonPlayers
+    // ile aynı ruhta, ama basketbolun (oyuncu-sezon-takım) daha basit yapısına uygun.
+    fun fetchCommonBasketballPlayers(team1: String, team2: String): List<BasketballPlayerResult> {
+        val std1 = team1.toStandardSearch()
+        val std2 = team2.toStandardSearch()
+
+        // 🛡️ Sadece son 5 sezonda (2021-2025) aktif olan takımlar aranabilir —
+        // Galatasaray gibi yıllardır bu kupalarda olmayan takımlar, elle yazılsa
+        // bile sonuç vermiyor (öneri listesinden zaten çıkarılmıştı, burada da
+        // aynı kısıtlama uygulanıyor).
+        val sql = """
+            SELECT p1.player_id, p1.name,
+                   MIN(p1.season_code) as season1, MIN(p2.season_code) as season2,
+                   GROUP_CONCAT(DISTINCT p1.competition) as competition
+            FROM bb_players p1
+            JOIN bb_players p2 ON p1.player_id = p2.player_id
+            WHERE p1.team_name_std LIKE ? AND p2.team_name_std LIKE ?
+              AND EXISTS (SELECT 1 FROM bb_players r1a WHERE r1a.team_name_std = p1.team_name_std AND r1a.season_code LIKE '%2021')
+              AND EXISTS (SELECT 1 FROM bb_players r1b WHERE r1b.team_name_std = p1.team_name_std AND r1b.season_code LIKE '%2022')
+              AND EXISTS (SELECT 1 FROM bb_players r1c WHERE r1c.team_name_std = p1.team_name_std AND r1c.season_code LIKE '%2023')
+              AND EXISTS (SELECT 1 FROM bb_players r1d WHERE r1d.team_name_std = p1.team_name_std AND r1d.season_code LIKE '%2024')
+              AND EXISTS (SELECT 1 FROM bb_players r1e WHERE r1e.team_name_std = p1.team_name_std AND r1e.season_code LIKE '%2025')
+              AND EXISTS (SELECT 1 FROM bb_players r2a WHERE r2a.team_name_std = p2.team_name_std AND r2a.season_code LIKE '%2021')
+              AND EXISTS (SELECT 1 FROM bb_players r2b WHERE r2b.team_name_std = p2.team_name_std AND r2b.season_code LIKE '%2022')
+              AND EXISTS (SELECT 1 FROM bb_players r2c WHERE r2c.team_name_std = p2.team_name_std AND r2c.season_code LIKE '%2023')
+              AND EXISTS (SELECT 1 FROM bb_players r2d WHERE r2d.team_name_std = p2.team_name_std AND r2d.season_code LIKE '%2024')
+              AND EXISTS (SELECT 1 FROM bb_players r2e WHERE r2e.team_name_std = p2.team_name_std AND r2e.season_code LIKE '%2025')
+            GROUP BY p1.player_id, p1.name
+        """.trimIndent()
+
+        val results = mutableListOf<BasketballPlayerResult>()
+        try {
+            withBbConnection { conn ->
+                conn.prepareStatement(sql).use { stmt ->
+                    stmt.setString(1, "%$std1%")
+                    stmt.setString(2, "%$std2%")
+                    stmt.executeQuery().use { rs ->
+                        while (rs.next()) {
+                            results.add(
+                                BasketballPlayerResult(
+                                    name = rs.getString("name"),
+                                    team1Season = rs.getString("season1"),
+                                    team2Season = rs.getString("season2"),
+                                    competition = rs.getString("competition")
+                                )
+                            )
+                        }
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            println("🔥 fetchCommonBasketballPlayers HATASI: ${e.message}")
+        }
+        // 🕰️ Futboldaki gibi güncelden eskiye sıralıyoruz — season_code'daki
+        // (örn. "E2024") yıl kısmını sayıya çevirip azalan sıraya diziyoruz.
+        return results.sortedByDescending { it.team1Season?.filter { c -> c.isDigit() }?.toIntOrNull() ?: 0 }
+    }
+
     // Havuzdan bir bağlantı alıp işi bitince geri bırakan yardımcı fonksiyon.
     // Tüm sorgular artık bunun üzerinden çalışıyor, hiçbiri connection'ı doğrudan paylaşmıyor.
     private fun <T> withConnection(block: (Connection) -> T): T {
@@ -300,7 +700,14 @@ object DatabaseClient {
             "yth", "youth", "academy", "akademi", "reserves", "amateur", "ii",
             "res.", "sva" // 💡 Çin ligi kısaltmaları (örn. "SH Shenhua Res.", "SH Shenhua SVA")
         )
-        return youthKeywords.any { lower.contains(it) }
+        if (youthKeywords.any { lower.contains(it) }) return true
+
+        // 💡 "Barcelona B", "Real Madrid C" gibi rezerv takım isimleri — sadece
+        // isim SONUNDA, tek başına bir " b"/" c" harfi varsa yakalıyoruz (kelime
+        // sınırı ile), yoksa "Bilbao" gibi normal isimleri yanlışlıkla eşleştirebilirdi.
+        if (Regex("\\s[bc]$").containsMatchIn(lower)) return true
+
+        return false
     }
 
     private fun matchesOriginalClub(clubName: String?, resolvedTarget: String): Boolean {
