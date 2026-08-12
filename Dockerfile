@@ -12,6 +12,7 @@ RUN apk add --no-cache gcompat
 
 COPY --from=build /app/build/libs/*-all.jar app.jar
 COPY --from=build /app/src/main/resources/football.db /app/football.db
+COPY --from=build /app/src/main/resources/basketball.db /app/basketball.db
 
 EXPOSE 8080
 
