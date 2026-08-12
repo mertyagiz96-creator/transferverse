@@ -424,6 +424,44 @@ object DatabaseClient {
         }
     }
 
+    // ⚽ Futbol kulüp logosu YEDEK sistemi — club_logos tablosunda olmayan
+    // kulüpler için. Basketboldan TAMAMEN AYRI önbellek (aynı isimli kulüpler
+    // olabilir, örn. "Barcelona" hem futbolda hem basketbolda var — karışmasın).
+    private val footballLogoFallbackCache = java.util.concurrent.ConcurrentHashMap<String, String>()
+
+    suspend fun fetchFootballTeamLogoFallback(teamName: String): String? {
+        val cacheKey = teamName.trim().lowercase()
+        footballLogoFallbackCache[cacheKey]?.let { return it }
+
+        try {
+            val response = httpClient.get("https://www.thesportsdb.com/api/v1/json/123/searchteams.php") {
+                parameter("t", teamName)
+            }
+            if (response.status.isSuccess()) {
+                val body = response.bodyAsText()
+                val root = Json.parseToJsonElement(body).jsonObject
+                val teamsElement = root["teams"]
+                if (teamsElement != null && teamsElement !is JsonNull) {
+                    val teams = teamsElement.jsonArray
+                    // 💡 Futbolda "Soccer" sporunu tercih ediyoruz ama bulunamazsa
+                    // (bazı kayıtlarda sport alanı boş/farklı olabiliyor) ilk sonucu kullanıyoruz.
+                    val footballTeam = teams.map { it.jsonObject }.firstOrNull {
+                        (it["strSport"]?.jsonPrimitive?.contentOrNull ?: "").equals("Soccer", ignoreCase = true)
+                    } ?: teams.firstOrNull()?.jsonObject
+                    val badge = footballTeam?.get("strTeamBadge")?.jsonPrimitive?.contentOrNull
+                        ?: footballTeam?.get("strBadge")?.jsonPrimitive?.contentOrNull
+                    if (!badge.isNullOrBlank()) {
+                        footballLogoFallbackCache[cacheKey] = badge
+                        return badge
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            println("🔥 fetchFootballTeamLogoFallback hata: ${e.message}")
+        }
+        return null
+    }
+
     suspend fun fetchBasketballTeamLogo(teamName: String): String? {
         val cacheKey = teamName.trim().lowercase()
         basketballLogoCache[cacheKey]?.let { return it }

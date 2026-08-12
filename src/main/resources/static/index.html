@@ -2003,16 +2003,16 @@
         }
 
         try {
-            const res = await fetch(`https://www.thesportsdb.com/api/v1/json/123/searchplayers.php?p=${encodeURIComponent(playerName)}`);
+            // 💡 Basketbol için kurduğumuz sunucu-proxy'yi (spor bağımsız, sadece
+            // isimle arıyor) burada da kullanıyoruz — tarayıcıdan TheSportsDB'ye
+            // doğrudan gitmek CORS'a takılıyordu (basketbolda bulduğumuz aynı sorun).
+            const res = await fetch(`/basketball/playerPhoto?name=${encodeURIComponent(playerName)}`);
             if (res.ok) {
                 const data = await res.json();
-                if (data && data.player && data.player.length > 0) {
-                    const photo = data.player[0].strCutout || data.player[0].strThumb;
-                    if (photo) {
-                        sportsDbPlayerPhotos[key] = photo;
-                        imgEl.src = photo; // 💡 img hâlâ DOM'daysa anında güncellenir
-                        return;
-                    }
+                if (data && data.photo) {
+                    sportsDbPlayerPhotos[key] = data.photo;
+                    imgEl.src = data.photo; // 💡 img hâlâ DOM'daysa anında güncellenir
+                    return;
                 }
             }
         } catch (e) {
@@ -2035,18 +2035,15 @@
         const searchTerm = sportsDbSearchAliasMap[key] || clubName;
 
         try {
-            const res = await fetch(`https://www.thesportsdb.com/api/v1/json/123/searchteams.php?t=${encodeURIComponent(searchTerm)}`);
+            const res = await fetch(`/football/teamLogoFallback?name=${encodeURIComponent(searchTerm)}`);
             if (res.ok) {
                 const data = await res.json();
-                if (data && data.teams && data.teams.length > 0) {
-                    const badge = data.teams[0].strTeamBadge || data.teams[0].strBadge;
-                    if (badge) {
-                        sportsDbLogos[key] = badge;
-                        delete sportsDbFetchInProgress[key];
-                        refreshVisibleClubIcons(); // 💡 o an ekranda açık bir soru varsa anında düzelt
-                        refreshClubLogoIcons(); // 💡 arama kutularının yanındaki ikonları da düzelt
-                        return badge;
-                    }
+                if (data && data.logo) {
+                    sportsDbLogos[key] = data.logo;
+                    delete sportsDbFetchInProgress[key];
+                    refreshVisibleClubIcons(); // 💡 o an ekranda açık bir soru varsa anında düzelt
+                    refreshClubLogoIcons(); // 💡 arama kutularının yanındaki ikonları da düzelt
+                    return data.logo;
                 }
             }
         } catch (e) {
@@ -5967,6 +5964,12 @@
         loadClubLogos();
         preloadStadiumPhotos(); // 🏟️ stadyum modu geciktirmesin diye önceden önbelleğe al
         loadDailyQuestion(); // 📅 arka planda, ana akışı hiç bekletmeden
+        // 🏀 Basketbol takım listelerini de SPOR SEÇİMİNDEN BAĞIMSIZ, sayfa
+        // açılır açılmaz arka planda yüklüyoruz — kullanıcı sonradan basketbola
+        // geçip Rastgele Eşleşme'ye basınca "takımlar yükleniyor" uyarısını
+        // hiç görmesin diye (futboldaki gibi anında, sınırsız basabilsin).
+        loadBasketballSuggestions();
+        loadNbaSuggestions();
         setupAutocomplete("club1Input", "club1Dropdown");
         setupAutocomplete("club2Input", "club2Dropdown");
         setupThemeSwitcher();

@@ -86,6 +86,17 @@ fun main() {
                 call.respond(mapOf("logo" to logo))
             }
 
+            // ⚽ Futbol kulüp logosu yedek sistemi — club_logos'ta olmayan kulüpler için
+            get("/football/teamLogoFallback") {
+                val name = call.request.queryParameters["name"]
+                if (name.isNullOrBlank()) {
+                    call.respond(mapOf("logo" to null))
+                    return@get
+                }
+                val logo = DatabaseClient.fetchFootballTeamLogoFallback(name)
+                call.respond(mapOf("logo" to logo))
+            }
+
             get("/basketball/playerPhoto") {
                 val name = call.request.queryParameters["name"]
                 if (name.isNullOrBlank()) {
