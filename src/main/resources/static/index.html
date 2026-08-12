@@ -3416,7 +3416,60 @@
         return result;
     }
 
+    // 🏀 NBA/Avrupa Bil Bakalım sorusu — rastgele iki takım seçip ortak oyuncu
+    // arıyor, bulamazsa birkaç kez daha dener. Futbolun beklediği veri şekline
+    // uyduruyoruz: clubs[0]/clubs[1] = takım+sezon, imageUrl = null (foto ayrı
+    // bir yoldan, render sırasında getBasketballPlayerPhoto ile çekiliyor).
+    async function fetchBasketballQuizQuestionData() {
+        const isNba = quizMode === 'nba';
+        if (isNba) { await loadNbaSuggestions(); } else { await loadBasketballSuggestions(); }
+        const pool = isNba ? nbaSuggestions : basketballSuggestions;
+        const endpoint = isNba ? '/nba/commonPlayers' : '/basketball/commonPlayers';
+
+        if (pool.length < 2) return { found: null, isCountryMix: false };
+
+        const maxAttempts = 8;
+        for (let i = 0; i < maxAttempts; i++) {
+            const team1 = pool[Math.floor(Math.random() * pool.length)];
+            let team2;
+            do {
+                team2 = pool[Math.floor(Math.random() * pool.length)];
+            } while (team2 === team1);
+
+            try {
+                const res = await fetch(`${endpoint}?team1=${encodeURIComponent(team1)}&team2=${encodeURIComponent(team2)}`);
+                if (res.ok) {
+                    const players = await res.json();
+                    if (players && players.length > 0) {
+                        const chosen = players[Math.floor(Math.random() * players.length)];
+                        return {
+                            found: {
+                                playerName: chosen.name,
+                                clubs: [
+                                    { club: team1, season: chosen.team1Season || '-' },
+                                    { club: team2, season: chosen.team2Season || '-' }
+                                ],
+                                imageUrl: null,
+                                position: null
+                            },
+                            isCountryMix: false,
+                            isBasketball: true
+                        };
+                    }
+                }
+            } catch (e) { /* sessizce geç, bir sonraki denemeye geç */ }
+        }
+        return { found: null, isCountryMix: false, isBasketball: true };
+    }
+
     async function fetchQuizQuestionData() {
+        // 🏀 NBA / Avrupa Basketbolu — futboldan tamamen ayrı bir havuzdan,
+        // ama SONUCU futbolun beklediği şekle ({found:{playerName,clubs:[...]}})
+        // uyduruyoruz ki mevcut renderQuizQuestion'ı (küçük dallanmalarla) kullanabilelim.
+        if (quizMode === 'nba' || quizMode === 'eurobasket') {
+            return await fetchBasketballQuizQuestionData();
+        }
+
         const maxAttempts = 12; // 💡 tekrar kontrolü için biraz daha fazla deneme payı
         let found = null;
         let isCountryMix = false;
@@ -3566,6 +3619,7 @@
             const safePosition = (found.position && found.position.trim())
                 ? found.position.trim().replace(/"/g, "&quot;")
                 : "Bilinmiyor";
+            const isBasketballQuestion = quizMode === 'nba' || quizMode === 'eurobasket';
 
             // 🕰️ Solda önce oynadığı kulüp, sağda sonra oynadığı kulüp olsun diye
             // sezona göre kronolojik sıralıyoruz — mevcut yıl filtresinde kullandığımız
@@ -3587,11 +3641,13 @@
             // var mı" yöntemi çok nadir tetikleniyordu. Daha fazla stadyum
             // eklendikçe bu oranı (şu an %50) düşürebiliriz.
             let stadiumSideIndex = -1;
-            const stadiumCandidateIndices = sortedClubs
-                .map((c, idx) => (stadiumPhotos[normalize(c.club)] ? idx : -1))
-                .filter(idx => idx !== -1);
-            if (stadiumCandidateIndices.length > 0 && Math.random() < 0.33) {
-                stadiumSideIndex = stadiumCandidateIndices[Math.floor(Math.random() * stadiumCandidateIndices.length)];
+            if (!isBasketballQuestion) {
+                const stadiumCandidateIndices = sortedClubs
+                    .map((c, idx) => (stadiumPhotos[normalize(c.club)] ? idx : -1))
+                    .filter(idx => idx !== -1);
+                if (stadiumCandidateIndices.length > 0 && Math.random() < 0.33) {
+                    stadiumSideIndex = stadiumCandidateIndices[Math.floor(Math.random() * stadiumCandidateIndices.length)];
+                }
             }
 
             const vsSidesHtml = sortedClubs.map((c, idx) => {
@@ -3600,7 +3656,13 @@
                     : `<span class="vs-club-season" style="visibility: hidden;">-</span>`;
                 let iconHtml = '';
                 let nameLabel = c.club;
-                if (idx === stadiumSideIndex) {
+                if (isBasketballQuestion) {
+                    // 🏀 Basketbolda bayrak/stadyum yok — sadece takım logosu
+                    const bbLogoUrl = getBasketballLogo(c.club);
+                    iconHtml = bbLogoUrl
+                        ? `<img src="${bbLogoUrl}" alt="" class="vs-club-logo-img" onerror="this.remove()">`
+                        : `<span style="font-size:1.8rem;">🏀</span>`;
+                } else if (idx === stadiumSideIndex) {
                     const key = normalize(c.club);
                     let stadiumUrl = stadiumPhotos[key];
                     let stadiumName = stadiumDisplayNameOverrides[key] || stadiumNames[key] || '';
@@ -3629,13 +3691,15 @@
             }).join('<div class="vs-divider"></div>');
             const clubListHtml = `<div class="vs-layout">${vsSidesHtml}</div>`;
 
-            hasRealPhoto = found.imageUrl && !found.imageUrl.includes('default.jpg');
+            const bbPhotoUrl = isBasketballQuestion ? getBasketballPlayerPhoto(cleanFullName) : null;
+            const effectivePhotoUrl = isBasketballQuestion ? bbPhotoUrl : found.imageUrl;
+            hasRealPhoto = effectivePhotoUrl && !(effectivePhotoUrl.includes && effectivePhotoUrl.includes('default.jpg'));
             showPhotoNow = hasRealPhoto && photoVisibleByDefault;
             const initialAvatarInner = showPhotoNow
-                ? `<img id="playerModeInitialPhoto" src="${found.imageUrl}" alt="" class="photo-fade-in" onload="revealQuestionWithPhoto()" onerror="handlePlayerPhotoError(this); revealQuestionWithPhoto();">`
+                ? `<img id="playerModeInitialPhoto" src="${effectivePhotoUrl}" alt="" class="photo-fade-in" onload="revealQuestionWithPhoto()" onerror="handlePlayerPhotoError(this); revealQuestionWithPhoto();">`
                 : genericAvatarSvg;
             const avatarHtml = `
-                <div class="player-mode-avatar${showPhotoNow ? ' photo-loading' : ''}" id="playerModeAvatar" data-photo="${hasRealPhoto ? found.imageUrl : ''}">
+                <div class="player-mode-avatar${showPhotoNow ? ' photo-loading' : ''}" id="playerModeAvatar" data-photo="${hasRealPhoto ? effectivePhotoUrl : ''}">
                     ${initialAvatarInner}
                 </div>
             `;
@@ -3669,7 +3733,7 @@
                     <div class="toolbar-wrapper" id="quizHintsWrapper">
                         <button id="quizHintsBtn" class="toolbar-btn">💡 İpuçları</button>
                         <div id="quizHintsPanel" class="year-filter-panel">
-                            <button id="revealPositionBtn" class="level-option-btn">🧭 Mevkisini Göster</button>
+                            ${isBasketballQuestion ? '' : '<button id="revealPositionBtn" class="level-option-btn">🧭 Mevkisini Göster</button>'}
                             <button id="revealMaskedBtn" class="level-option-btn">🎭 Maskeli Göster</button>
                             ${hasRealPhoto ? `<button id="togglePhotoBtn" class="level-option-btn">${showPhotoNow ? '🙈 Fotoğrafı Gizle' : '🖼️ Fotoğrafı Göster'}</button>` : ''}
                         </div>
@@ -4967,10 +5031,11 @@
                     <div class="player-mode-card">
                         <div class="quiz-win-title" style="font-size: 1.3rem;">🎮 Hangi modda oynamak istersin?</div>
                         <button id="selectGenelModeBtn" class="toolbar-btn" style="width: 100%; margin-bottom: 12px; padding: 16px 14px; font-size: 0.82rem;">🌍 Genel Mod</button>
-                        <button id="selectTurkiyeModeBtn" class="toolbar-btn" style="width: 100%; padding: 16px 14px; font-size: 0.82rem;">🇹🇷 Türkiye Ligi Modu</button>
+                        <button id="selectTurkiyeModeBtn" class="toolbar-btn" style="width: 100%; margin-bottom: 12px; padding: 16px 14px; font-size: 0.82rem;">🇹🇷 Türkiye Ligi Modu</button>
+                        <button id="selectNbaModeBtn" class="toolbar-btn" style="width: 100%; margin-bottom: 12px; padding: 16px 14px; font-size: 0.82rem;">🏀 NBA</button>
+                        <button id="selectEuroBasketModeBtn" class="toolbar-btn" style="width: 100%; padding: 16px 14px; font-size: 0.82rem;">🏀 Avrupa Basketbolu</button>
                         <div style="font-size: 0.72rem; color: rgba(var(--fg-rgb), 0.5); margin-top: 10px;">
-                            Türkiye Ligi Modu daha zorlu — sadece Süper Lig + tarihi kulüpler.<br>
-                            ⚽ Bu mod şu an sadece futbol içerir.
+                            Türkiye Ligi Modu daha zorlu — sadece Süper Lig + tarihi kulüpler.
                         </div>
                     </div>
                 </td>
@@ -4979,17 +5044,23 @@
 
         const genelBtn = document.getElementById('selectGenelModeBtn');
         const turkiyeBtn = document.getElementById('selectTurkiyeModeBtn');
+        const nbaBtn = document.getElementById('selectNbaModeBtn');
+        const euroBtn = document.getElementById('selectEuroBasketModeBtn');
 
-        // 🔒 Bir moda basılınca ikisini de anında kilitliyoruz — hızlıca iki
+        // 🔒 Bir moda basılınca hepsini anında kilitliyoruz — hızlıca iki
         // farklı moda art arda basılırsa iki ayrı başlatma süreci aynı anda
         // çalışıp skoru/rekoru karıştırmasın diye.
         function lockModeButtons() {
             genelBtn.disabled = true;
             turkiyeBtn.disabled = true;
+            nbaBtn.disabled = true;
+            euroBtn.disabled = true;
         }
 
         genelBtn.addEventListener('click', () => { lockModeButtons(); beginQuiz('genel'); });
         turkiyeBtn.addEventListener('click', () => { lockModeButtons(); beginQuiz('turkiye'); });
+        nbaBtn.addEventListener('click', () => { lockModeButtons(); beginQuiz('nba'); });
+        euroBtn.addEventListener('click', () => { lockModeButtons(); beginQuiz('eurobasket'); });
     }
 
     async function beginQuiz(mode) {
@@ -5021,6 +5092,29 @@
         scrollToResultsArea();
     }
 
+    // 🇹🇷 Türkçe takma ad / şehir ismi eşleştirmesi — kulüpler veritabanında
+    // genelde İngilizce/orijinal isimleriyle kayıtlı (örn. "Marseille"), ama
+    // kullanıcılar Türkçe okunuşuyla arayabiliyor (örn. "Marsilya"). Anahtar:
+    // normalize edilmiş Türkçe takma ad, değer: aranacak gerçek isim parçası.
+    const clubNicknameAliases = {
+        'marsilya': 'marseille',
+        'münih': 'munich',
+        'napoli': 'napoli',
+        'milano': 'milan',
+        'lizbon': 'sporting',
+    };
+
+    function expandQueryWithAliases(normalizedQuery) {
+        // 💡 Kullanıcının yazdığı, bilinen bir Türkçe takma adın İÇİNDE veya
+        // TAM eşleşiyorsa, arama sorgusuna gerçek ismi de ekliyoruz.
+        for (const [alias, realNamePart] of Object.entries(clubNicknameAliases)) {
+            if (alias.includes(normalizedQuery) || normalizedQuery.includes(alias)) {
+                return realNamePart;
+            }
+        }
+        return null;
+    }
+
     function setupAutocomplete(inputId, dropdownId) {
         const input = document.getElementById(inputId);
         const dropdown = document.getElementById(dropdownId);
@@ -5040,12 +5134,13 @@
             }
 
             const normalizedQuery = normalize(query);
+            const aliasExpansion = expandQueryWithAliases(normalizedQuery);
             let sourceSuggestions = allSuggestions;
             if (currentSport === 'basketball') {
                 sourceSuggestions = [...basketballSuggestions, ...nbaSuggestions];
             }
             const matches = sourceSuggestions
-                .filter(s => normalize(s).includes(normalizedQuery))
+                .filter(s => normalize(s).includes(normalizedQuery) || (aliasExpansion && normalize(s).includes(aliasExpansion)))
                 .slice(0, 10);
 
             dropdown.innerHTML = "";
