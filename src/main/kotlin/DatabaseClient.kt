@@ -416,12 +416,39 @@ object DatabaseClient {
             val europeTeams = fetchAllBasketballSuggestions()
             val nbaTeams = fetchAllNbaSuggestions()
             val allTeams = (europeTeams + nbaTeams).distinct()
+
+            // 🚀 KRİTİK OPTİMİZASYON: Eğer zaten HEPSİ (ya da neredeyse hepsi)
+            // kalıcı veritabanında kayıtlıysa, döngüye HİÇ girmiyoruz — tek bir
+            // hızlı COUNT sorgusu yeterli. Böylece sunucu açılışında (soğuk
+            // başlangıçta) bağlantı havuzu boşuna meşgul edilmiyor, kullanıcının
+            // İLK isteği (Bil Bakalım vb.) hiç beklemeden anında işlenebiliyor.
+            val alreadyCachedCount = withBbConnection { conn ->
+                var count = 0
+                conn.prepareStatement("SELECT COUNT(*) as cnt FROM bb_team_logos").use { stmt ->
+                    stmt.executeQuery().use { rs ->
+                        if (rs.next()) count = rs.getInt("cnt")
+                    }
+                }
+                count
+            }
+            if (alreadyCachedCount >= allTeams.size) {
+                println("🏀 Logolar zaten kalıcı veritabanında ($alreadyCachedCount/${allTeams.size}) — ön-yükleme atlandı, sunucu anında hazır.")
+                return
+            }
+
             println("🏀 ${allTeams.size} takımın logosu önceden yükleniyor...")
             var found = 0
             for (team in allTeams) {
+                val callStart = System.currentTimeMillis()
                 val logo = fetchBasketballTeamLogo(team)
                 if (logo != null) found++
-                kotlinx.coroutines.delay(600) // 💡 hız sınırını zorlamayalım diye aralıklı
+                val callElapsed = System.currentTimeMillis() - callStart
+                // 💡 100ms'den hızlıysa muhtemelen veritabanından geldi (ağa hiç
+                // gidilmedi) — bu durumda BEKLEMEYE GEREK YOK. Sadece gerçekten
+                // TheSportsDB'ye gidilen (yavaş) durumlarda aralık koyuyoruz.
+                if (callElapsed > 100) {
+                    kotlinx.coroutines.delay(600) // 💡 hız sınırını zorlamayalım diye aralıklı
+                }
             }
             println("🏀 Logo ön-yükleme tamamlandı: $found / ${allTeams.size} bulundu.")
         } catch (e: Exception) {
@@ -817,6 +844,87 @@ object DatabaseClient {
     }
 
     // 🖼️ Kulüp logoları — club_logos tablosundan tek seferde tüm eşlemeyi çekiyor
+    // 🎲 Bil Bakalım için rastgele soru — TÜM deneme mantığı SUNUCUDA, tek bir
+    // istekte. Önceden istemci 8 farklı takım çiftini TEK TEK sunucuya soruyordu
+    // (her biri ayrı bir ağ gidiş-gelişi = Render'da ~3-4sn × 8 = 25-30sn!). Artık
+    // döngü burada, dahili — ağ gecikmesi sadece BİR KEZ ödeniyor.
+    @Serializable
+    data class RandomBasketballQuestion(
+        val found: Boolean,
+        val team1: String? = null,
+        val team2: String? = null,
+        val playerName: String? = null,
+        val team1Season: String? = null,
+        val team2Season: String? = null
+    )
+
+    // ⚡ HAFİF sürüm — pool'dan gelen takımlar zaten 5-sezon filtresinden geçmiş
+    // (fetchAllBasketballSuggestions bunu garanti ediyor), bu yüzden o 10 tane
+    // EXISTS kontrolünü BURADA TEKRAR yapmıyoruz — gereksiz yük, sorguyu yavaşlatıyordu.
+    private fun fetchCommonBasketballPlayersLean(team1: String, team2: String): List<BasketballPlayerResult> {
+        val std1 = team1.toStandardSearch()
+        val std2 = team2.toStandardSearch()
+        val sql = """
+            SELECT p1.player_id, p1.name,
+                   MIN(p1.season_code) as season1, MIN(p2.season_code) as season2,
+                   GROUP_CONCAT(DISTINCT p1.competition) as competition
+            FROM bb_players p1
+            JOIN bb_players p2 ON p1.player_id = p2.player_id
+            WHERE p1.team_name_std LIKE ? AND p2.team_name_std LIKE ?
+            GROUP BY p1.player_id, p1.name
+        """.trimIndent()
+        val results = mutableListOf<BasketballPlayerResult>()
+        try {
+            withBbConnection { conn ->
+                conn.prepareStatement(sql).use { stmt ->
+                    stmt.setString(1, "%$std1%")
+                    stmt.setString(2, "%$std2%")
+                    stmt.executeQuery().use { rs ->
+                        while (rs.next()) {
+                            results.add(
+                                BasketballPlayerResult(
+                                    name = rs.getString("name"),
+                                    team1Season = rs.getString("season1"),
+                                    team2Season = rs.getString("season2"),
+                                    competition = rs.getString("competition")
+                                )
+                            )
+                        }
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            println("🔥 fetchCommonBasketballPlayersLean HATASI: ${e.message}")
+        }
+        return results
+    }
+
+    fun fetchRandomBasketballQuestion(pool: List<String>, isNba: Boolean): RandomBasketballQuestion {
+        if (pool.size < 2) return RandomBasketballQuestion(found = false)
+        val overallStart = System.currentTimeMillis()
+        repeat(15) { attemptNum ->
+            val team1 = pool.random()
+            var team2: String
+            do { team2 = pool.random() } while (team2 == team1)
+
+            val players = if (isNba) fetchCommonNbaPlayers(team1, team2) else fetchCommonBasketballPlayersLean(team1, team2)
+            if (players.isNotEmpty()) {
+                val player = players.random()
+                val totalElapsed = System.currentTimeMillis() - overallStart
+                println("⏱️ fetchRandomBasketballQuestion: ${totalElapsed}ms, ${attemptNum + 1} deneme")
+                return RandomBasketballQuestion(
+                    found = true,
+                    team1 = team1,
+                    team2 = team2,
+                    playerName = player.name,
+                    team1Season = player.team1Season,
+                    team2Season = player.team2Season
+                )
+            }
+        }
+        return RandomBasketballQuestion(found = false)
+    }
+
     fun fetchAllClubLogos(): Map<String, String> {
         val result = mutableMapOf<String, String>()
         try {

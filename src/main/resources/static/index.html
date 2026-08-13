@@ -1878,6 +1878,33 @@
     let currentBasketballLeague = 'europe'; // 'europe' | 'nba'
     let nbaSuggestions = [];
     let nbaSuggestionsLoaded = false;
+
+    // 🏀 SABİT, KODA GÖMÜLÜ takım listeleri — futboldaki superLigClubs/luckyClubs
+    // ile AYNI mantık: hiçbir ağ isteğine bağlı değil, Rastgele Eşleşme'de
+    // SINIRSIZ, ANINDA çalışır. Arama sırasında backend zaten ismi normalize
+    // ediyor (toStandardSearch), bu yüzden büyük/küçük harf ya da tam yazım
+    // önemli değil — sadece tanınabilir olması yeterli.
+    const luckyEuropeClubs = [
+        'Real Madrid', 'Anadolu Efes Istanbul', 'Fenerbahce Beko Istanbul', 'FC Barcelona',
+        'FC Bayern Munich', 'AS Monaco', 'Zalgiris Kaunas', 'Crvena Zvezda Mts Belgrade',
+        'Olympiacos Piraeus', 'Panathinaikos Aktor Athens', 'Partizan Nis Belgrade',
+        'Valencia Basket', 'Kosner Baskonia Vitoria-Gasteiz', 'Maccabi Fox Tel Aviv',
+        'EA7 Emporio Armani Milan', 'LDLC Asvel Villeurbanne', 'Buducnost Voli Podgorica',
+        'Cedevita Olimpija Ljubljana', 'Cosea JL Bourg-En-Bresse', 'Dolomiti Energia Trento',
+        'Lietkabelis Panevezys', 'Ratiopharm Ulm', 'Turk Telekom Ankara', 'Umana Reyer Venice',
+        'Veolia Towers Hamburg', 'Virtus Segafredo Bologna'
+    ];
+    const luckyNbaClubs = [
+        'Atlanta Hawks', 'Boston Celtics', 'Cleveland Cavaliers', 'New Orleans Pelicans',
+        'Chicago Bulls', 'Dallas Mavericks', 'Denver Nuggets', 'Golden State Warriors',
+        'Houston Rockets', 'Los Angeles Clippers', 'Los Angeles Lakers', 'Miami Heat',
+        'Milwaukee Bucks', 'Minnesota Timberwolves', 'Brooklyn Nets', 'New York Knicks',
+        'Orlando Magic', 'Indiana Pacers', 'Philadelphia 76ers', 'Phoenix Suns',
+        'Portland Trail Blazers', 'Sacramento Kings', 'San Antonio Spurs', 'Oklahoma City Thunder',
+        'Toronto Raptors', 'Utah Jazz', 'Memphis Grizzlies', 'Washington Wizards',
+        'Detroit Pistons', 'Charlotte Hornets'
+    ];
+
     let currentPlayers = [];
     let currentFilteredPlayers = []; // 🕵️ Ana moddaki tahmin kutusu bu listeye bakıyor
     let hunterModeOn = false;
@@ -3415,43 +3442,28 @@
     // bir yoldan, render sırasında getBasketballPlayerPhoto ile çekiliyor).
     async function fetchBasketballQuizQuestionData() {
         const isNba = quizMode === 'nba';
-        if (isNba) { await loadNbaSuggestions(); } else { await loadBasketballSuggestions(); }
-        const pool = isNba ? nbaSuggestions : basketballSuggestions;
-        const endpoint = isNba ? '/nba/commonPlayers' : '/basketball/commonPlayers';
-
-        if (pool.length < 2) return { found: null, isCountryMix: false };
-
-        const maxAttempts = 8;
-        for (let i = 0; i < maxAttempts; i++) {
-            const team1 = pool[Math.floor(Math.random() * pool.length)];
-            let team2;
-            do {
-                team2 = pool[Math.floor(Math.random() * pool.length)];
-            } while (team2 === team1);
-
-            try {
-                const res = await fetch(`${endpoint}?team1=${encodeURIComponent(team1)}&team2=${encodeURIComponent(team2)}`);
-                if (res.ok) {
-                    const players = await res.json();
-                    if (players && players.length > 0) {
-                        const chosen = players[Math.floor(Math.random() * players.length)];
-                        return {
-                            found: {
-                                playerName: chosen.name,
-                                clubs: [
-                                    { club: team1, season: stripBbSeasonPrefix(chosen.team1Season) || '-' },
-                                    { club: team2, season: stripBbSeasonPrefix(chosen.team2Season) || '-' }
-                                ],
-                                imageUrl: null,
-                                position: null
-                            },
-                            isCountryMix: false,
-                            isBasketball: true
-                        };
-                    }
+        const league = isNba ? 'nba' : 'europe';
+        try {
+            const res = await fetch(`/basketball/randomQuestion?league=${league}`);
+            if (res.ok) {
+                const data = await res.json();
+                if (data && data.found) {
+                    return {
+                        found: {
+                            playerName: data.playerName,
+                            clubs: [
+                                { club: data.team1, season: stripBbSeasonPrefix(data.team1Season) || '-' },
+                                { club: data.team2, season: stripBbSeasonPrefix(data.team2Season) || '-' }
+                            ],
+                            imageUrl: null,
+                            position: null
+                        },
+                        isCountryMix: false,
+                        isBasketball: true
+                    };
                 }
-            } catch (e) { /* sessizce geç, bir sonraki denemeye geç */ }
-        }
+            }
+        } catch (e) { /* aşağıda zaten "bulunamadı" ekranı gösteriliyor */ }
         return { found: null, isCountryMix: false, isBasketball: true };
     }
 
@@ -4188,6 +4200,11 @@
     function renderDailyQuestionCardBasketball(data) {
         const container = document.getElementById('dailyQuestionCard');
         if (!container || !data || !data.player) return;
+        // 🛡️ Bu veri gelene kadar kullanıcı Bil Bakalım'a, Arkadaşla Yarış'a
+        // geçmiş ya da futbola dönmüş olabilir — o durumda kartı ZORLA
+        // görünür yapmıyoruz (yarış durumu: "ana menüye geçebilmiş gibi"
+        // Günün Sorusu'nun beklenmedik anda belirmesi buradan kaynaklanıyordu).
+        if (playerModeActive || duelActive || currentSport !== 'basketball') return;
 
         dailyQuestionSolved = false;
         dailyQuestionStartTime = Date.now();
@@ -4301,6 +4318,9 @@
     function renderDailyQuestionCard(found) {
         const container = document.getElementById('dailyQuestionCard');
         if (!container || !found || !found.clubs || found.clubs.length !== 2) return;
+        // 🛡️ Basketboldaki aynı yarış durumu düzeltmesi — bu veri gelene kadar
+        // kullanıcı başka bir moda geçmiş olabilir, kartı zorla göstermiyoruz.
+        if (playerModeActive || duelActive || currentSport !== 'football') return;
 
         dailyQuestionSolved = false;
         dailyQuestionStartTime = Date.now();
@@ -5828,16 +5848,10 @@
     // 🎲 Basketbol'un Rastgele Eşleşme'si — EuroLeague/EuroCup ayrımı yapmadan,
     // zaten yüklü olan basketballSuggestions'tan iki farklı takım seçiyor.
     function pickRandomBasketballMatch() {
-        // 🎲 Hangi ligden geleceğini kendi içimizde rastgele seçiyoruz (%50-%50) —
-        // kullanıcı bir şey seçmiyor, ama NBA-NBA ya da Avrupa-Avrupa eşleşmesi
-        // garanti (asla karışmıyor).
-        const useNba = Math.random() < 0.5 && nbaSuggestionsLoaded && nbaSuggestions.length >= 2;
-        const pool = useNba ? nbaSuggestions : basketballSuggestions;
-        const poolLoaded = useNba ? nbaSuggestionsLoaded : basketballSuggestionsLoaded;
-        if (!poolLoaded || pool.length < 2) {
-            showToast('Takımlar henüz yükleniyor, birazdan tekrar deneyin...');
-            return;
-        }
+        // 🎲 Artık SABİT, koda gömülü listeler kullanıyoruz — futboldaki gibi
+        // hiçbir ağ isteğine bağlı değil, sınırsız ve anında çalışır.
+        const useNba = Math.random() < 0.5;
+        const pool = useNba ? luckyNbaClubs : luckyEuropeClubs;
         const team1 = pool[Math.floor(Math.random() * pool.length)];
         let team2;
         do {
@@ -5965,11 +5979,10 @@
         preloadStadiumPhotos(); // 🏟️ stadyum modu geciktirmesin diye önceden önbelleğe al
         loadDailyQuestion(); // 📅 arka planda, ana akışı hiç bekletmeden
         // 🏀 Basketbol takım listelerini de SPOR SEÇİMİNDEN BAĞIMSIZ, sayfa
-        // açılır açılmaz arka planda yüklüyoruz — kullanıcı sonradan basketbola
-        // geçip Rastgele Eşleşme'ye basınca "takımlar yükleniyor" uyarısını
-        // hiç görmesin diye (futboldaki gibi anında, sınırsız basabilsin).
-        loadBasketballSuggestions();
-        loadNbaSuggestions();
+        // açılır açılmaz arka planda yüklüyoruz. Rastgele Eşleşme butonu bu
+        // promise'i izleyip, hazır olana kadar kendini pasif/"Yükleniyor" yapıyor
+        // — kullanıcıya hata mesajı göstermek yerine, buton kendisi bekliyor.
+        window.basketballSuggestionsReadyPromise = Promise.all([loadBasketballSuggestions(), loadNbaSuggestions()]);
         setupAutocomplete("club1Input", "club1Dropdown");
         setupAutocomplete("club2Input", "club2Dropdown");
         setupThemeSwitcher();

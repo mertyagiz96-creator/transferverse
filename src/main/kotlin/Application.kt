@@ -58,6 +58,16 @@ fun main() {
                 call.respond(common)
             }
 
+            // 🎲 Bil Bakalım rastgele soru — TÜM deneme mantığı tek istekte,
+            // sunucu içinde. İstemci sadece hangi ligi istediğini söylüyor.
+            get("/basketball/randomQuestion") {
+                val league = call.request.queryParameters["league"] ?: "europe"
+                val isNba = league == "nba"
+                val pool = if (isNba) DatabaseClient.fetchAllNbaSuggestions() else DatabaseClient.fetchAllBasketballSuggestions()
+                val result = DatabaseClient.fetchRandomBasketballQuestion(pool, isNba)
+                call.respond(result)
+            }
+
             // 🏀 NBA — Avrupa basketbolundan ayrı endpoint'ler.
             get("/nba/suggestions") {
                 call.respond(DatabaseClient.fetchAllNbaSuggestions())
