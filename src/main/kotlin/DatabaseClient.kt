@@ -282,18 +282,21 @@ object DatabaseClient {
         val suggestions = mutableSetOf<String>()
         try {
             withBbConnection { conn ->
-                // 💡 Sadece son 5 sezonun (2021-2025) HEPSİNDE oynamış takımları
-                // öneriyoruz (herhangi birinde değil) — arada boşluk (gap year)
-                // olan takımların o dönemki transfer verisini kaçırma riskini
-                // en aza indiriyor. İstikrarlı biçimde uzun süre bu kupalarda
-                // olan takımlar, muhtemelen daha eski yıllarda da iyi kapsanmış olur.
-                val years = listOf("2021", "2022", "2023", "2024", "2025")
-                val conditions = years.joinToString(" AND ") {
-                    "EXISTS (SELECT 1 FROM bb_players b2 WHERE b2.team_name = b.team_name AND b2.season_code LIKE '%$it')"
-                }
-                conn.prepareStatement(
-                    "SELECT DISTINCT team_name FROM bb_players b WHERE $conditions"
-                ).use { stmt ->
+                // ⚡ YENİDEN YAZILDI: eski sürüm her satır için 5 ayrı iç içe (correlated)
+                // EXISTS sorgusu çalıştırıyordu (indekssiz team_name üzerinden) — 14.836
+                // satırda bu ~19 SANİYE sürüyordu! Yeni sürüm TEK GEÇİŞTE (GROUP BY +
+                // HAVING) aynı sonucu veriyor, milisaniyeler içinde.
+                val sql = """
+                    SELECT team_name FROM (
+                        SELECT team_name, substr(season_code, -4) as yr
+                        FROM bb_players
+                        WHERE substr(season_code, -4) IN ('2021','2022','2023','2024','2025')
+                        GROUP BY team_name, yr
+                    )
+                    GROUP BY team_name
+                    HAVING COUNT(*) = 5
+                """.trimIndent()
+                conn.prepareStatement(sql).use { stmt ->
                     stmt.executeQuery().use { rs ->
                         while (rs.next()) {
                             val name = rs.getString("team_name")
@@ -855,7 +858,8 @@ object DatabaseClient {
         val team2: String? = null,
         val playerName: String? = null,
         val team1Season: String? = null,
-        val team2Season: String? = null
+        val team2Season: String? = null,
+        val nbaOfficialId: String? = null
     )
 
     // ⚡ HAFİF sürüm — pool'dan gelen takımlar zaten 5-sezon filtresinden geçmiş
@@ -911,14 +915,17 @@ object DatabaseClient {
             if (players.isNotEmpty()) {
                 val player = players.random()
                 val totalElapsed = System.currentTimeMillis() - overallStart
-                println("⏱️ fetchRandomBasketballQuestion: ${totalElapsed}ms, ${attemptNum + 1} deneme")
+                if (totalElapsed > 500 || attemptNum >= 3) {
+                    println("⏱️ fetchRandomBasketballQuestion YAVAŞ: ${totalElapsed}ms, ${attemptNum + 1} deneme")
+                }
                 return RandomBasketballQuestion(
                     found = true,
                     team1 = team1,
                     team2 = team2,
                     playerName = player.name,
                     team1Season = player.team1Season,
-                    team2Season = player.team2Season
+                    team2Season = player.team2Season,
+                    nbaOfficialId = player.nbaOfficialId
                 )
             }
         }
@@ -941,6 +948,29 @@ object DatabaseClient {
             }
         } catch (e: Exception) {
             println("🔥 fetchAllClubLogos HATASI: ${e.message}")
+        }
+        return result
+    }
+
+    // 🏀 Basketbol için de futboldaki TOPLU yükleme deseni — az önce her takım
+    // AYRI AYRI, istek üzerine çekiliyordu (veri zaten hazır olsa bile en az bir
+    // ağ gidiş-gelişi gerektiriyordu). Artık tek sorguda HEPSİ birden geliyor.
+    fun fetchAllBasketballLogos(): Map<String, String> {
+        val result = mutableMapOf<String, String>()
+        try {
+            withBbConnection { conn ->
+                conn.prepareStatement("SELECT team_name_std, logo_url FROM bb_team_logos").use { stmt ->
+                    stmt.executeQuery().use { rs ->
+                        while (rs.next()) {
+                            val key = rs.getString("team_name_std") ?: continue
+                            val url = rs.getString("logo_url") ?: continue
+                            result[key] = url
+                        }
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            println("🔥 fetchAllBasketballLogos HATASI: ${e.message}")
         }
         return result
     }

@@ -2117,8 +2117,9 @@
     function getBasketballLogo(teamName) {
         if (!teamName) return null;
         const key = normalize(teamName);
+        if (basketballLogosMap[key]) return basketballLogosMap[key]; // 💡 toplu yüklenen haritadan ANINDA
         if (sportsDbBasketballLogos[key]) return sportsDbBasketballLogos[key];
-        fetchSportsDbBasketballLogo(teamName); // 💡 arka planda tembel istek, sonucu beklemeden devam
+        fetchSportsDbBasketballLogo(teamName); // 💡 sadece toplu haritada da yoksa, arka planda tembel istek
         return null;
     }
 
@@ -2206,6 +2207,22 @@
             }
         } catch (e) {
             console.log("Kulüp logoları yüklenirken pas geçildi.");
+        }
+    }
+
+    // 🏀 Futboldaki toplu yükleme deseninin aynısı — 56 basketbol logosu TEK
+    // istekte geliyor, artık her takım için ayrı ayrı beklemek gerekmiyor.
+    let basketballLogosMap = {};
+    async function loadBasketballLogosBulk() {
+        try {
+            const response = await fetch('/basketball/allLogos');
+            if (response.ok) {
+                basketballLogosMap = await response.json();
+                refreshVisibleBasketballIcons();
+                if (typeof refreshClubLogoIcons === 'function') refreshClubLogoIcons();
+            }
+        } catch (e) {
+            console.log("Basketbol logoları yüklenirken pas geçildi.");
         }
     }
 
@@ -3456,7 +3473,8 @@
                                 { club: data.team2, season: stripBbSeasonPrefix(data.team2Season) || '-' }
                             ],
                             imageUrl: null,
-                            position: null
+                            position: null,
+                            nbaOfficialId: data.nbaOfficialId || null
                         },
                         isCountryMix: false,
                         isBasketball: true
@@ -3700,7 +3718,11 @@
             }).join('<div class="vs-divider"></div>');
             const clubListHtml = `<div class="vs-layout">${vsSidesHtml}</div>`;
 
-            const bbPhotoUrl = isBasketballQuestion ? getBasketballPlayerPhoto(cleanFullName) : null;
+            const bbPhotoUrl = isBasketballQuestion
+                ? (found.nbaOfficialId
+                    ? `https://cdn.nba.com/headshots/nba/latest/1040x760/${found.nbaOfficialId}.png`
+                    : getBasketballPlayerPhoto(cleanFullName))
+                : null;
             const effectivePhotoUrl = isBasketballQuestion ? bbPhotoUrl : found.imageUrl;
             hasRealPhoto = effectivePhotoUrl && !(effectivePhotoUrl.includes && effectivePhotoUrl.includes('default.jpg'));
             showPhotoNow = hasRealPhoto && photoVisibleByDefault;
@@ -5976,6 +5998,7 @@
         setupInstallBanner();
         loadSuggestions();
         loadClubLogos();
+        loadBasketballLogosBulk();
         preloadStadiumPhotos(); // 🏟️ stadyum modu geciktirmesin diye önceden önbelleğe al
         loadDailyQuestion(); // 📅 arka planda, ana akışı hiç bekletmeden
         // 🏀 Basketbol takım listelerini de SPOR SEÇİMİNDEN BAĞIMSIZ, sayfa

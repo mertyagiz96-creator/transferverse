@@ -63,7 +63,12 @@ fun main() {
             get("/basketball/randomQuestion") {
                 val league = call.request.queryParameters["league"] ?: "europe"
                 val isNba = league == "nba"
+                val poolStart = System.currentTimeMillis()
                 val pool = if (isNba) DatabaseClient.fetchAllNbaSuggestions() else DatabaseClient.fetchAllBasketballSuggestions()
+                val poolElapsed = System.currentTimeMillis() - poolStart
+                if (poolElapsed > 500) {
+                    println("⏱️ havuz hesaplama YAVAŞ (${if (isNba) "NBA" else "Avrupa"}): ${poolElapsed}ms, ${pool.size} takım")
+                }
                 val result = DatabaseClient.fetchRandomBasketballQuestion(pool, isNba)
                 call.respond(result)
             }
@@ -121,6 +126,11 @@ fun main() {
             // hafızada tutuyor, her istek için tekrar tekrar sormuyor.
             get("/clubLogos") {
                 val logos = DatabaseClient.fetchAllClubLogos()
+                call.respond(logos)
+            }
+
+            get("/basketball/allLogos") {
+                val logos = DatabaseClient.fetchAllBasketballLogos()
                 call.respond(logos)
             }
 
