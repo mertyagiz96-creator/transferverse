@@ -240,7 +240,7 @@ object DatabaseClient {
     // (basketball.db). EuroLeague + EuroCup verisi, "oyuncu-sezon-takım"
     // şeklinde. Mevki/uyruk verisi YOK (kaynakta bulunmuyor) — sadece
     // "iki takımda da oynayan oyuncu" sorgusu için kullanılıyor.
-    private const val BB_POOL_SIZE = 3
+    private const val BB_POOL_SIZE = 6
     private val bbConnectionPool: java.util.concurrent.BlockingQueue<Connection> by lazy { createBbConnectionPool() }
 
     private fun createBbConnectionPool(): java.util.concurrent.BlockingQueue<Connection> {
@@ -349,6 +349,7 @@ object DatabaseClient {
     }
 
     fun fetchCommonNbaPlayers(team1: String, team2: String): List<BasketballPlayerResult> {
+        val startTime = System.currentTimeMillis()
         val std1 = team1.toStandardSearch()
         val std2 = team2.toStandardSearch()
 
@@ -388,6 +389,10 @@ object DatabaseClient {
             }
         } catch (e: Exception) {
             println("🔥 fetchCommonNbaPlayers HATASI: ${e.message}")
+        }
+        val elapsed = System.currentTimeMillis() - startTime
+        if (elapsed > 1000) {
+            println("⏱️ fetchCommonNbaPlayers YAVAŞ: ${elapsed}ms ($team1 vs $team2, ${results.size} sonuç)")
         }
         return results.sortedByDescending { it.team1Season?.toIntOrNull() ?: 0 }
     }
@@ -626,6 +631,7 @@ object DatabaseClient {
     // 🏀 İki takımda da oynamış oyuncuları buluyor — futboldaki fetchCommonPlayers
     // ile aynı ruhta, ama basketbolun (oyuncu-sezon-takım) daha basit yapısına uygun.
     fun fetchCommonBasketballPlayers(team1: String, team2: String): List<BasketballPlayerResult> {
+        val startTime = System.currentTimeMillis()
         val std1 = team1.toStandardSearch()
         val std2 = team2.toStandardSearch()
 
@@ -675,6 +681,10 @@ object DatabaseClient {
             }
         } catch (e: Exception) {
             println("🔥 fetchCommonBasketballPlayers HATASI: ${e.message}")
+        }
+        val elapsed = System.currentTimeMillis() - startTime
+        if (elapsed > 1000) {
+            println("⏱️ fetchCommonBasketballPlayers YAVAŞ: ${elapsed}ms ($team1 vs $team2, ${results.size} sonuç)")
         }
         // 🕰️ Futboldaki gibi güncelden eskiye sıralıyoruz — season_code'daki
         // (örn. "E2024") yıl kısmını sayıya çevirip azalan sıraya diziyoruz.
