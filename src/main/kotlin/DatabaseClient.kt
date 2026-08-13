@@ -428,14 +428,20 @@ object DatabaseClient {
     // kulüpler için. Basketboldan TAMAMEN AYRI önbellek (aynı isimli kulüpler
     // olabilir, örn. "Barcelona" hem futbolda hem basketbolda var — karışmasın).
     private val footballLogoFallbackCache = java.util.concurrent.ConcurrentHashMap<String, String>()
+    private val footballLogoFallbackFailedRecently = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
 
     suspend fun fetchFootballTeamLogoFallback(teamName: String): String? {
         val cacheKey = teamName.trim().lowercase()
         footballLogoFallbackCache[cacheKey]?.let { return it }
+        // 🛡️ Başarısız bir denemeyi de KISA SÜRELİĞİNE önbelleğe alıyoruz — TheSportsDB
+        // şu an ulaşılamıyor/yavaşsa, AYNI kulüp için art arda gelen istekler (birden
+        // fazla kullanıcı aynı anda arama yapınca) her biri ayrı ayrı 15sn beklemesin.
+        if (footballLogoFallbackFailedRecently.contains(cacheKey)) return null
 
         try {
             val response = httpClient.get("https://www.thesportsdb.com/api/v1/json/123/searchteams.php") {
                 parameter("t", teamName)
+                timeout { requestTimeoutMillis = 3_000 } // 💡 15sn yerine sadece 3sn — sunucuyu tıkamasın
             }
             if (response.status.isSuccess()) {
                 val body = response.bodyAsText()
@@ -458,6 +464,7 @@ object DatabaseClient {
             }
         } catch (e: Exception) {
             println("🔥 fetchFootballTeamLogoFallback hata: ${e.message}")
+            footballLogoFallbackFailedRecently.add(cacheKey)
         }
         return null
     }
@@ -694,7 +701,7 @@ object DatabaseClient {
         if (!dbFile.exists()) {
             throw IllegalStateException(
                 "❌ football.db bulunamadı: ${dbFile.absolutePath}. " +
-                "Local çalıştırıyorsanız dosyayı proje kök dizinine kopyalayın."
+                        "Local çalıştırıyorsanız dosyayı proje kök dizinine kopyalayın."
             )
         }
 
@@ -977,7 +984,7 @@ object DatabaseClient {
             resultList.filter { player ->
                 val transfers = playerAllTransfers[player.transferId] ?: emptyList()
                 transfers.any { (f, t, _) -> isExactClubMatch(f, resolvedClubTerm) || isExactClubMatch(t, resolvedClubTerm) } ||
-                    isPrimaryCountryMatch(player.nationality, clubOrCountry, mappedCountry)
+                        isPrimaryCountryMatch(player.nationality, clubOrCountry, mappedCountry)
             }
         } else {
             resultList
@@ -1110,12 +1117,12 @@ object DatabaseClient {
 
             val ok1 = if (exact1) {
                 transfers.any { (f, t, _) -> isExactClubMatch(f, resolvedClubTerm1) || isExactClubMatch(t, resolvedClubTerm1) } ||
-                    isPrimaryCountryMatch(player.nationality, param1, mappedCountry1)
+                        isPrimaryCountryMatch(player.nationality, param1, mappedCountry1)
             } else true
 
             val ok2 = if (exact2) {
                 transfers.any { (f, t, _) -> isExactClubMatch(f, resolvedClubTerm2) || isExactClubMatch(t, resolvedClubTerm2) } ||
-                    isPrimaryCountryMatch(player.nationality, param2, mappedCountry2)
+                        isPrimaryCountryMatch(player.nationality, param2, mappedCountry2)
             } else true
 
             ok1 && ok2
