@@ -170,37 +170,48 @@ object DatabaseClient {
         install(HttpTimeout) { requestTimeoutMillis = 15_000 }
     }
 
-    fun fetchQuizHighScore(): Int = kotlinx.coroutines.runBlocking { fetchQuizHighScoreSuspend() }
+    // 🏆 4 ayrı Bil Bakalım modu, 4 ayrı rekor — Supabase'teki quiz_highscore
+    // tablosunda id=1..4, her biri farklı bir moda karşılık geliyor.
+    private val quizModeIds = mapOf(
+        "genel" to 1,
+        "turkiye" to 2,
+        "nba" to 3,
+        "eurobasket" to 4
+    )
+    private fun defaultScoreForMode(modeId: Int): Int = if (modeId == 1) 21 else 10
 
-    fun submitQuizScore(score: Int): Int = kotlinx.coroutines.runBlocking { submitQuizScoreSuspend(score) }
+    fun fetchQuizHighScore(mode: String): Int = kotlinx.coroutines.runBlocking { fetchQuizHighScoreSuspend(quizModeIds[mode] ?: 1) }
 
-    private suspend fun fetchQuizHighScoreSuspend(): Int {
+    fun submitQuizScore(mode: String, score: Int): Int = kotlinx.coroutines.runBlocking { submitQuizScoreSuspend(quizModeIds[mode] ?: 1, score) }
+
+    private suspend fun fetchQuizHighScoreSuspend(modeId: Int): Int {
+        val fallback = defaultScoreForMode(modeId)
         if (supabaseUrl == null || supabaseKey == null) {
-            println("⚠️ SUPABASE_URL / SUPABASE_KEY ayarlanmamış, rekor devre dışı (varsayılan 14 dönüyor).")
-            return 14
+            println("⚠️ SUPABASE_URL / SUPABASE_KEY ayarlanmamış, rekor devre dışı (varsayılan $fallback dönüyor).")
+            return fallback
         }
         return try {
             val response: HttpResponse = httpClient.get("$supabaseUrl/rest/v1/quiz_highscore") {
                 header("apikey", supabaseKey)
                 header("Authorization", "Bearer $supabaseKey")
                 parameter("select", "score")
-                parameter("id", "eq.1")
+                parameter("id", "eq.$modeId")
                 parameter("limit", "1")
             }
             val body = response.bodyAsText()
             val rows = Json.parseToJsonElement(body).jsonArray
-            if (rows.isEmpty()) 14 else (rows[0].jsonObject["score"]?.jsonPrimitive?.int ?: 14)
+            if (rows.isEmpty()) fallback else (rows[0].jsonObject["score"]?.jsonPrimitive?.int ?: fallback)
         } catch (e: Exception) {
             println("🔥 Supabase rekor okuma hatası: ${e.message}")
-            14
+            fallback
         }
     }
 
     // 📈 Skoru gönderir, mevcut rekordan büyükse günceller — her durumda sonuçtaki
     // (güncel) rekoru döndürür. Supabase'te "upsert" (varsa güncelle, yoksa oluştur)
     // için Prefer: resolution=merge-duplicates header'ı kullanılıyor.
-    private suspend fun submitQuizScoreSuspend(score: Int): Int {
-        val current = fetchQuizHighScoreSuspend()
+    private suspend fun submitQuizScoreSuspend(modeId: Int, score: Int): Int {
+        val current = fetchQuizHighScoreSuspend(modeId)
         if (supabaseUrl == null || supabaseKey == null) {
             return maxOf(current, score)
         }
@@ -213,7 +224,7 @@ object DatabaseClient {
                 header("Authorization", "Bearer $supabaseKey")
                 header("Content-Type", "application/json")
                 header("Prefer", "resolution=merge-duplicates")
-                setBody(Json.encodeToString(SupabaseHighScoreInsert(1, score)))
+                setBody(Json.encodeToString(SupabaseHighScoreInsert(modeId, score)))
             }
             if (!response.status.isSuccess()) {
                 val errorBody = response.bodyAsText()
@@ -741,7 +752,7 @@ object DatabaseClient {
         if (!dbFile.exists()) {
             throw IllegalStateException(
                 "❌ football.db bulunamadı: ${dbFile.absolutePath}. " +
-                        "Local çalıştırıyorsanız dosyayı proje kök dizinine kopyalayın."
+                "Local çalıştırıyorsanız dosyayı proje kök dizinine kopyalayın."
             )
         }
 
@@ -1132,7 +1143,7 @@ object DatabaseClient {
             resultList.filter { player ->
                 val transfers = playerAllTransfers[player.transferId] ?: emptyList()
                 transfers.any { (f, t, _) -> isExactClubMatch(f, resolvedClubTerm) || isExactClubMatch(t, resolvedClubTerm) } ||
-                        isPrimaryCountryMatch(player.nationality, clubOrCountry, mappedCountry)
+                    isPrimaryCountryMatch(player.nationality, clubOrCountry, mappedCountry)
             }
         } else {
             resultList
@@ -1265,12 +1276,12 @@ object DatabaseClient {
 
             val ok1 = if (exact1) {
                 transfers.any { (f, t, _) -> isExactClubMatch(f, resolvedClubTerm1) || isExactClubMatch(t, resolvedClubTerm1) } ||
-                        isPrimaryCountryMatch(player.nationality, param1, mappedCountry1)
+                    isPrimaryCountryMatch(player.nationality, param1, mappedCountry1)
             } else true
 
             val ok2 = if (exact2) {
                 transfers.any { (f, t, _) -> isExactClubMatch(f, resolvedClubTerm2) || isExactClubMatch(t, resolvedClubTerm2) } ||
-                        isPrimaryCountryMatch(player.nationality, param2, mappedCountry2)
+                    isPrimaryCountryMatch(player.nationality, param2, mappedCountry2)
             } else true
 
             ok1 && ok2

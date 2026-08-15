@@ -2352,14 +2352,12 @@
         if (!clubName) return null;
         const key = normalize(clubName);
 
-        // 🌍 Önce TheSportsDB (bağımsız kaynak) — Transfermarkt sorun yaşarsa bile çalışır
+        // 🌍 Önce TheSportsDB önbelleği (daha önce bulunmuşsa anında)
         if (sportsDbLogos[key]) return sportsDbLogos[key];
 
-        // 💡 Henüz önbellekte yok — arka planda (bekletmeden) tembel bir istek başlatıyoruz,
-        // gelince refreshVisibleClubIcons/refreshClubLogoIcons ile ekran kendini düzeltecek.
-        fetchSportsDbLogo(clubName);
-
-        // 🛡️ Bu arada gömülü Transfermarkt yedek listesi — TheSportsDB'de yoksa/henüz gelmediyse
+        // 🛡️ Diğer kaynakları TheSportsDB'ye GİTMEDEN önce kontrol ediyoruz —
+        // zaten buradan bir sonuç çıkacaksa, gereksiz bir ağ isteğine (ve
+        // TheSportsDB ulaşılamazsa log gürültüsüne) hiç gerek yok.
         if (hardcodedPoolLogos[key]) return hardcodedPoolLogos[key];
 
         if (clubLogoAliasMap[key] && clubLogos[clubLogoAliasMap[key]]) {
@@ -2375,6 +2373,11 @@
                 return clubLogos[k];
             }
         }
+
+        // 💡 Hiçbir kaynakta yoksa, ANCAK O ZAMAN TheSportsDB'yi arka planda
+        // deniyoruz — gelince refreshVisibleClubIcons/refreshClubLogoIcons ile
+        // ekran kendini düzeltecek.
+        fetchSportsDbLogo(clubName);
         return null;
     }
 
@@ -3184,7 +3187,7 @@
 
     async function fetchQuizHighScore() {
         try {
-            const res = await fetch('/quiz/highscore');
+            const res = await fetch(`/quiz/highscore?mode=${quizMode || 'genel'}`);
             if (res.ok) {
                 const data = await res.json();
                 quizHighScore = data.highScore || 0;
@@ -3200,7 +3203,7 @@
             const res = await fetch('/quiz/highscore', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ score })
+                body: JSON.stringify({ score, mode: quizMode || 'genel' })
             });
             if (res.ok) {
                 const data = await res.json();
@@ -4112,6 +4115,16 @@
         return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     }
 
+    // 🗓️ 📅 emojisinin kendisi (Unicode tasarımı gereği) sabit "17" yazılı geliyor —
+    // gerçek güncel günü gösteren küçük bir rozet üretiyoruz onun yerine.
+    function realCalendarIconHtml() {
+        const day = new Date().getDate();
+        return `<span style="display:inline-flex; flex-direction:column; width:18px; height:20px; border-radius:3px; overflow:hidden; vertical-align:middle; margin-right:3px; margin-top:-3px; box-shadow: 0 0 0 1px rgba(0,0,0,0.12);">
+            <span style="display:block; height:5px; background:#e8483a;"></span>
+            <span style="flex:1; display:flex; align-items:center; justify-content:center; background:#ffffff; color:#2b2b2b; font-weight:800; font-size:0.62rem; line-height:1;">${day}</span>
+        </span>`;
+    }
+
     function seededHash(str) {
         let hash = 0;
         for (let i = 0; i < str.length; i++) {
@@ -4149,19 +4162,31 @@
             }
         } catch (e) { /* sessizce geç, yeniden çekeriz */ }
 
-        const [club1, club2] = pickDailyClubPair();
-        try {
-            const res = await fetch(`/playerMode?clubs=${encodeURIComponent([club1, club2].join(','))}&isCountry=0,0`);
-            if (res.ok) {
-                const data = await res.json();
-                if (currentSport !== 'football') return; // 🛡️ bu arada basketbola geçilmişse kartı ezme
-                try {
-                    localStorage.setItem(DAILY_QUESTION_STORAGE_KEY, JSON.stringify({ date: today, data }));
-                } catch (e) { /* sessizce geç */ }
-                renderDailyQuestionCard(data);
+        const baseSeed = seededHash(today);
+        const pool = easyClubs;
+        for (let attempt = 0; attempt < 10; attempt++) {
+            const seed = baseSeed + attempt * 97;
+            const idx1 = ((seed % pool.length) + pool.length) % pool.length;
+            let idx2 = (((seed * 7 + 13) % pool.length) + pool.length) % pool.length;
+            if (idx2 === idx1) idx2 = (idx2 + 1) % pool.length;
+            const [club1, club2] = [pool[idx1], pool[idx2]];
+
+            try {
+                const res = await fetch(`/playerMode?clubs=${encodeURIComponent([club1, club2].join(','))}&isCountry=0,0`);
+                if (res.ok) {
+                    const data = await res.json();
+                    if (currentSport !== 'football') return; // 🛡️ bu arada basketbola geçilmişse kartı ezme
+                    if (data && data.playerName) {
+                        try {
+                            localStorage.setItem(DAILY_QUESTION_STORAGE_KEY, JSON.stringify({ date: today, data }));
+                        } catch (e) { /* sessizce geç */ }
+                        renderDailyQuestionCard(data);
+                        return; // 💡 bulundu, döngüyü bitir
+                    }
+                }
+            } catch (e) {
+                // sessizce geç, bir sonraki denemeye geç
             }
-        } catch (e) {
-            // sessizce geç — kart hiç görünmez, ana akış hiç etkilenmez
         }
     }
 
@@ -4192,30 +4217,39 @@
         const pool = todaysLeague === 'nba' ? nbaSuggestions : basketballSuggestions;
         if (pool.length < 2) return;
 
-        const seed = seededHash(today + '-bb-' + todaysLeague);
-        const idx1 = seed % pool.length;
-        let idx2 = (seed * 7 + 13) % pool.length;
-        if (idx2 === idx1) idx2 = (idx2 + 1) % pool.length;
-        const team1 = pool[idx1];
-        const team2 = pool[idx2];
+        // 🛡️ İlk seçilen çiftte ortak oyuncu bulunamayabilir (ör. dün yaşanan sorun:
+        // kart hiç güncellenmiyordu) — bu yüzden birden fazla DETERMİNİSTİK çift
+        // deniyoruz (herkese aynı gün aynı sonuç çıkması için hâlâ tarihe bağlı,
+        // ama bulana kadar ilerliyor).
+        const baseSeed = seededHash(today + '-bb-' + todaysLeague);
+        const endpoint = todaysLeague === 'nba' ? '/nba/commonPlayers' : '/basketball/commonPlayers';
 
-        try {
-            const endpoint = todaysLeague === 'nba' ? '/nba/commonPlayers' : '/basketball/commonPlayers';
-            const res = await fetch(`${endpoint}?team1=${encodeURIComponent(team1)}&team2=${encodeURIComponent(team2)}`);
-            if (res.ok) {
-                const players = await res.json();
-                if (currentSport !== 'basketball') return; // 🛡️ bu arada futbola geçilmişse kartı ezme
-                if (players && players.length > 0) {
-                    const chosen = players[Math.floor(Math.random() * players.length)];
-                    const data = { team1, team2, player: chosen };
-                    try {
-                        localStorage.setItem(storageKey, JSON.stringify({ date: today, data }));
-                    } catch (e) { /* sessizce geç */ }
-                    renderDailyQuestionCardBasketball(data);
+        for (let attempt = 0; attempt < 10; attempt++) {
+            const seed = baseSeed + attempt * 97; // 💡 her denemede farklı ama hâlâ deterministik
+            const idx1 = ((seed % pool.length) + pool.length) % pool.length;
+            let idx2 = (((seed * 7 + 13) % pool.length) + pool.length) % pool.length;
+            if (idx2 === idx1) idx2 = (idx2 + 1) % pool.length;
+            const team1 = pool[idx1];
+            const team2 = pool[idx2];
+
+            try {
+                const res = await fetch(`${endpoint}?team1=${encodeURIComponent(team1)}&team2=${encodeURIComponent(team2)}`);
+                if (res.ok) {
+                    const players = await res.json();
+                    if (currentSport !== 'basketball') return; // 🛡️ bu arada futbola geçilmişse kartı ezme
+                    if (players && players.length > 0) {
+                        const chosen = players[Math.floor(Math.random() * players.length)];
+                        const data = { team1, team2, player: chosen };
+                        try {
+                            localStorage.setItem(storageKey, JSON.stringify({ date: today, data }));
+                        } catch (e) { /* sessizce geç */ }
+                        renderDailyQuestionCardBasketball(data);
+                        return; // 💡 bulundu, döngüyü bitir
+                    }
                 }
+            } catch (e) {
+                // sessizce geç, bir sonraki denemeye geç
             }
-        } catch (e) {
-            // sessizce geç
         }
     }
 
@@ -4269,7 +4303,7 @@
         container.innerHTML = `
             <div class="daily-question-box">
                 <div style="font-size: 0.72rem; text-transform: uppercase; letter-spacing: 1.2px; color: var(--accent-gold); font-weight: 700;">
-                    📅 Günün Sorusu (${currentBasketballLeague === 'nba' ? '🇺🇸 NBA' : '🌍 Avrupa'}) — İki takımda da oynayan oyuncu kim?
+                    ${realCalendarIconHtml()} Günün Sorusu (${currentBasketballLeague === 'nba' ? '🇺🇸 NBA' : '🌍 Avrupa'}) — İki takımda da oynayan oyuncu kim?
                 </div>
                 <div style="display:flex; align-items:flex-start; gap: 20px; justify-content:center;">
                     ${teamBlockHtml(data.team1, data.player && data.player.team1Season)}
@@ -4375,7 +4409,7 @@
         container.innerHTML = `
             <div class="daily-question-box">
                 <div style="font-size: 0.72rem; text-transform: uppercase; letter-spacing: 1.2px; color: var(--accent-gold); font-weight: 700;">
-                    📅 Günün Sorusu — İki takımda da oynayan oyuncu kim?
+                    ${realCalendarIconHtml()} Günün Sorusu — İki takımda da oynayan oyuncu kim?
                 </div>
                 <div style="display:flex; align-items:flex-start; gap: 20px; justify-content:center;">
                     ${clubBlockHtml(clubA)}
@@ -4510,8 +4544,8 @@
                             Hangi kulüp havuzu?
                         </div>
                         <div class="player-mode-hint-row" style="margin-bottom: 16px;">
-                            <button id="duelModeGenelBtn" class="toolbar-btn active" data-mode="genel">🌍 Genel Ligler</button>
-                            <button id="duelModeTurkiyeBtn" class="toolbar-btn" data-mode="turkiye">🇹🇷 Türkiye Ligi</button>
+                            <button id="duelModeGenelBtn" class="toolbar-btn active" data-mode="genel">⚽ Genel Ligler</button>
+                            <button id="duelModeTurkiyeBtn" class="toolbar-btn" data-mode="turkiye">⚽ Türkiye Ligi</button>
                         </div>
                         <button id="duelMaskingToggleBtn" class="toolbar-btn" style="width: 100%; margin-bottom: 16px;">🎭 Maskeleme Yardımı: Kapalı</button>
                         <button id="duelCreateBtn" class="btn-search" style="width: 100%; margin-bottom: 20px;">Yeni Oda Kur</button>
@@ -5070,8 +5104,8 @@
                 <td colspan="5" style="padding: 40px 24px; text-align: center;">
                     <div class="player-mode-card">
                         <div class="quiz-win-title" style="font-size: 1.3rem;">🎮 Hangi modda oynamak istersin?</div>
-                        <button id="selectGenelModeBtn" class="toolbar-btn" style="width: 100%; margin-bottom: 12px; padding: 16px 14px; font-size: 0.82rem;">🌍 Genel Mod</button>
-                        <button id="selectTurkiyeModeBtn" class="toolbar-btn" style="width: 100%; margin-bottom: 12px; padding: 16px 14px; font-size: 0.82rem;">🇹🇷 Türkiye Ligi Modu</button>
+                        <button id="selectGenelModeBtn" class="toolbar-btn" style="width: 100%; margin-bottom: 12px; padding: 16px 14px; font-size: 0.82rem;">⚽ Genel Mod</button>
+                        <button id="selectTurkiyeModeBtn" class="toolbar-btn" style="width: 100%; margin-bottom: 12px; padding: 16px 14px; font-size: 0.82rem;">⚽ Türkiye Ligi Modu</button>
                         <button id="selectNbaModeBtn" class="toolbar-btn" style="width: 100%; margin-bottom: 12px; padding: 16px 14px; font-size: 0.82rem;">🏀 NBA</button>
                         <button id="selectEuroBasketModeBtn" class="toolbar-btn" style="width: 100%; padding: 16px 14px; font-size: 0.82rem;">🏀 Avrupa Basketbolu</button>
                         <div style="font-size: 0.72rem; color: rgba(var(--fg-rgb), 0.5); margin-top: 10px;">
@@ -5848,10 +5882,13 @@
                 ? `https://cdn.nba.com/headshots/nba/latest/1040x760/${player.nbaOfficialId}.png`
                 : getBasketballPlayerPhoto(player.name);
             const photoInner = photoUrl ? `<img src="${photoUrl}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" onerror="if(this.parentElement) this.parentElement.innerHTML='👤'">` : '👤';
+            const profileUrl = player.nbaOfficialId
+                ? `https://www.nba.com/player/${player.nbaOfficialId}`
+                : `https://www.google.com/search?q=${encodeURIComponent(player.name + ' basketball player')}`;
             nameCell.innerHTML = `
                 <div style="display:flex; align-items:center; gap:10px;">
                     <div class="bb-player-photo-box" data-player-name="${escapeHtml(player.name)}" style="width:32px;height:32px;border-radius:50%;background:rgba(var(--fg-rgb),0.08);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:1rem;overflow:hidden;">${photoInner}</div>
-                    <span>${escapeHtml(player.name)}</span>
+                    <a href="${profileUrl}" target="_blank" rel="noopener" style="color: inherit; text-decoration: none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">${escapeHtml(player.name)}</a>
                 </div>
             `;
 

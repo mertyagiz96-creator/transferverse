@@ -17,7 +17,7 @@ import kotlinx.coroutines.launch
 @Serializable data class DuelAnswerRequest(val roomCode: String, val playerName: String, val guess: String)
 @Serializable data class DuelPassRequest(val roomCode: String, val playerName: String)
 @Serializable data class NextRoundRequest(val roomCode: String)
-@Serializable data class QuizScoreSubmission(val score: Int)
+@Serializable data class QuizScoreSubmission(val score: Int, val mode: String = "genel")
 
 fun main() {
     val port = System.getenv("PORT")?.toIntOrNull() ?: 8080
@@ -134,14 +134,15 @@ fun main() {
                 call.respond(logos)
             }
 
-            // 🏆 Bil Bakalım global rekoru
+            // 🏆 Bil Bakalım rekoru — mod bazlı (Genel/Türkiye/NBA/Avrupa Basketbolu)
             get("/quiz/highscore") {
-                call.respond(mapOf("highScore" to DatabaseClient.fetchQuizHighScore()))
+                val mode = call.request.queryParameters["mode"] ?: "genel"
+                call.respond(mapOf("highScore" to DatabaseClient.fetchQuizHighScore(mode)))
             }
 
             post("/quiz/highscore") {
                 val body = call.receive<QuizScoreSubmission>()
-                val newRecord = DatabaseClient.submitQuizScore(body.score)
+                val newRecord = DatabaseClient.submitQuizScore(body.mode, body.score)
                 call.respond(mapOf("highScore" to newRecord))
             }
 
