@@ -129,6 +129,17 @@ fun main() {
                 call.respond(logos)
             }
 
+            // 📰 Günün Oyuncusu — tarihe göre sabit (herkese aynı gün aynı), gerçek veri
+            get("/dailyPlayerBio") {
+                val dateSeed = call.request.queryParameters["seed"]?.toIntOrNull() ?: 0
+                val bio = DatabaseClient.fetchDailyPlayerBio(dateSeed)
+                if (bio == null) {
+                    call.respond(HttpStatusCode.NotFound)
+                } else {
+                    call.respond(bio)
+                }
+            }
+
             get("/basketball/allLogos") {
                 val logos = DatabaseClient.fetchAllBasketballLogos()
                 call.respond(logos)

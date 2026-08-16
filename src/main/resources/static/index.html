@@ -1603,6 +1603,16 @@
                 font-size: 0.85rem;
             }
         }
+        /* 📢 GÜVENLİ VARSAYILAN: reklam kutuları varsayılan olarak GİZLİ —
+           sadece Google'ın script'i "filled" (gerçekten dolu) olarak
+           işaretlerse görünür oluyor. Onaysız hesapta, script hiç
+           çalışmasa/işaretlemese bile boşluk kalmıyor. */
+        ins.adsbygoogle {
+            display: none !important;
+        }
+        ins.adsbygoogle[data-ad-status="filled"] {
+            display: block !important;
+        }
     </style>
     <!-- 💡 Microsoft Clarity — ziyaretçi istatistikleri için. Tamamen tarayıcı
          tarafında çalışan, asenkron bir script; backend'e ve arama performansına
@@ -1782,16 +1792,21 @@
         </table>
     </div>
 
+    <p id="basketballCoverageNote" style="display: none; font-size: 0.76rem; color: rgba(var(--fg-rgb), 0.5); margin-top: 40px; margin-bottom: -20px;">
+        🏀 Basketbol modu EuroLeague, EuroCup ve NBA takımlarını içerir.
+    </p>
+
+    <div id="dailyPlayerBioSection" style="margin-top: 40px; padding-top: 30px; border-top: 1px solid rgba(var(--fg-rgb), 0.09); font-size: 0.88rem; line-height: 1.75; color: rgba(var(--fg-rgb), 0.75); display: none;">
+        <h2 style="font-size: 1.15rem; font-weight: 800; color: var(--accent-gold); margin-bottom: 14px;">📰 Günün Oyuncusu</h2>
+        <div id="dailyPlayerBioContent"></div>
+    </div>
+
     <div id="aboutContentSection" style="margin-top: 40px; padding-top: 30px; border-top: 1px solid rgba(var(--fg-rgb), 0.09); font-size: 0.88rem; line-height: 1.75; color: rgba(var(--fg-rgb), 0.75);">
-        <p id="basketballCoverageNote" style="display: none; font-size: 0.76rem; color: rgba(var(--fg-rgb), 0.5); margin-bottom: 6px;">
-            🏀 Basketbol modu EuroLeague, EuroCup ve NBA takımlarını içerir.
-        </p>
         <h2 style="font-size: 1.15rem; font-weight: 800; color: var(--accent-gold); margin-bottom: 14px;">TransferKolik Nedir?</h2>
         <p style="margin-bottom: 22px;">
             TransferKolik, futbolseverlerin bir oyuncunun kariyeri boyunca hangi kulüplerde ve milli takımda forma giydiğini kolayca araştırabildiği, Türkçe ve Türk futboluna odaklanmış ücretsiz bir platformdur. İki kulüp veya ülke ismi girerek, o iki takımda ortak oynamış tüm futbolcuları saniyeler içinde bulabilirsiniz — hem eski günlerin efsanelerini hatırlamak hem de bugünün transferlerini takip etmek için pratik bir araçtır. Aşağıda, sitedeki her modu ve özelliği daha ayrıntılı anlatıyoruz.
         </p>
 
-        <!-- 📢 Manuel reklam kutusu #1 — sadece gerçek, uzun içerikle çevrili, "Hakkımızda" bölümünün içinde (Bil Bakalım/Arkadaşla Yarış'a girince otomatik gizlenir). 9871800320 yerine AdSense panelinden oluşturduğunuz gerçek slot numarasını yazın. -->
         <ins class="adsbygoogle"
              style="display:block; margin: 20px 0;"
              data-ad-client="ca-pub-3295787676113049"
@@ -1835,7 +1850,6 @@
             TransferKolik'teki transfer geçmişi ve oyuncu bilgileri, halka açık futbol veritabanlarından derlenmiştir; kulüp logoları ve stadyum görselleri ise TheSportsDB ve Wikimedia Commons gibi kaynaklardan sağlanmaktadır. Veriler belirli bir tarihte alınmış bir görüntüyü yansıttığı için çok yakın zamanlı transferler henüz yer almayabilir. Site, herhangi bir kayıt gerektirmeden anında kullanılabilir ve masaüstü, tablet, mobil dahil tüm cihazlarla uyumludur.
         </p>
 
-        <!-- 📢 Manuel reklam kutusu #2 — bölümün en sonu, hâlâ gerçek içerikle çevrili. -->
         <ins class="adsbygoogle"
              style="display:block; margin: 24px 0 0 0;"
              data-ad-client="ca-pub-3295787676113049"
@@ -4046,6 +4060,8 @@
         if (sportToggleExit1) sportToggleExit1.style.display = 'flex';
         const aboutExit = document.getElementById('aboutContentSection');
         if (aboutExit) aboutExit.style.display = '';
+        const bioExit = document.getElementById('dailyPlayerBioSection');
+        if (bioExit && bioExit.dataset.hasContent) bioExit.style.display = 'block';
         document.getElementById('luckyModeBtn').style.display = '';
         document.getElementById('hunterModeWrapper').style.display = '';
         document.getElementById('yearFilterWrapper').style.display = '';
@@ -4150,6 +4166,114 @@
             hash |= 0;
         }
         return Math.abs(hash);
+    }
+
+    // 📰 Günün Oyuncusu — gerçek transfer verisinden, tarihe göre sabit (herkese
+    // aynı gün aynı oyuncu) doğal bir kariyer anlatısı oluşturuyor. Uydurma metin
+    // değil, /dailyPlayerBio'dan gelen gerçek kulüp/sezon verisiyle kuruluyor.
+    // 📰 Günün Oyuncusu'nda gösterim için — veritabanındaki İngilizce uyruk/mevki
+    // isimlerini Türkçeye çeviriyoruz (arama mantığına dokunmuyor, sadece bu metinde).
+    const nationalityToTurkish = {
+        'england': 'İngiltere', 'spain': 'İspanya', 'germany': 'Almanya', 'france': 'Fransa',
+        'italy': 'İtalya', 'portugal': 'Portekiz', 'netherlands': 'Hollanda', 'belgium': 'Belçika',
+        'brazil': 'Brezilya', 'argentina': 'Arjantin', 'turkey': 'Türkiye', 'croatia': 'Hırvatistan',
+        'sweden': 'İsveç', 'norway': 'Norveç', 'denmark': 'Danimarka', 'poland': 'Polonya',
+        'switzerland': 'İsviçre', 'austria': 'Avusturya', 'serbia': 'Sırbistan', 'greece': 'Yunanistan',
+        'russia': 'Rusya', 'ukraine': 'Ukrayna', 'wales': 'Galler', 'scotland': 'İskoçya',
+        'ireland': 'İrlanda', 'uruguay': 'Uruguay', 'colombia': 'Kolombiya', 'chile': 'Şili',
+        'mexico': 'Meksika', 'united states': 'ABD', 'canada': 'Kanada', 'japan': 'Japonya',
+        'south korea': 'Güney Kore', 'nigeria': 'Nijerya', 'cameroon': 'Kamerun', 'senegal': 'Senegal',
+        'ivory coast': 'Fildişi Sahili', "cote d'ivoire": 'Fildişi Sahili', 'ghana': 'Gana',
+        'morocco': 'Fas', 'algeria': 'Cezayir', 'egypt': 'Mısır', 'czech republic': 'Çekya',
+        'slovakia': 'Slovakya', 'hungary': 'Macaristan', 'romania': 'Romanya', 'bulgaria': 'Bulgaristan'
+    };
+
+    const positionToTurkish = {
+        'attack': 'Forvet', 'centre-forward': 'Santrafor', 'second striker': 'İkinci Forvet',
+        'right winger': 'Sağ Kanat', 'left winger': 'Sol Kanat',
+        'midfield': 'Orta Saha', 'central midfield': 'Merkez Orta Saha',
+        'defensive midfield': 'Defansif Orta Saha', 'attacking midfield': 'Ofansif Orta Saha',
+        'right midfield': 'Sağ Orta Saha', 'left midfield': 'Sol Orta Saha',
+        'defence': 'Defans', 'centre-back': 'Stoper', 'right-back': 'Sağ Bek', 'left-back': 'Sol Bek',
+        'goalkeeper': 'Kaleci'
+    };
+
+    function translateNationality(raw) {
+        if (!raw) return '';
+        const key = raw.trim().toLowerCase();
+        return nationalityToTurkish[key] || raw.trim();
+    }
+
+    function translatePosition(raw) {
+        if (!raw) return '';
+        // 💡 "Midfield - Central Midfield" gibi tekrarlı ifadelerde, en ANLAMLI
+        // (genelde sondaki, en spesifik) kısmı kullanıyoruz.
+        const parts = raw.split(/[-,]/).map(p => p.trim().toLowerCase()).filter(Boolean);
+        const specific = parts[parts.length - 1];
+        return positionToTurkish[specific] || positionToTurkish[parts[0]] || raw.trim();
+    }
+
+    async function loadDailyPlayerBio() {
+        const section = document.getElementById('dailyPlayerBioSection');
+        const content = document.getElementById('dailyPlayerBioContent');
+        if (!section || !content) return;
+
+        const today = getTodayDateString();
+        const seed = seededHash(today + '-player-bio');
+
+        try {
+            const res = await fetch(`/dailyPlayerBio?seed=${seed}`);
+            if (!res.ok) return;
+            const bio = await res.json();
+            if (!bio || !bio.name || !bio.careerMoves || bio.careerMoves.length === 0) return;
+            if (playerModeActive || duelActive) return; // 🛡️ yarış durumu güvenliği
+
+            // 🧹 VERİ TEMİZLİĞİ: bazı kayıtlarda geçersiz kulüp adları ("123" gibi
+            // sadece rakam) ya da art arda AYNI kulübün tekrarı (veri kalitesi
+            // sorunu) çıkabiliyor — ikisini de burada süzüyoruz.
+            const rawMoves = bio.careerMoves.filter(m => m.club && !/^\d+$/.test(m.club.trim()));
+            const moves = [];
+            for (const m of rawMoves) {
+                if (moves.length === 0 || moves[moves.length - 1].club !== m.club) {
+                    moves.push(m);
+                }
+            }
+            if (moves.length === 0) return;
+
+            const clubList = moves.map(m => m.club);
+            const firstClub = clubList[0];
+            const lastClub = clubList[clubList.length - 1];
+            const firstSeason = moves[0].season;
+            const turkishNationality = translateNationality(bio.nationality);
+            const turkishPosition = translatePosition(bio.position);
+
+            let paragraph1 = `${bio.name}`;
+            if (turkishPosition) paragraph1 += `, futbol kariyerinde ${turkishPosition} pozisyonunda forma giymiş`;
+            if (turkishNationality) paragraph1 += `, ${turkishNationality} uyruklu bir futbolcudur.`;
+            else paragraph1 += ` tanınmış bir futbolcudur.`;
+            paragraph1 += ` Kariyerine ${firstSeason} sezonunda ${firstClub} formasıyla başlayan ${bio.name.split(' ')[0]}, futbol hayatı boyunca toplam ${clubList.length} farklı kulüpte forma giydi.`;
+
+            let paragraph2 = '';
+            if (clubList.length > 1) {
+                const middleClubs = clubList.slice(1, -1);
+                if (middleClubs.length > 0) {
+                    paragraph2 = `${firstClub}'daki döneminin ardından sırasıyla ${middleClubs.join(', ')} formalarını giyen oyuncu, `;
+                } else {
+                    paragraph2 = `${firstClub}'daki döneminin ardından, `;
+                }
+                paragraph2 += `kariyerinin bilinen son durağı olarak ${lastClub} forması giydi.`;
+            }
+
+            const paragraph3 = `TransferKolik'te ${bio.name}'in tam transfer geçmişini, hangi kulüpte hangi sezonlarda oynadığını görmek için oyuncu ismini veya kulüplerinden birini arama kutusuna yazabilirsiniz.`;
+
+            content.innerHTML = `<p style="margin-bottom: 14px;">${paragraph1}</p>` +
+                (paragraph2 ? `<p style="margin-bottom: 14px;">${paragraph2}</p>` : '') +
+                `<p>${paragraph3}</p>`;
+            section.style.display = 'block';
+            section.dataset.hasContent = 'true';
+        } catch (e) {
+            // sessizce geç, bölüm gizli kalır
+        }
     }
 
     function pickDailyClubPair() {
@@ -4504,6 +4628,8 @@
         if (sportToggleEnter2) sportToggleEnter2.style.display = 'none';
         const aboutEnter = document.getElementById('aboutContentSection');
         if (aboutEnter) aboutEnter.style.display = 'none';
+        const bioEnter = document.getElementById('dailyPlayerBioSection');
+        if (bioEnter) bioEnter.style.display = 'none';
         document.getElementById('luckyModeBtn').style.display = 'none';
         document.getElementById('hunterModeWrapper').style.display = 'none';
         document.getElementById('yearFilterWrapper').style.display = 'none';
@@ -4531,6 +4657,8 @@
         if (sportToggleExit2) sportToggleExit2.style.display = 'flex';
         const aboutDuelExit = document.getElementById('aboutContentSection');
         if (aboutDuelExit) aboutDuelExit.style.display = '';
+        const bioDuelExit = document.getElementById('dailyPlayerBioSection');
+        if (bioDuelExit && bioDuelExit.dataset.hasContent) bioDuelExit.style.display = 'block';
         document.getElementById('luckyModeBtn').style.display = '';
         document.getElementById('hunterModeWrapper').style.display = '';
         document.getElementById('yearFilterWrapper').style.display = '';
@@ -5101,6 +5229,8 @@
             if (sportToggleEnter1) sportToggleEnter1.style.display = 'none';
             const aboutPlayerEnter = document.getElementById('aboutContentSection');
             if (aboutPlayerEnter) aboutPlayerEnter.style.display = 'none';
+            const bioPlayerEnter = document.getElementById('dailyPlayerBioSection');
+            if (bioPlayerEnter) bioPlayerEnter.style.display = 'none';
             luckyBtn.style.display = 'none';
             hunterWrapper.style.display = 'none';
             yearWrapper.style.display = 'none';
@@ -6056,6 +6186,7 @@
         loadBasketballLogosBulk();
         preloadStadiumPhotos(); // 🏟️ stadyum modu geciktirmesin diye önceden önbelleğe al
         loadDailyQuestion(); // 📅 arka planda, ana akışı hiç bekletmeden
+        loadDailyPlayerBio(); // 📰 Günün Oyuncusu, arka planda
         // 🏀 Basketbol takım listelerini de SPOR SEÇİMİNDEN BAĞIMSIZ, sayfa
         // açılır açılmaz arka planda yüklüyoruz. Rastgele Eşleşme butonu bu
         // promise'i izleyip, hazır olana kadar kendini pasif/"Yükleniyor" yapıyor

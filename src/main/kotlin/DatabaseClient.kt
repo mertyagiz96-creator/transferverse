@@ -943,6 +943,80 @@ object DatabaseClient {
         return RandomBasketballQuestion(found = false)
     }
 
+    // 📰 GÜNÜN OYUNCUSU — AdSense'in "gerçek, günlük değişen içerik" önerisi için.
+    // Tanınmış oyunculardan sabit bir havuzdan, TARİHE GÖRE (herkese aynı gün aynı
+    // oyuncu) birini seçip, GERÇEK transfer geçmişini veritabanından çekiyoruz —
+    // metin frontend'de bu gerçek veriden oluşturuluyor, uydurma değil.
+    private val dailyPlayerPool = listOf(
+        "Cristiano Ronaldo", "Lionel Messi", "Zlatan Ibrahimovic", "Wesley Sneijder",
+        "Didier Drogba", "Samuel Eto'o", "Arjen Robben", "Frank Lampard",
+        "Steven Gerrard", "Andrea Pirlo", "Xavi", "Andres Iniesta",
+        "Karim Benzema", "Luka Modric", "Sergio Ramos", "Gareth Bale",
+        "Robert Lewandowski", "Neymar", "Kylian Mbappe", "Erling Haaland",
+        "Hakan Sukur", "Arda Turan", "Nuri Sahin", "Emre Belozoglu",
+        "Rustu Recber", "Tuncay Sanli", "Burak Yilmaz", "Wesley Sneijder"
+    ).distinct()
+
+    @Serializable
+    data class DailyPlayerBio(
+        val name: String,
+        val position: String,
+        val nationality: String,
+        val imageUrl: String?,
+        val careerMoves: List<ClubSeason>
+    )
+
+    fun fetchDailyPlayerBio(dateSeed: Int): DailyPlayerBio? {
+        val playerName = dailyPlayerPool[((dateSeed % dailyPlayerPool.size) + dailyPlayerPool.size) % dailyPlayerPool.size]
+
+        var result: DailyPlayerBio? = null
+        try {
+            withConnection { conn ->
+                conn.prepareStatement(
+                    "SELECT id, name, position, nationality, image_url FROM players WHERE name LIKE ? LIMIT 1"
+                ).use { stmt ->
+                    stmt.setString(1, "%$playerName%")
+                    stmt.executeQuery().use { rs ->
+                        if (rs.next()) {
+                            val pId = rs.getInt("id")
+                            val fullName = rs.getString("name") ?: playerName
+                            val position = rs.getString("position") ?: ""
+                            val rawNat = rs.getString("nationality") ?: ""
+                            val imageUrl = rs.getString("image_url")
+
+                            val moves = mutableListOf<ClubSeason>()
+                            conn.prepareStatement(
+                                "SELECT from_club, to_club, season FROM transfers WHERE transfer_id = ? ORDER BY season ASC"
+                            ).use { stmt2 ->
+                                stmt2.setInt(1, pId)
+                                stmt2.executeQuery().use { rs2 ->
+                                    while (rs2.next()) {
+                                        val toClub = rs2.getString("to_club") ?: continue
+                                        val season = rs2.getString("season") ?: ""
+                                        if (!isYouthClub(toClub)) {
+                                            moves.add(ClubSeason(toClub, season))
+                                        }
+                                    }
+                                }
+                            }
+
+                            result = DailyPlayerBio(
+                                name = fullName.replace(Regex("\\s*\\(\\d+\\)\\s*"), "").trim(),
+                                position = position,
+                                nationality = cleanNationalityText(rawNat),
+                                imageUrl = imageUrl,
+                                careerMoves = moves
+                            )
+                        }
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            println("🔥 fetchDailyPlayerBio HATASI: ${e.message}")
+        }
+        return result
+    }
+
     fun fetchAllClubLogos(): Map<String, String> {
         val result = mutableMapOf<String, String>()
         try {
