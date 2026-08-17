@@ -5333,7 +5333,47 @@
         'milano': 'milan',
         'lizbon': 'sporting cp',
         'lisbon': 'sporting cp',
+        'sporting lizbon': 'sporting cp',
+        'sporting lisbon': 'sporting cp',
+        'atletico': 'atletico madrid',
+        'atlético': 'atletico madrid',
     };
+
+    // ⭐ ÖNCELİKLİ KULÜPLER — öneri listesinde bunlar ÜSTTE gösterilir (diğer
+    // tüm eşleşmeler de hâlâ görünür, sadece SIRALAMA değişiyor, hiçbir şey
+    // gizlenmiyor). "at" yazınca Atalanta'nın, 5. lig bir "At..." kulübünden
+    // önce çıkması için. Mevcut easyClubs/mediumClubs'ı temel alıp genişlettim.
+    const priorityClubsSet = new Set([
+        ...easyClubs, ...mediumClubs,
+        'Atalanta', 'Fulham', 'Beşiktaş', 'Fenerbahçe', 'Galatasaray', 'Trabzonspor',
+        'Napoli', 'AS Roma', 'Lazio', 'Sevilla', 'Villarreal', 'Atletico Madrid',
+        'Sporting CP', 'Benfica', 'Porto', 'Celtic', 'Rangers', 'PSV', 'Feyenoord',
+        'Ajax', 'RB Leipzig', 'Bayer Leverkusen', 'Schalke 04', 'Werder Bremen',
+        'Hertha BSC', 'VfB Stuttgart', 'Eintracht Frankfurt', 'VfL Wolfsburg',
+        'Borussia Monchengladbach', 'Union Berlin', 'FC Koln', 'Mainz 05',
+        'Lyon', 'Marseille', 'Monaco', 'Lille', 'River Plate', 'Boca Juniors',
+        'Flamengo', 'Palmeiras', 'Corinthians', 'Sao Paulo', 'Santos'
+    ].map(normalize));
+
+    // 🧹 Öneri listesindeki "aynı kulübün farklı yazımları" (örn. "Fulham" ve
+    // "Fulham FC") tekrarını, SADECE GÖRÜNÜMDE tekilleştiriyor — arka planda
+    // arama mantığı hiç değişmiyor, hangi yazımı seçerse seçsin aynı şekilde
+    // sorgulanıyor (mevcut fuzzy/substring eşleşme aynen çalışıyor).
+    const clubSuffixStripRegex = /\s+(fc|cf|sk|jk|cp|ac|sc|afc|bc|fk|kk|united|utd)$/i;
+    function coreNameFor(clubName) {
+        return normalize(clubName).replace(clubSuffixStripRegex, '').trim();
+    }
+    function dedupeSuggestions(list) {
+        const seenCores = new Map(); // core -> en kısa/temiz olan isim
+        for (const name of list) {
+            const core = coreNameFor(name);
+            const existing = seenCores.get(core);
+            if (!existing || name.length < existing.length) {
+                seenCores.set(core, name);
+            }
+        }
+        return Array.from(seenCores.values());
+    }
 
     function expandQueryWithAliases(normalizedQuery) {
         // 💡 Kullanıcının yazdığı, bilinen bir Türkçe takma adın İÇİNDE veya
@@ -5370,9 +5410,18 @@
             if (currentSport === 'basketball') {
                 sourceSuggestions = [...basketballSuggestions, ...nbaSuggestions];
             }
-            const matches = sourceSuggestions
-                .filter(s => normalize(s).includes(normalizedQuery) || (aliasExpansion && normalize(s).includes(aliasExpansion)))
-                .slice(0, 10);
+            const matches = dedupeSuggestions(
+                sourceSuggestions.filter(s => normalize(s).includes(normalizedQuery) || (aliasExpansion && normalize(s).includes(aliasExpansion)))
+            ).sort((a, b) => {
+                // 💡 Öncelikli kulüpler önce — tam eşleşme yerine esnek (substring)
+                // kontrol, veritabanındaki gerçek yazım biraz farklıysa bile çalışsın.
+                const aCore = coreNameFor(a);
+                const bCore = coreNameFor(b);
+                const aPriority = [...priorityClubsSet].some(p => aCore.includes(p) || p.includes(aCore)) ? 0 : 1;
+                const bPriority = [...priorityClubsSet].some(p => bCore.includes(p) || p.includes(bCore)) ? 0 : 1;
+                if (aPriority !== bPriority) return aPriority - bPriority;
+                return a.localeCompare(b);
+            }).slice(0, 10);
 
             dropdown.innerHTML = "";
             activeIndex = -1;
