@@ -2233,7 +2233,16 @@
         try {
             const response = await fetch('/clubLogos');
             if (response.ok) {
-                clubLogos = await response.json();
+                const raw = await response.json();
+                // 💡 KÖK DÜZELTME: backend'den gelen anahtarlar (club_name_std)
+                // sadece Türkçe karakterleri düzeltiyor, genel aksanları (é, á vb.)
+                // DEĞİL — ama bizim normalize() artık aksanları da temizliyor. Bu
+                // uyumsuzluğu önlemek için, gelen veriyi anahtarları AYNI şekilde
+                // (normalize ile) yeniden işleyerek saklıyoruz.
+                clubLogos = {};
+                for (const k in raw) {
+                    clubLogos[normalize(k)] = raw[k];
+                }
                 refreshClubLogoIcons();
                 preloadLuckyClubLogos();
             }
@@ -2305,7 +2314,7 @@
         'tottenham': 'https://tmssl.akamaized.net//images/wappen/head/148.png?lm=1732011953',
         'real madrid': 'https://tmssl.akamaized.net//images/wappen/head/418.png?lm=1729684474',
         'barcelona': 'https://tmssl.akamaized.net//images/wappen/head/131.png?lm=1406739548',
-        'atlético madrid': 'https://tmssl.akamaized.net//images/wappen/head/13.png?lm=1719915566',
+        'atletico madrid': 'https://tmssl.akamaized.net//images/wappen/head/13.png?lm=1719915566',
         'sevilla fc': 'https://tmssl.akamaized.net//images/wappen/head/368.png?lm=1730896593',
         'juventus': 'https://tmssl.akamaized.net//images/wappen/head/506.png?lm=1626441487',
         'inter': 'https://tmssl.akamaized.net//images/wappen/head/46.png?lm=1618900989',
@@ -2355,7 +2364,7 @@
         'ac milan': 'ac milan',
         'arsenal': 'arsenal fc',
         'barcelona': 'fc barcelona',
-        'atlético madrid': 'atlético de madrid',
+        'atletico madrid': 'atletico de madrid',
         'juventus': 'juventus fc',
         'napoli': 'ssc napoli',
         'paris sg': 'paris saint-germain',
