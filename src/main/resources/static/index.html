@@ -2419,25 +2419,26 @@
         // yoksa yanlışlıkla bir altyapı takımının logosu gelebiliyordu (Juventus'ta
         // yaşanan sorun buydu). Birden fazla aday varsa EN KISA ismi (genelde
         // A takımı) tercih ediyoruz.
+        //
+        // ⚡ HIZ İÇİN: eskiden bu iki arama (önce altyapı filtreli, sonra filtresiz
+        // yedek) AYRI AYRI 2174 kaydı TEKRAR TEKRAR tarıyordu — her tuş vuruşunda
+        // gözle görülür bir yavaşlığa yol açıyordu. Artık TEK GEÇİŞTE, ikisini de
+        // aynı anda takip ediyoruz.
         const youthLikePattern = /primavera|next gen|under|youth|yth|u1[5-9]|u2[0-3]|\bii\b|reserves|b-team|\bb$/i;
-        let bestMatch = null;
+        let bestMatch = null;      // altyapı hariç, en kısa aday
+        let bestAnyMatch = null;   // hiç filtre yok, son çare
         for (const k in clubLogos) {
-            if ((k.includes(key) || key.includes(k)) && !youthLikePattern.test(k)) {
-                if (!bestMatch || k.length < bestMatch.length) {
+            if (k.includes(key) || key.includes(k)) {
+                if (!bestAnyMatch || k.length < bestAnyMatch.length) {
+                    bestAnyMatch = k;
+                }
+                if (!youthLikePattern.test(k) && (!bestMatch || k.length < bestMatch.length)) {
                     bestMatch = k;
                 }
             }
         }
         if (bestMatch) return clubLogos[bestMatch];
-
-        // 🛡️ Son çare: yukarıdaki filtre YÜZÜNDEN hiçbir şey bulunamadıysa (örn.
-        // kulübün SADECE altyapı kaydı varsa), filtre olmadan tekrar dene —
-        // hiç logo göstermemektense en azından bir şey gösterelim.
-        for (const k in clubLogos) {
-            if (k.includes(key) || key.includes(k)) {
-                return clubLogos[k];
-            }
-        }
+        if (bestAnyMatch) return clubLogos[bestAnyMatch]; // 🛡️ sadece altyapı kaydı varsa, o da olsun
 
         // 💡 Hiçbir kaynakta yoksa, ANCAK O ZAMAN TheSportsDB'yi arka planda
         // deniyoruz — gelince refreshVisibleClubIcons/refreshClubLogoIcons ile
@@ -2481,7 +2482,7 @@
             const icon = document.getElementById(iconId);
             if (!input || !icon) return;
 
-            function updateIcon() {
+            function updateIconImmediate() {
                 const value = input.value.trim();
 
                 if (currentSport === 'basketball') {
@@ -2500,8 +2501,32 @@
                 icon.innerHTML = logoUrl ? `<img src="${logoUrl}" alt="" onerror="if(this.parentElement) this.parentElement.innerHTML=''">` : '';
             }
 
+            // ⚡ HIZ + KALİTELİ HİS İÇİN: gerçek yazarken (kullanıcı tuşa bastıkça)
+            // her harfte ANINDA aramaya çalışmak yerine — (1) 2 harften kısa
+            // girişte hiç arama yapmıyoruz (zaten anlamlı sonuç çıkmaz), (2) kısa
+            // bir gecikme (debounce) ile, kullanıcı yazmayı BIRAKTIKTAN hemen
+            // sonra tek bir arama yapıyoruz. Öneriye tıklama/Rastgele Eşleşme gibi
+            // TEK SEFERLİK, kasıtlı eylemler ise hâlâ ANINDA (gecikmesiz) güncelleniyor.
+            let debounceTimer = null;
+            function updateIcon() {
+                const value = input.value.trim();
+                if (debounceTimer) clearTimeout(debounceTimer);
+                if (value.length === 0) {
+                    icon.innerHTML = ''; // 💡 kutu boşsa hiçbir şey gösterme
+                    return;
+                }
+                if (value.length < 3) {
+                    // 💡 KALİTELİ HİS: henüz arama yapmaya değecek kadar uzun
+                    // değil, ama kullanıcı "bir şey oluyor mu" diye endişelenmesin
+                    // diye hafif bir "arıyor" göstergesi anında beliriyor.
+                    icon.innerHTML = '<span style="opacity:0.35; font-size:0.85em;">🔍</span>';
+                    return;
+                }
+                debounceTimer = setTimeout(updateIconImmediate, 120);
+            }
+
             input.addEventListener('input', updateIcon);
-            updaters.push(updateIcon);
+            updaters.push(updateIconImmediate);
         });
 
         refreshClubLogoIcons = () => updaters.forEach(fn => fn());
@@ -2824,6 +2849,7 @@
         const c2 = params.get('club2');
         if (c1) document.getElementById('club1Input').value = c1;
         if (c2) document.getElementById('club2Input').value = c2;
+        if ((c1 || c2) && typeof refreshClubLogoIcons === 'function') refreshClubLogoIcons();
     }
 
     const countryFlags = {
@@ -5378,8 +5404,13 @@
     // arama mantığı hiç değişmiyor, hangi yazımı seçerse seçsin aynı şekilde
     // sorgulanıyor (mevcut fuzzy/substring eşleşme aynen çalışıyor).
     const clubSuffixStripRegex = /\s+(fc|cf|sk|jk|cp|ac|sc|afc|bc|fk|kk|united|utd)$/i;
+    // 💡 "EA Guingamp" ↔ "Guingamp", "Olympique Marseille" ↔ "Marseille" gibi
+    // farkı BAŞTA olan yaygın kalıplar — sonek kadar yaygın, ayrıca kontrol ediyoruz.
+    const clubPrefixStripRegex = /^(ea|as|ac|sc|fc|us|es|cs|ogc|rc|asc|olympique|club)\s+/i;
     function coreNameFor(clubName) {
-        return normalize(clubName).replace(clubSuffixStripRegex, '').trim();
+        let core = normalize(clubName).replace(clubSuffixStripRegex, '').trim();
+        core = core.replace(clubPrefixStripRegex, '').trim();
+        return core;
     }
     function dedupeSuggestions(list) {
         const seenCores = new Map(); // core -> en kısa/temiz olan isim
@@ -5492,6 +5523,13 @@
                 item.addEventListener("mousedown", (e) => {
                     e.preventDefault();
                     input.value = displayName;
+                    // 💡 .value'yu kodla değiştirmek, tarayıcının 'input' olayını
+                    // kendiliğinden tetiklemiyor — ikon önizlemesini elle
+                    // güncelliyoruz. (Önceden sahte 'input' olayı fırlatıyorduk
+                    // ama bu, dropdown'ın kendi dinleyicisini de tetikleyip
+                    // kendini tekrar açmasına yol açıyordu — bu yüzden artık
+                    // doğrudan fonksiyon çağırıyoruz, olay fırlatmıyoruz.)
+                    if (typeof refreshClubLogoIcons === 'function') refreshClubLogoIcons();
                     closeDropdown();
                 });
 
@@ -5501,7 +5539,19 @@
             dropdown.style.display = "block";
         }
 
-        input.addEventListener("input", renderMatches);
+        // ⚡ HIZ İÇİN: bu fonksiyon, potansiyel olarak binlerce kulüp/ülke ismini
+        // filtreleyip sıralıyor — eskiden her harfte SENKRON çalışıyordu, bu da
+        // tarayıcının o an yazılan harfi EKRANA YANSITMASINI bile geciktirebiliyordu
+        // (JS ana iş parçacığını meşgul ettiği için). Artık kısa bir gecikmeyle
+        // (debounce) çalışıyor — yazı kutuya HER ZAMAN anında yansır, arama/sıralama
+        // ise kullanıcı kısa bir an durunca devreye giriyor.
+        let renderMatchesTimer = null;
+        function debouncedRenderMatches() {
+            if (renderMatchesTimer) clearTimeout(renderMatchesTimer);
+            renderMatchesTimer = setTimeout(renderMatches, 120);
+        }
+
+        input.addEventListener("input", debouncedRenderMatches);
         input.addEventListener("focus", renderMatches);
 
         input.addEventListener("blur", () => {
