@@ -2522,6 +2522,7 @@
             .replace(/ş/g, 's')
             .replace(/ö/g, 'o')
             .replace(/ç/g, 'c')
+            .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // 💡 é,á,ó,ñ vb. genel aksanları da temizler (Atlético→atletico gibi)
             .trim();
     }
 
@@ -5390,7 +5391,7 @@
     const priorityClubsSet = new Set([
         ...easyClubs, ...mediumClubs,
         'Atalanta', 'Fulham', 'Beşiktaş', 'Fenerbahçe', 'Galatasaray', 'Trabzonspor',
-        'Napoli', 'AS Roma', 'Lazio', 'Sevilla', 'Villarreal', 'Atletico Madrid', 'Olympiacos Piraeus',
+        'Napoli', 'AS Roma', 'Lazio', 'Sevilla', 'Villarreal', 'Atletico Madrid', 'Olympiacos Piraeus', 'SC Braga',
         'Sporting CP', 'Benfica', 'Porto', 'Celtic', 'Rangers', 'PSV', 'Feyenoord',
         'Ajax', 'RB Leipzig', 'Bayer Leverkusen', 'Schalke 04', 'Werder Bremen',
         'Hertha BSC', 'VfB Stuttgart', 'Eintracht Frankfurt', 'VfL Wolfsburg',
