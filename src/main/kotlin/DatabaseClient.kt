@@ -819,11 +819,29 @@ object DatabaseClient {
 
     // 🎯 Tam eşleşme kontrolü — "Inter" ile "Inter Miami" gibi, biri diğerinin
     // içinde geçen ama FARKLI kulüpleri ayırt etmek için kullanılıyor.
+    // 💡 Bazı kulüpler veritabanında hem "Atalanta" hem "Atalanta BC" gibi iki
+    // farklı yazımla geçebiliyor — aynı kulüp, sadece ek (BC/FC/CF/SK/AC/SC)
+    // farkı. Bu ekleri yok sayarak karşılaştırıyoruz ki "tam eşleşme" filtresi
+    // bu kulübün diğer yazımını (Merih Demiral'ın "Atalanta BC" kayıtları gibi)
+    // yanlışlıkla dışlamasın. "Inter" ile "Inter Miami" gibi GERÇEKTEN farklı
+    // kulüpler ise (şehir ismi bir ek değil) hâlâ doğru şekilde ayrı kalıyor.
+    private fun stripClubSuffix(s: String): String {
+        // 💡 Bilerek "ii", "u21", "u19" gibi genç/yedek takım göstergelerini EKLEMEDİK —
+        // onlar zaten isYouthClub() ile ayrı tutuluyor, buraya karışmamalı.
+        var result = s.replace(Regex("\\s+(bc|fc|cf|sk|ac|sc|afc|kk|fk|cp|sd|cd|if|bk|ff|bsc)$"), "").trim()
+        // 💡 Almanca kulüplerde bu kısaltmalar genelde BAŞTA olur (VfB Stuttgart,
+        // TSV München, SV Werder gibi) — sadece BELİRGİN olanları kontrol ediyoruz,
+        // genel "FC"/"SC" önekini kasıtlı olarak dahil etmedik (çok geniş, farklı
+        // kulüpleri yanlışlıkla birleştirme riski taşırdı).
+        result = result.replace(Regex("^(1\\.\\s*fc|vfb|vfl|tsv)\\s+"), "").trim()
+        return result
+    }
+
     private fun isExactClubMatch(clubName: String?, resolvedTarget: String): Boolean {
         if (clubName == null) return false
         val cleanClub = clubName.toStandardSearch()
         if (isYouthClub(cleanClub)) return false
-        return cleanClub == resolvedTarget
+        return cleanClub == resolvedTarget || stripClubSuffix(cleanClub) == stripClubSuffix(resolvedTarget)
     }
 
     // 💡 Sadece SADECE ilk/ana uyruğu baz alan kusursuz kontrol
