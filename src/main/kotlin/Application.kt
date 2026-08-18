@@ -129,6 +129,14 @@ fun main() {
                 call.respond(logos)
             }
 
+            // 📅 Sunucunun kendi tarihini döndürür — Günün Sorusu artık cihazın
+            // kendi saatine değil, buna göre hesaplanıyor. Böylece farklı saat
+            // dilimindeki/yanlış saatli cihazlar bile HERKESE AYNI günü görür.
+            get("/serverDate") {
+                val today = java.time.LocalDate.now(java.time.ZoneOffset.UTC).toString()
+                call.respond(mapOf("date" to today))
+            }
+
             // 📰 Günün Oyuncusu — tarihe göre sabit (herkese aynı gün aynı), gerçek veri
             get("/dailyPlayerBio") {
                 val dateSeed = call.request.queryParameters["seed"]?.toIntOrNull() ?: 0
