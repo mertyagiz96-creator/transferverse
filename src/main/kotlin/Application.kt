@@ -159,6 +159,21 @@ fun main() {
                 call.respond(mapOf("highScore" to DatabaseClient.fetchQuizHighScore(mode)))
             }
 
+            // 🗳️ Şampiyonluk Anketi
+            get("/poll/results") {
+                call.respond(DatabaseClient.fetchPollResults())
+            }
+
+            post("/poll/vote") {
+                val league = call.request.queryParameters["league"]
+                val team = call.request.queryParameters["team"]
+                if (league.isNullOrBlank() || team.isNullOrBlank()) {
+                    call.respond(HttpStatusCode.BadRequest)
+                    return@post
+                }
+                call.respond(DatabaseClient.submitPollVote(league, team))
+            }
+
             post("/quiz/highscore") {
                 val body = call.receive<QuizScoreSubmission>()
                 val newRecord = DatabaseClient.submitQuizScore(body.mode, body.score)

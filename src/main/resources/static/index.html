@@ -1621,6 +1621,14 @@
             max-height: 1000px; /* yeterince büyük bir üst sınır */
             opacity: 1;
         }
+        .fee-quiz-option:hover {
+            transform: translateY(-3px);
+            border-color: var(--accent-gold) !important;
+            background: rgba(255, 215, 0, 0.06) !important;
+        }
+        .fee-quiz-option:active {
+            transform: translateY(-1px);
+        }
     </style>
     <!-- 💡 Microsoft Clarity — ziyaretçi istatistikleri için. Tamamen tarayıcı
          tarafında çalışan, asenkron bir script; backend'e ve arama performansına
@@ -1737,16 +1745,6 @@
         </button>
     </div>
 
-    <p class="subtitle">İki Kulüp Arasındaki Ortak Oyuncular veya Kulüp / Ülke Araması</p>
-
-    <div id="dailyQuestionCard" style="display: block; width: 100%; max-width: 1150px; margin-bottom: 20px;">
-        <div class="daily-question-box">
-            <div style="font-size: 0.68rem; text-transform: uppercase; letter-spacing: 1.2px; color: rgba(var(--fg-rgb), 0.5); font-weight: 700;">
-                📅 Günün Sorusu hazırlanıyor...
-            </div>
-        </div>
-    </div>
-
     <div id="topLoader" class="top-loader">
         <div class="loader-track">
             <div class="rolling-ball">⚽</div>
@@ -1754,12 +1752,13 @@
         <span>Transferler Taranıyor...</span>
     </div>
 
-    <div id="sportToggleWrapper" style="display: flex; justify-content: flex-end; gap: 8px; margin-bottom: 14px;">
+    <div id="sportToggleWrapper" style="display: flex; justify-content: flex-end; gap: 8px; margin-bottom: 14px; flex-wrap: wrap;">
         <button id="sportFootballBtn" class="toolbar-btn active" data-sport="football">⚽ Futbol</button>
         <button id="sportBasketballBtn" class="toolbar-btn" data-sport="basketball">🏀 Basketbol</button>
     </div>
 
     <div class="search-card" style="position: relative;">
+        <p class="subtitle" style="grid-column: 1 / -1; margin: 0 0 4px 0;">İki Kulüp Arasındaki Ortak Oyuncular veya Kulüp / Ülke Araması</p>
         <div style="grid-column: 1 / -1; display: flex; justify-content: flex-end; margin-bottom: -6px;">
             <button id="luckyModeBtn" class="toolbar-btn" style="font-size: 0.62rem; padding: 6px 10px;" title="Rastgele iki takım/ülke seçer, aramayı siz başlatırsınız — tahmin oyunu için ideal">
                 🎲 Rastgele Eşleşme
@@ -1800,9 +1799,27 @@
         </table>
     </div>
 
+    <div id="dailyQuestionCard" style="display: block; width: 100%; max-width: 1150px; margin-bottom: 20px; margin-top: 30px;">
+        <div class="daily-question-box">
+            <div style="font-size: 0.68rem; text-transform: uppercase; letter-spacing: 1.2px; color: rgba(var(--fg-rgb), 0.5); font-weight: 700;">
+                📅 Günün Sorusu hazırlanıyor...
+            </div>
+        </div>
+    </div>
+
     <p id="basketballCoverageNote" style="display: none; font-size: 0.76rem; color: rgba(var(--fg-rgb), 0.5); margin-top: 40px; margin-bottom: -20px;">
         🏀 Basketbol modu EuroLeague, EuroCup ve NBA takımlarını içerir.
     </p>
+
+    <div id="championshipPollSection" style="margin-top: 40px; padding-top: 30px; border-top: 1px solid rgba(var(--fg-rgb), 0.09); display: none;">
+        <h2 style="font-size: 1.15rem; font-weight: 800; color: var(--accent-gold); margin-bottom: 14px;">🗳️ Bu Sezon Kim Şampiyon Olur?</h2>
+        <div id="championshipPollGrid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px;"></div>
+    </div>
+
+    <div id="transferFeeQuizSection" style="margin-top: 40px; padding-top: 30px; border-top: 1px solid rgba(var(--fg-rgb), 0.09); display: none;">
+        <h2 style="font-size: 1.15rem; font-weight: 800; color: var(--accent-gold); margin-bottom: 14px;">💰 Hangi Transfer Daha Pahalıydı?</h2>
+        <div id="transferFeeQuizContent"></div>
+    </div>
 
     <div id="dailyPlayerBioSection" style="margin-top: 40px; padding-top: 30px; border-top: 1px solid rgba(var(--fg-rgb), 0.09); font-size: 0.88rem; line-height: 1.75; color: rgba(var(--fg-rgb), 0.75); display: none;">
         <h2 style="font-size: 1.15rem; font-weight: 800; color: var(--accent-gold); margin-bottom: 14px;">📰 Günün Oyuncusu</h2>
@@ -4130,6 +4147,8 @@
         if (aboutExit) aboutExit.style.display = '';
         const bioExit = document.getElementById('dailyPlayerBioSection');
         if (bioExit && bioExit.dataset.hasContent) bioExit.style.display = 'block';
+        loadChampionshipPoll(); // 🗳️ ana ekrana dönünce güncel oylarla göster
+        loadTransferFeeQuiz(); // 💰 ana ekrana dönünce göster
         document.getElementById('luckyModeBtn').style.display = '';
         document.getElementById('hunterModeWrapper').style.display = '';
         document.getElementById('yearFilterWrapper').style.display = '';
@@ -4298,7 +4317,329 @@
         return positionToTurkish[specific] || positionToTurkish[parts[0]] || raw.trim();
     }
 
+    // 🗳️ ŞAMPİYONLUK ANKETİ — her lig için ayrı bir mini anket. Cihaz başına
+    // (localStorage ile) her ligde SADECE BİR KEZ oy kullanılabiliyor — mükemmel
+    // bir güvenlik değil (biri isterse localStorage'ı silip tekrar oy verebilir)
+    // ama günlük kullanım için makul, standart bir çözüm.
+    const POLL_LEAGUES = [
+        { key: 'turkey', label: '🇹🇷 Süper Lig', teams: ['Galatasaray', 'Fenerbahce'] },
+        { key: 'england', label: '🇬🇧 Premier League', teams: ['Arsenal', 'Manchester City'] },
+        { key: 'spain', label: '🇪🇸 La Liga', teams: ['Barcelona', 'Real Madrid'] },
+        { key: 'italy', label: '🇮🇹 Serie A', teams: ['Inter', 'Napoli'] }
+    ];
+
+    function hasVotedInPoll(leagueKey) {
+        try {
+            return localStorage.getItem('transferkolik_poll_voted_' + leagueKey) === 'true';
+        } catch (e) { return false; }
+    }
+    function markVotedInPoll(leagueKey) {
+        try {
+            localStorage.setItem('transferkolik_poll_voted_' + leagueKey, 'true');
+        } catch (e) { /* sessizce geç */ }
+    }
+
+
+    // 💰 HANGİ TRANSFER DAHA PAHALIYDI — 70 tanınmış, doğrulanmış ünlü transfer
+    // havuzu (gerçek bonservis rakamlarıyla). Her gün, tarihe göre sabit (herkese
+    // aynı gün aynı çift) 2 FARKLI transfer seçilip karşılaştırılıyor.
+    const famousTransfersPool = [
+        { player: 'Neymar', fromClub: 'Barcelona', toClub: 'Paris SG', fee: 222000000, season: '17/18' },
+        { player: 'Kylian Mbappé', fromClub: 'Monaco', toClub: 'Paris SG', fee: 180000000, season: '18/19' },
+        { player: 'Ousmane Dembélé', fromClub: 'Bor. Dortmund', toClub: 'Barcelona', fee: 148000000, season: '17/18' },
+        { player: 'Alexander Isak', fromClub: 'Newcastle', toClub: 'Liverpool', fee: 145000000, season: '25/26' },
+        { player: 'Philippe Coutinho', fromClub: 'Liverpool', toClub: 'Barcelona', fee: 135000000, season: '17/18' },
+        { player: 'João Félix', fromClub: 'Benfica', toClub: 'Atlético Madrid', fee: 127200000, season: '19/20' },
+        { player: 'Jude Bellingham', fromClub: 'Bor. Dortmund', toClub: 'Real Madrid', fee: 127000000, season: '23/24' },
+        { player: 'Florian Wirtz', fromClub: 'B. Leverkusen', toClub: 'Liverpool', fee: 125000000, season: '25/26' },
+        { player: 'Enzo Fernández', fromClub: 'Benfica', toClub: 'Chelsea', fee: 121000000, season: '22/23' },
+        { player: 'Eden Hazard', fromClub: 'Chelsea', toClub: 'Real Madrid', fee: 120800000, season: '19/20' },
+        { player: 'Antoine Griezmann', fromClub: 'Atlético Madrid', toClub: 'Barcelona', fee: 120000000, season: '19/20' },
+        { player: 'Jack Grealish', fromClub: 'Aston Villa', toClub: 'Man City', fee: 117500000, season: '21/22' },
+        { player: 'Cristiano Ronaldo', fromClub: 'Real Madrid', toClub: 'Juventus', fee: 117000000, season: '18/19' },
+        { player: 'Declan Rice', fromClub: 'West Ham', toClub: 'Arsenal', fee: 116600000, season: '23/24' },
+        { player: 'Moisés Caicedo', fromClub: 'Brighton', toClub: 'Chelsea', fee: 116000000, season: '23/24' },
+        { player: 'Romelu Lukaku', fromClub: 'Inter', toClub: 'Chelsea', fee: 113000000, season: '21/22' },
+        { player: 'Paul Pogba', fromClub: 'Juventus', toClub: 'Man Utd', fee: 105000000, season: '16/17' },
+        { player: 'Gareth Bale', fromClub: 'Tottenham', toClub: 'Real Madrid', fee: 101000000, season: '13/14' },
+        { player: 'Kai Havertz', fromClub: 'B. Leverkusen', toClub: 'Chelsea', fee: 100000000, season: '20/21' },
+        { player: 'Harry Kane', fromClub: 'Tottenham', toClub: 'Bayern Munich', fee: 95000000, season: '23/24' },
+        { player: 'Randal Kolo Muani', fromClub: 'E. Frankfurt', toClub: 'Paris SG', fee: 95000000, season: '23/24' },
+        { player: 'Antony', fromClub: 'Ajax', toClub: 'Man Utd', fee: 95000000, season: '22/23' },
+        { player: 'Hugo Ekitiké', fromClub: 'E. Frankfurt', toClub: 'Liverpool', fee: 95000000, season: '25/26' },
+        { player: 'Gonzalo Higuaín', fromClub: 'Napoli', toClub: 'Juventus', fee: 90000000, season: '16/17' },
+        { player: 'Frenkie de Jong', fromClub: 'Ajax', toClub: 'Barcelona', fee: 86000000, season: '19/20' },
+        { player: 'Matthijs de Ligt', fromClub: 'Ajax', toClub: 'Juventus', fee: 85500000, season: '19/20' },
+        { player: 'Darwin Núñez', fromClub: 'Benfica', toClub: 'Liverpool', fee: 85000000, season: '22/23' },
+        { player: 'Virgil van Dijk', fromClub: 'Southampton', toClub: 'Liverpool', fee: 84650000, season: '17/18' },
+        { player: 'Dušan Vlahović', fromClub: 'Fiorentina', toClub: 'Juventus', fee: 83500000, season: '21/22' },
+        { player: 'Luis Suárez', fromClub: 'Liverpool', toClub: 'Barcelona', fee: 81720000, season: '14/15' },
+        { player: 'Arthur Melo', fromClub: 'Barcelona', toClub: 'Juventus', fee: 80600000, season: '20/21' },
+        { player: 'Wesley Fofana', fromClub: 'Leicester', toClub: 'Chelsea', fee: 80400000, season: '22/23' },
+        { player: 'Kepa Arrizabalaga', fromClub: 'Athletic', toClub: 'Chelsea', fee: 80000000, season: '18/19' },
+        { player: 'Lucas Hernández', fromClub: 'Atlético Madrid', toClub: 'Bayern Munich', fee: 80000000, season: '19/20' },
+        { player: 'Nicolas Pépé', fromClub: 'LOSC Lille', toClub: 'Arsenal', fee: 80000000, season: '19/20' },
+        { player: 'Aurélien Tchouaméni', fromClub: 'Monaco', toClub: 'Real Madrid', fee: 80000000, season: '22/23' },
+        { player: 'Victor Osimhen', fromClub: 'LOSC Lille', toClub: 'Napoli', fee: 78900000, season: '20/21' },
+        { player: 'Zinédine Zidane', fromClub: 'Juventus', toClub: 'Real Madrid', fee: 77500000, season: '01/02' },
+        { player: 'Jhon Durán', fromClub: 'Aston Villa', toClub: 'Al-Nassr', fee: 77000000, season: '24/25' },
+        { player: 'Ángel Di María', fromClub: 'Real Madrid', toClub: 'Man Utd', fee: 75000000, season: '14/15' },
+        { player: 'James Rodríguez', fromClub: 'Monaco', toClub: 'Real Madrid', fee: 75000000, season: '14/15' },
+        { player: 'Alisson', fromClub: 'AS Roma', toClub: 'Liverpool', fee: 72500000, season: '18/19' },
+        { player: 'Thomas Lemar', fromClub: 'Monaco', toClub: 'Atlético Madrid', fee: 72000000, season: '18/19' },
+        { player: 'Rúben Dias', fromClub: 'Benfica', toClub: 'Man City', fee: 71600000, season: '20/21' },
+        { player: 'Casemiro', fromClub: 'Real Madrid', toClub: 'Man Utd', fee: 70650000, season: '22/23' },
+        { player: 'Martín Zubimendi', fromClub: 'Real Sociedad', toClub: 'Arsenal', fee: 70000000, season: '25/26' },
+        { player: 'Dominik Szoboszlai', fromClub: 'RB Leipzig', toClub: 'Liverpool', fee: 70000000, season: '23/24' },
+        { player: 'Luis Díaz', fromClub: 'Liverpool', toClub: 'Bayern Munich', fee: 70000000, season: '25/26' },
+        { player: 'Khvicha Kvaratskhelia', fromClub: 'Napoli', toClub: 'Paris SG', fee: 70000000, season: '24/25' },
+        { player: 'Mykhaylo Mudryk', fromClub: 'Shakhtar D.', toClub: 'Chelsea', fee: 70000000, season: '22/23' },
+        { player: 'Zlatan Ibrahimović', fromClub: 'Inter', toClub: 'Barcelona', fee: 69500000, season: '09/10' },
+        { player: 'Eberechi Eze', fromClub: 'Crystal Palace', toClub: 'Arsenal', fee: 69300000, season: '25/26' },
+        { player: 'Achraf Hakimi', fromClub: 'Inter', toClub: 'Paris SG', fee: 68000000, season: '21/22' },
+        { player: 'Mason Mount', fromClub: 'Chelsea', toClub: 'Man Utd', fee: 67700000, season: '23/24' },
+        { player: 'Kaká', fromClub: 'AC Milan', toClub: 'Real Madrid', fee: 67000000, season: '09/10' },
+        { player: 'Álvaro Morata', fromClub: 'Real Madrid', toClub: 'Chelsea', fee: 66000000, season: '17/18' },
+        { player: 'Viktor Gyökeres', fromClub: 'Sporting CP', toClub: 'Arsenal', fee: 65800000, season: '25/26' },
+        { player: 'Marc Cucurella', fromClub: 'Brighton', toClub: 'Chelsea', fee: 65300000, season: '22/23' },
+        { player: 'João Cancelo', fromClub: 'Juventus', toClub: 'Man City', fee: 65000000, season: '19/20' },
+        { player: 'Bruno Fernandes', fromClub: 'Sporting CP', toClub: 'Man Utd', fee: 65000000, season: '19/20' },
+        { player: 'Gonçalo Ramos', fromClub: 'Benfica', toClub: 'Paris SG', fee: 65000000, season: '23/24' },
+        { player: 'Xavi Simons', fromClub: 'RB Leipzig', toClub: 'Tottenham', fee: 65000000, season: '25/26' },
+        { player: 'Edinson Cavani', fromClub: 'Napoli', toClub: 'Paris SG', fee: 64500000, season: '13/14' },
+        { player: 'Dominic Solanke', fromClub: 'Bournemouth', toClub: 'Tottenham', fee: 64300000, season: '24/25' },
+        { player: 'Christian Pulisic', fromClub: 'Bor. Dortmund', toClub: 'Chelsea', fee: 64000000, season: '18/19' },
+        { player: 'Mohammed Kudus', fromClub: 'West Ham', toClub: 'Tottenham', fee: 63800000, season: '25/26' },
+        { player: 'Pierre-Emerick Aubameyang', fromClub: 'Bor. Dortmund', toClub: 'Arsenal', fee: 63750000, season: '17/18' },
+        { player: 'Raheem Sterling', fromClub: 'Liverpool', toClub: 'Man City', fee: 63700000, season: '15/16' },
+        { player: 'João Pedro', fromClub: 'Brighton', toClub: 'Chelsea', fee: 63700000, season: '25/26' },
+        { player: 'Luka Jović', fromClub: 'E. Frankfurt', toClub: 'Real Madrid', fee: 63000000, season: '19/20' },
+    ];
+
+    function hasAnsweredTransferQuiz(dateStr) {
+        try {
+            const raw = localStorage.getItem('transferkolik_fee_quiz');
+            if (!raw) return false;
+            const data = JSON.parse(raw);
+            return data.date === dateStr;
+        } catch (e) { return false; }
+    }
+    function markAnsweredTransferQuiz(dateStr, correct) {
+        try {
+            localStorage.setItem('transferkolik_fee_quiz', JSON.stringify({ date: dateStr, correct }));
+        } catch (e) { /* sessizce geç */ }
+    }
+    function formatFeeMillions(fee) {
+        return (fee / 1_000_000).toFixed(1).replace('.0', '') + 'M€';
+    }
+
+    function loadTransferFeeQuiz() {
+        const section = document.getElementById('transferFeeQuizSection');
+        const content = document.getElementById('transferFeeQuizContent');
+        if (!section || !content) return;
+        if (playerModeActive || duelActive || currentSport !== 'football') return; // 🛡️ sadece futbol ana ekranı
+
+        const today = getTodayDateString();
+        const seed = seededHash(today + '-fee-quiz');
+        // 💡 DÜZELTME: eskiden tamamen rastgele 2 tane seçiliyordu — bu bazen
+        // Neymar (222M) ile küçük bir transferi eşleştirip çok bariz bir soru
+        // yaratabiliyordu. Artık ücrete göre SIRALAYIP, birbirine YAKIN iki
+        // transferi eşleştiriyoruz — fark küçük, tahmin gerçekten zorlayıcı.
+        const sortedPool = [...famousTransfersPool].sort((a, b) => b.fee - a.fee);
+        const idx1 = seed % (sortedPool.length - 1); // son elemanı komşusuz bırakmasın diye -1
+        const idx2 = idx1 + 1; // sıralı listede HEMEN yanındaki (en yakın ücretli)
+        const t1 = sortedPool[idx1];
+        const t2 = sortedPool[idx2];
+
+        function renderCard(t, side, revealed, isWinner) {
+            const logoUrl = getClubLogo(t.toClub);
+            const logoHtml = logoUrl ? `<img src="${logoUrl}" alt="" style="width:30px; height:30px; object-fit:contain; margin-bottom:6px;" onerror="this.remove()">` : '<div style="height:36px;"></div>';
+            const feeHtml = revealed
+                ? `<div style="font-size:1.05rem; font-weight:900; color:${isWinner ? 'var(--accent-gold)' : 'rgb(var(--fg-rgb))'}; margin-top:8px;">${formatFeeMillions(t.fee)}</div>`
+                : '';
+            const winnerGlow = isWinner ? 'box-shadow: 0 0 0 2px var(--accent-gold); background:rgba(255,215,0,0.06);' : '';
+            const clickableAttrs = revealed ? '' : `class="fee-quiz-option" data-side="${side}" role="button" tabindex="0"`;
+            const clickableStyle = revealed ? '' : 'cursor:pointer;';
+
+            return `
+                <div ${clickableAttrs} style="flex:1; min-width:130px; max-width:160px; text-align:center; padding:12px 10px; background:rgba(var(--fg-rgb),0.04); border:1px solid rgba(var(--fg-rgb),0.1); border-radius:10px; ${winnerGlow} ${clickableStyle} display:flex; flex-direction:column; align-items:center; transition: transform 0.15s ease, border-color 0.15s ease, background 0.15s ease;">
+                    ${logoHtml}
+                    <div style="font-weight:700; font-size:0.78rem; margin-bottom:4px;">${escapeHtml(t.player)}</div>
+                    <div style="font-size:0.64rem; opacity:0.6; line-height:1.3;">${escapeHtml(t.fromClub)}<br>→ ${escapeHtml(t.toClub)}</div>
+                    <div style="font-size:0.6rem; opacity:0.45; margin-top:2px;">${t.season}</div>
+                    ${feeHtml}
+                </div>`;
+        }
+
+        const alreadyAnswered = hasAnsweredTransferQuiz(today);
+        const winnerSide = t1.fee >= t2.fee ? 'left' : 'right';
+
+        content.innerHTML = `
+            <div style="display:flex; gap:16px; flex-wrap:wrap; align-items:center; justify-content:center;">
+                ${renderCard(t1, 'left', alreadyAnswered, alreadyAnswered && winnerSide === 'left')}
+                <div style="display:flex; align-items:center; justify-content:center; width:36px; height:36px; border-radius:50%; background:rgba(var(--fg-rgb),0.08); font-weight:900; opacity:0.55; font-size:0.8rem; flex-shrink:0;">VS</div>
+                ${renderCard(t2, 'right', alreadyAnswered, alreadyAnswered && winnerSide === 'right')}
+            </div>
+            <div id="feeQuizFeedback" style="margin-top:14px; font-size:0.82rem; font-weight:600; text-align:center;"></div>
+        `;
+
+        if (alreadyAnswered) {
+            let savedCorrect = null;
+            try {
+                savedCorrect = JSON.parse(localStorage.getItem('transferkolik_fee_quiz')).correct;
+            } catch (e) {}
+            const feedback = document.getElementById('feeQuizFeedback');
+            if (feedback) {
+                feedback.textContent = savedCorrect ? '✅ Bugün doğru bildin!' : '❌ Bugün yanlış tahmin etmiştin — yarın tekrar dene!';
+                feedback.style.color = savedCorrect ? 'var(--accent-gold)' : 'rgba(var(--fg-rgb), 0.6)';
+            }
+        } else {
+            content.querySelectorAll('.fee-quiz-option').forEach(el => {
+                el.addEventListener('click', () => {
+                    const chosenSide = el.dataset.side;
+                    const correct = chosenSide === winnerSide;
+                    markAnsweredTransferQuiz(today, correct);
+                    loadTransferFeeQuiz(); // 💡 sonucu göstermek için yeniden çiz
+                });
+            });
+        }
+
+        section.style.display = 'block';
+    }
+
+    async function loadChampionshipPoll() {
+        const section = document.getElementById('championshipPollSection');
+        const grid = document.getElementById('championshipPollGrid');
+        if (!section || !grid) return;
+        if (playerModeActive || duelActive || currentSport !== 'football') return; // 🛡️ sadece futbol ana ekranı
+
+        try {
+            const res = await fetch('/poll/results');
+            if (!res.ok) return;
+            // 🧪 GEÇİCİ TEŞHİS AŞAMASI: veri boş gelse bile (örn. Supabase henüz
+            // yapılandırılmadıysa) UI'ı 0 oyla göstermeye devam ediyoruz — böylece
+            // görünüm/tasarım ayrı test edilebiliyor, veri sorunu ayrı çözülüyor.
+            let results = [];
+            try {
+                results = await res.json();
+                if (!Array.isArray(results)) results = [];
+            } catch (e) {
+                results = [];
+            }
+
+            grid.innerHTML = '';
+            POLL_LEAGUES.forEach(leagueInfo => {
+                const card = document.createElement('div');
+                card.style.cssText = 'background: rgba(var(--fg-rgb), 0.04); border: 1px solid rgba(var(--fg-rgb), 0.09); border-radius: 10px; padding: 14px;';
+
+                const teamVotes = leagueInfo.teams.map(team => {
+                    const found = results.find(r => r.league === leagueInfo.key && r.team === team);
+                    return { team, votes: found ? found.votes : 0 };
+                });
+                const totalVotes = teamVotes.reduce((sum, t) => sum + t.votes, 0);
+                const voted = hasVotedInPoll(leagueInfo.key);
+
+                let html = `<div style="font-size:0.82rem; font-weight:700; margin-bottom:10px; color: rgb(var(--fg-rgb));">${leagueInfo.label}</div>`;
+
+                teamVotes.forEach(({ team, votes }) => {
+                    const pct = totalVotes > 0 ? Math.round((votes / totalVotes) * 100) : 50;
+                    const logoUrl = getClubLogo(team);
+                    const logoHtml = logoUrl ? `<img src="${logoUrl}" alt="" style="width:20px; height:20px; object-fit:contain; margin-right:6px; vertical-align:-5px;" onerror="this.remove()">` : '';
+
+                    if (voted) {
+                        html += `
+                            <div style="margin-bottom:8px;">
+                                <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.78rem; margin-bottom:3px;">
+                                    <span>${logoHtml}${escapeHtml(team)}</span>
+                                    <span style="font-weight:700;">%${pct}</span>
+                                </div>
+                                <div style="height:6px; background:rgba(var(--fg-rgb),0.08); border-radius:3px; overflow:hidden;">
+                                    <div style="height:100%; width:${pct}%; background:var(--accent-gold); border-radius:3px;"></div>
+                                </div>
+                            </div>`;
+                    } else {
+                        html += `
+                            <button class="poll-vote-btn" data-league="${leagueInfo.key}" data-team="${escapeHtml(team)}"
+                                style="display:flex; align-items:center; width:100%; padding:8px 10px; margin-bottom:6px; background:rgba(var(--fg-rgb),0.06); border:1px solid rgba(var(--fg-rgb),0.12); border-radius:6px; color:rgb(var(--fg-rgb)); font-size:0.8rem; font-weight:600; cursor:pointer; text-align:left;">
+                                ${logoHtml}${escapeHtml(team)}
+                            </button>`;
+                    }
+                });
+
+                if (voted) {
+                    html += `<div style="font-size:0.68rem; opacity:0.5; margin-top:4px;">Toplam ${totalVotes} oy</div>`;
+                }
+
+                card.innerHTML = html;
+                grid.appendChild(card);
+            });
+
+            // 🗳️ Oy verme butonlarına tıklama
+            grid.querySelectorAll('.poll-vote-btn').forEach(btn => {
+                btn.addEventListener('click', async () => {
+                    const league = btn.dataset.league;
+                    const team = btn.dataset.team;
+                    if (hasVotedInPoll(league)) return; // 🛡️ çift tıklama koruması
+                    markVotedInPoll(league);
+                    try {
+                        await fetch(`/poll/vote?league=${encodeURIComponent(league)}&team=${encodeURIComponent(team)}`, { method: 'POST' });
+                    } catch (e) { /* sessizce geç */ }
+                    loadChampionshipPoll(); // 💡 sonucu güncel oylarla yeniden çiz
+                });
+            });
+
+            section.style.display = 'block';
+        } catch (e) {
+            // sessizce geç, bölüm gizli kalır
+        }
+    }
+
+    // 🏀 Basketbol için SABİT, koda gömülü 14 oyuncu havuzu (7 NBA + 7 Avrupa) —
+    // futboldaki gibi canlı veritabanı sorgusu YOK, elle yazılmış kısa tanıtımlar.
+    const basketballBioPool = [
+        { name: 'LeBron James', league: 'NBA', bio: 'Kariyerine 2003 yılında Cleveland Cavaliers formasıyla başlayan LeBron James, 2010\'da Miami Heat\'e transfer olup burada 2 şampiyonluk kazandı. 2014\'te memleket takımı Cleveland\'a geri dönerek şehre ilk NBA şampiyonluğunu yaşattı, ardından 2018\'de Los Angeles Lakers\'a katılıp burada da bir şampiyonluk daha kazandı. Basketbol tarihinin en uzun soluklu ve en çok konuşulan yıldızlarından biri olarak, kariyeri boyunca 4 farklı takımda (Cleveland\'da iki ayrı dönem dahil) forma giydi.' },
+        { name: 'Kevin Durant', league: 'NBA', bio: 'Kariyerine 2007\'de Seattle SuperSonics formasıyla başlayan Kevin Durant, takımın Oklahoma City\'ye taşınmasıyla Thunder forması giymeye devam etti ve burada MVP ödülü kazandı. 2016\'da tartışmalı bir kararla Golden State Warriors\'a transfer olup üst üste 2 şampiyonluk ve 2 Finals MVP ödülü kazandı. Ardından Brooklyn Nets\'e, son olarak da Phoenix Suns\'a transfer olan Durant, kariyeri boyunca tarihin en isabetli skorer\'lerinden biri olarak anıldı.' },
+        { name: 'Chris Paul', league: 'NBA', bio: 'Kariyerine 2005\'te New Orleans Hornets formasıyla başlayan Chris Paul, sonrasında sırasıyla LA Clippers, Houston Rockets, Oklahoma City Thunder, Phoenix Suns, Golden State Warriors ve San Antonio Spurs formalarını giydi. NBA tarihinin en çok takım değiştiren yıldız oyun kurucularından biri olan Paul, asist ve top çalma istatistiklerinde uzun yıllar liginin zirvesinde yer aldı, ama bir türlü şampiyonluk kupasını kaldıramadı.' },
+        { name: 'James Harden', league: 'NBA', bio: 'Kariyerine 2009\'da Oklahoma City Thunder formasıyla başlayan James Harden, 2012\'de Houston Rockets\'a transfer olup burada liginin en üretken skorer\'lerinden biri hâline geldi ve MVP ödülü kazandı. Ardından sırasıyla Brooklyn Nets, Philadelphia 76ers ve LA Clippers formalarını giyen Harden, kariyeri boyunca serbest atış ve üçlük istatistiklerinde tarihin en iyileri arasında yer aldı, özgün oyun stiliyle tanındı.' },
+        { name: 'Russell Westbrook', league: 'NBA', bio: 'Kariyerine 2008\'de Oklahoma City Thunder formasıyla başlayan Russell Westbrook, burada MVP ödülü kazanıp bir sezon boyunca ortalama triple-double istatistiği tutturarak tarihe geçti. Sonrasında sırasıyla Houston Rockets, Washington Wizards, LA Lakers, LA Clippers ve Denver Nuggets formalarını giyen Westbrook, enerjik oyun tarzı ve triple-double rekorlarıyla liginin en dikkat çekici isimlerinden biri oldu.' },
+        { name: 'Kawhi Leonard', league: 'NBA', bio: 'Kariyerine 2011\'de San Antonio Spurs formasıyla başlayan Kawhi Leonard, burada bir şampiyonluk kazanıp Finals MVP ödülü aldı. 2018\'de Toronto Raptors\'a transfer olarak takıma ilk NBA şampiyonluğunu yaşattı ve ikinci Finals MVP ödülünü kazandı, ardından LA Clippers\'a katıldı. Sessiz kişiliği ve savunmadaki üstünlüğüyle tanınan Leonard, kariyeri boyunca sakatlıklarla da mücadele etti.' },
+        { name: 'Kyrie Irving', league: 'NBA', bio: 'Kariyerine 2011\'de Cleveland Cavaliers formasıyla başlayan Kyrie Irving, LeBron James ile birlikte oynadığı dönemde takıma ilk NBA şampiyonluğunu yaşattı. 2017\'de Boston Celtics\'e, ardından Brooklyn Nets\'e ve son olarak Dallas Mavericks\'e transfer olan Irving, top sürme becerisi ve bitiricilik yeteneğiyle liginin en yetenekli oyuncularından biri olarak kabul edildi.' },
+        { name: 'Nikola Mirotic', league: 'Avrupa', bio: 'Kariyerine İspanyol devi Real Madrid altyapısında başlayan Nikola Mirotic, burada Avrupa\'nın en yetenekli genç forvetlerinden biri olarak öne çıktı. NBA\'e geçip Chicago Bulls, New Orleans Pelicans ve Milwaukee Bucks formalarını giyen Karadağlı oyuncu, kariyerinin ilerleyen döneminde Avrupa\'ya dönüp FC Barcelona\'ya katıldı ve burada da başarılı performanslar sergiledi.' },
+        { name: 'Vasilije Micic', league: 'Avrupa', bio: 'Sırbistanlı Mega Basket ve Partizan\'ın ardından Anadolu Efes formasına kavuşan Vasilije Micic, burada EuroLeague şampiyonluğu yaşayıp ligin MVP\'si seçildi. Başarılarının ardından NBA\'e transfer olup Oklahoma City Thunder ve Phoenix Suns formalarını giyen oyun kurucu, sonrasında Real Madrid\'e transfer oldu ve Avrupa basketboluna geri döndü.' },
+        { name: 'Nando de Colo', league: 'Avrupa', bio: 'Fransız basketbolunun önemli isimlerinden Nando de Colo, CSKA Moskova ile uzun yıllar boyunca EuroLeague\'in en başarılı takımlarından birinde forma giyip çok sayıda şampiyonluk kazandı. Ardından Fenerbahçe\'ye transfer olup burada da başarılı bir dönem geçiren de Colo, kariyerinin ilerleyen döneminde İtalyan ekibi Virtus Bologna formasını giydi.' },
+        { name: 'Facundo Campazzo', league: 'Avrupa', bio: 'Arjantinli oyun kurucu Facundo Campazzo, Real Madrid ile Avrupa basketbolunda yıldızlaşıp çok sayıda EuroLeague ve İspanya Ligi şampiyonluğu kazandı. Kısa bir süreliğine NBA\'e geçip Denver Nuggets formasını giyen Campazzo, ardından tekrar Real Madrid\'e dönerek Avrupa\'daki başarılı kariyerine devam etti, hızlı oyun tarzı ve pas yeteneğiyle tanındı.' },
+        { name: 'Mike James', league: 'Avrupa', bio: 'Amerikalı oyun kurucu Mike James, kariyeri boyunca Panathinaikos, CSKA Moskova ve AS Monaco gibi EuroLeague\'in önde gelen kulüplerinde forma giydi. Farklı ülkelerde ve liglerde geçirdiği uzun kariyeri boyunca yüksek sayı ortalamalarıyla dikkat çeken James, Avrupa basketbolunun en üretken ve tanınan oyun kurucularından biri olarak kabul ediliyor.' },
+        { name: 'Kostas Sloukas', league: 'Avrupa', bio: 'Yunan basketbolunun önemli isimlerinden Kostas Sloukas, kariyeri boyunca Olympiacos, Maccabi Tel Aviv, Fenerbahçe ve Panathinaikos gibi Avrupa\'nın en köklü kulüplerinde forma giydi. Çok sayıda EuroLeague şampiyonluğu ve final dörtlüsü deneyimi yaşayan Sloukas, oyun kurucu pozisyonunda gösterdiği liderlik ve deneyimle Yunan basketbol tarihinin en başarılı isimlerinden biri oldu.' },
+        { name: 'Bogdan Bogdanovic', league: 'Avrupa', bio: 'Sırp basketbolunun yıldızı Bogdan Bogdanovic, Partizan ve Fenerbahçe formalarıyla Avrupa\'da adından söz ettirip EuroLeague şampiyonluğu kazandı. Başarılarının ardından NBA\'e transfer olup sırasıyla Sacramento Kings, Atlanta Hawks ve LA Clippers formalarını giyen Bogdanovic, üçlük atışlarındaki isabet oranı ve çok yönlü oyun tarzıyla liginin dikkat çeken isimlerinden biri hâline geldi.' }
+    ];
+
+    function renderBasketballBio() {
+        const section = document.getElementById('dailyPlayerBioSection');
+        const content = document.getElementById('dailyPlayerBioContent');
+        if (!section || !content) return;
+        if (playerModeActive || duelActive || currentSport !== 'basketball') return;
+
+        const today = getTodayDateString();
+        const seed = seededHash(today + '-bb-player-bio');
+        const idx = seed % basketballBioPool.length;
+        const player = basketballBioPool[idx];
+
+        content.innerHTML = `
+            <p style="margin-bottom: 10px;">
+                <span style="font-size:0.85rem; font-weight:800; color:var(--accent-gold); text-transform:uppercase; letter-spacing:0.5px;">${player.league}</span>
+            </p>
+            <p style="margin-bottom: 14px;">${player.bio}</p>
+            <p>TransferKolik'te ${player.name}'in tam takım geçmişini görmek için, oynadığı kulüplerden birini "1. Takım" ya da "2. Takım" kutusuna yazıp arayabilirsiniz.</p>
+        `;
+        section.style.display = 'block';
+        section.dataset.hasContent = 'true';
+    }
+
     async function loadDailyPlayerBio() {
+        if (currentSport === 'basketball') {
+            renderBasketballBio();
+            return;
+        }
         const section = document.getElementById('dailyPlayerBioSection');
         const content = document.getElementById('dailyPlayerBioContent');
         if (!section || !content) return;
@@ -4715,6 +5056,10 @@
         if (aboutEnter) aboutEnter.style.display = 'none';
         const bioEnter = document.getElementById('dailyPlayerBioSection');
         if (bioEnter) bioEnter.style.display = 'none';
+        const pollEnter = document.getElementById('championshipPollSection');
+        if (pollEnter) pollEnter.style.display = 'none';
+        const feeQuizEnter = document.getElementById('transferFeeQuizSection');
+        if (feeQuizEnter) feeQuizEnter.style.display = 'none';
         document.getElementById('luckyModeBtn').style.display = 'none';
         document.getElementById('hunterModeWrapper').style.display = 'none';
         document.getElementById('yearFilterWrapper').style.display = 'none';
@@ -4744,6 +5089,8 @@
         if (aboutDuelExit) aboutDuelExit.style.display = '';
         const bioDuelExit = document.getElementById('dailyPlayerBioSection');
         if (bioDuelExit && bioDuelExit.dataset.hasContent) bioDuelExit.style.display = 'block';
+        loadChampionshipPoll(); // 🗳️ ana ekrana dönünce güncel oylarla göster
+        loadTransferFeeQuiz(); // 💰 ana ekrana dönünce göster
         document.getElementById('luckyModeBtn').style.display = '';
         document.getElementById('hunterModeWrapper').style.display = '';
         document.getElementById('yearFilterWrapper').style.display = '';
@@ -5316,6 +5663,10 @@
             if (aboutPlayerEnter) aboutPlayerEnter.style.display = 'none';
             const bioPlayerEnter = document.getElementById('dailyPlayerBioSection');
             if (bioPlayerEnter) bioPlayerEnter.style.display = 'none';
+            const pollPlayerEnter = document.getElementById('championshipPollSection');
+            if (pollPlayerEnter) pollPlayerEnter.style.display = 'none';
+            const feeQuizPlayerEnter = document.getElementById('transferFeeQuizSection');
+            if (feeQuizPlayerEnter) feeQuizPlayerEnter.style.display = 'none';
             luckyBtn.style.display = 'none';
             hunterWrapper.style.display = 'none';
             yearWrapper.style.display = 'none';
@@ -6131,6 +6482,16 @@
         basketballBtn.classList.toggle('active', sport === 'basketball');
         const coverageNote = document.getElementById('basketballCoverageNote');
         if (coverageNote) coverageNote.style.display = (sport === 'basketball') ? 'block' : 'none';
+        if (sport === 'football') {
+            loadChampionshipPoll(); // 🗳️ futbola dönünce göster
+            loadTransferFeeQuiz(); // 💰 futbola dönünce göster
+        } else {
+            const pollSection = document.getElementById('championshipPollSection');
+            if (pollSection) pollSection.style.display = 'none';
+            const feeQuizSection = document.getElementById('transferFeeQuizSection');
+            if (feeQuizSection) feeQuizSection.style.display = 'none';
+        }
+        loadDailyPlayerBio(); // 📰/🏀 spor değişince doğru içerikle yeniden çiz
 
         const colMevki = document.getElementById('colMevki');
         const colUyruk = document.getElementById('colUyruk');
@@ -6369,6 +6730,8 @@
             await syncServerDate();
             loadDailyQuestion();
             loadDailyPlayerBio();
+            loadChampionshipPoll();
+            loadTransferFeeQuiz();
         })();
         // 🏀 Basketbol takım listelerini de SPOR SEÇİMİNDEN BAĞIMSIZ, sayfa
         // açılır açılmaz arka planda yüklüyoruz. Rastgele Eşleşme butonu bu

@@ -32,6 +32,13 @@ data class MultiClubPlayerResult(
 @Serializable
 data class SupabaseHighScoreInsert(val id: Int, val score: Int)
 
+// 🗳️ Şampiyonluk Anketi — Supabase'teki poll_votes tablosunu okuyup güncelliyor.
+@Serializable
+data class PollOption(val league: String, val team: String, val votes: Int)
+
+@Serializable
+data class PollVoteUpdate(val votes: Int)
+
 object DatabaseClient {
 
     private val countryMap = mapOf(
@@ -236,6 +243,54 @@ object DatabaseClient {
             println("🔥 Supabase rekor yazma hatası: ${e.message}")
             current
         }
+    }
+
+    // 🗳️ ŞAMPİYONLUK ANKETİ — Supabase'teki poll_votes tablosunu okuyup güncelliyor.
+    // Rekor sistemiyle aynı ruhta: Render'ın kalıcı olmayan diskine değil,
+    // Supabase'in kalıcı Postgres'ine yazıyoruz ki oylar kaybolmasın.
+    fun fetchPollResults(): List<PollOption> = kotlinx.coroutines.runBlocking { fetchPollResultsSuspend() }
+
+    fun submitPollVote(league: String, team: String): List<PollOption> = kotlinx.coroutines.runBlocking { submitPollVoteSuspend(league, team) }
+
+    private suspend fun fetchPollResultsSuspend(): List<PollOption> {
+        if (supabaseUrl == null || supabaseKey == null) return emptyList()
+        return try {
+            val response: HttpResponse = httpClient.get("$supabaseUrl/rest/v1/poll_votes") {
+                header("apikey", supabaseKey)
+                header("Authorization", "Bearer $supabaseKey")
+                parameter("select", "league,team,votes")
+            }
+            val body = response.bodyAsText()
+            Json.decodeFromString<List<PollOption>>(body)
+        } catch (e: Exception) {
+            println("🔥 Anket okuma hatası: ${e.message}")
+            emptyList()
+        }
+    }
+
+    // 💡 Basit oku-artır-yaz mantığı (rekor sistemiyle aynı) — çok nadir, aynı
+    // anda iki oy gelirse teorik olarak biri kaybolabilir ama bu ölçekte
+    // (küçük bir anket) kabul edilebilir bir basitleştirme.
+    private suspend fun submitPollVoteSuspend(league: String, team: String): List<PollOption> {
+        if (supabaseUrl == null || supabaseKey == null) return emptyList()
+        try {
+            val current = fetchPollResultsSuspend()
+            val currentVotes = current.firstOrNull { it.league == league && it.team == team }?.votes ?: 0
+            val response = httpClient.patch("$supabaseUrl/rest/v1/poll_votes") {
+                header("apikey", supabaseKey)
+                header("Authorization", "Bearer $supabaseKey")
+                header("Content-Type", "application/json")
+                parameter("league", "eq.$league")
+                parameter("team", "eq.$team")
+                setBody(PollVoteUpdate(currentVotes + 1))
+            }
+            if (!response.status.isSuccess()) {
+                println("🔥 Anket oy yazma hatası: HTTP ${response.status} — ${response.bodyAsText()}")
+            }
+        } catch (e: Exception) {
+            println("🔥 Anket oy yazma hatası: ${e.message}")
+        }
+        return fetchPollResultsSuspend()
     }
 
     private fun createConnectionPool(): java.util.concurrent.BlockingQueue<Connection> {
