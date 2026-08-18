@@ -1607,11 +1607,19 @@
            sadece Google'ın script'i "filled" (gerçekten dolu) olarak
            işaretlerse görünür oluyor. Onaysız hesapta, script hiç
            çalışmasa/işaretlemese bile boşluk kalmıyor. */
+        /* 💡 DÜZELTME: display:none, kutunun GENİŞLİĞİNİ de 0 yapıyordu — reklam
+           kodu duyarlı boyut için genişliği ölçemeyince hata veriyordu ("no slot
+           size for available width=0") ve muhtemelen hiç "dolu" duruma geçemiyordu.
+           Bunun yerine genişliği koruyup sadece yüksekliği/görünürlüğü kısıyoruz. */
         ins.adsbygoogle {
-            display: none !important;
+            max-height: 0;
+            overflow: hidden;
+            opacity: 0;
+            transition: max-height 0.3s ease, opacity 0.3s ease;
         }
         ins.adsbygoogle[data-ad-status="filled"] {
-            display: block !important;
+            max-height: 1000px; /* yeterince büyük bir üst sınır */
+            opacity: 1;
         }
     </style>
     <!-- 💡 Microsoft Clarity — ziyaretçi istatistikleri için. Tamamen tarayıcı
@@ -4204,7 +4212,24 @@
     let dailyQuestionStartTime = null;
     let dailyQuestionSolved = false;
 
+    // 📅 Sunucudan senkronize tarih — sayfa açılışında BİR KEZ çekilip saklanıyor.
+    // Böylece farklı cihazlar (farklı saat dilimi/yanlış saat ayarı olsa bile)
+    // Günün Sorusu için HERKESE AYNI "bugün"ü görür, cihazın kendi saatine değil.
+    let serverDateCache = null;
+    async function syncServerDate() {
+        try {
+            const res = await fetch('/serverDate');
+            if (res.ok) {
+                const data = await res.json();
+                if (data && data.date) serverDateCache = data.date;
+            }
+        } catch (e) {
+            // sessizce geç, cihazın kendi saatine düşülecek
+        }
+    }
+
     function getTodayDateString() {
+        if (serverDateCache) return serverDateCache;
         const d = new Date();
         return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     }
@@ -6336,8 +6361,15 @@
         loadClubLogos();
         loadBasketballLogosBulk();
         preloadStadiumPhotos(); // 🏟️ stadyum modu geciktirmesin diye önceden önbelleğe al
-        loadDailyQuestion(); // 📅 arka planda, ana akışı hiç bekletmeden
-        loadDailyPlayerBio(); // 📰 Günün Oyuncusu, arka planda
+        // 📅 Önce sunucu tarihini senkronize edip, ANCAK ONDAN SONRA Günün
+        // Sorusu'nu hesaplıyoruz — böylece cihazın kendi saati yanlış/farklı
+        // saat diliminde olsa bile herkes aynı günü görür. Sayfanın geri kalanı
+        // bunu beklemiyor, paralel yükleniyor.
+        (async () => {
+            await syncServerDate();
+            loadDailyQuestion();
+            loadDailyPlayerBio();
+        })();
         // 🏀 Basketbol takım listelerini de SPOR SEÇİMİNDEN BAĞIMSIZ, sayfa
         // açılır açılmaz arka planda yüklüyoruz. Rastgele Eşleşme butonu bu
         // promise'i izleyip, hazır olana kadar kendini pasif/"Yükleniyor" yapıyor
