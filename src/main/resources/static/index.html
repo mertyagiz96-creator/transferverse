@@ -1581,7 +1581,14 @@
                 width: 100%;
                 gap: 8px !important;
             }
-            #gameModeButtonGroup .toolbar-btn, #sportToggleWrapper .toolbar-btn {
+            #gameModeButtonGroup .toolbar-btn {
+                width: 50%;
+                flex: 1;
+                font-size: 0.56rem;
+                padding: 10px 3px;
+                letter-spacing: 0.3px;
+            }
+            #sportToggleWrapper .toolbar-btn {
                 width: 50%;
                 flex: 1;
                 font-size: 0.62rem;
@@ -1830,6 +1837,11 @@
     <div id="championshipPollSection" style="margin-top: 40px; padding-top: 30px; border-top: 1px solid rgba(var(--fg-rgb), 0.09); display: none;">
         <h2 style="font-size: 1.15rem; font-weight: 800; color: var(--accent-gold); margin-bottom: 14px;">🗳️ Bu Sezon Kim Şampiyon Olur?</h2>
         <div id="championshipPollGrid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px;"></div>
+    </div>
+
+    <div id="basketballPollSection" style="margin-top: 40px; padding-top: 30px; border-top: 1px solid rgba(var(--fg-rgb), 0.09); display: none;">
+        <h2 style="font-size: 1.15rem; font-weight: 800; color: var(--accent-gold); margin-bottom: 14px;">🏀 Bu Sezon Kim Şampiyon Olur?</h2>
+        <div id="basketballPollGrid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px;"></div>
     </div>
 
     <div id="transferFeeQuizSection" style="margin-top: 40px; padding-top: 30px; border-top: 1px solid rgba(var(--fg-rgb), 0.09); display: none;">
@@ -4164,6 +4176,7 @@
         const bioExit = document.getElementById('dailyPlayerBioSection');
         if (bioExit && bioExit.dataset.hasContent) bioExit.style.display = 'block';
         loadChampionshipPoll(); // 🗳️ ana ekrana dönünce güncel oylarla göster
+        loadBasketballPoll(); // 🏀 ana ekrana dönünce güncel oylarla göster
         loadTransferFeeQuiz(); // 💰 ana ekrana dönünce göster
         document.getElementById('luckyModeBtn').style.display = '';
         document.getElementById('hunterModeWrapper').style.display = '';
@@ -4338,7 +4351,7 @@
     // bir güvenlik değil (biri isterse localStorage'ı silip tekrar oy verebilir)
     // ama günlük kullanım için makul, standart bir çözüm.
     const POLL_LEAGUES = [
-        { key: 'turkey', label: '🇹🇷 Süper Lig', teams: ['Galatasaray', 'Fenerbahce'] },
+        { key: 'turkey', label: '🇹🇷 Süper Lig', teams: ['Galatasaray', 'Fenerbahce', 'Besiktas'] },
         { key: 'england', label: '🇬🇧 Premier League', teams: ['Arsenal', 'Manchester City'] },
         { key: 'spain', label: '🇪🇸 La Liga', teams: ['Barcelona', 'Real Madrid'] },
         { key: 'italy', label: '🇮🇹 Serie A', teams: ['Inter', 'Napoli'] }
@@ -4521,6 +4534,97 @@
         }
 
         section.style.display = 'block';
+    }
+
+    // 🏀 Basketbol Şampiyonluk Anketi — futboldakiyle AYNI backend'i (poll_votes
+    // tablosu, /poll/results, /poll/vote) kullanıyor, sadece farklı lig/takım
+    // anahtarlarıyla (euroleague/nba) — hiç backend değişikliği gerekmedi.
+    const BB_POLL_LEAGUES = [
+        { key: 'euroleague', label: '🏆 EuroLeague', teams: ['Olympiacos', 'Real Madrid', 'Fenerbahce Beko'] },
+        { key: 'nba', label: '🇺🇸 NBA', teams: ['New York Knicks', 'San Antonio Spurs', 'Oklahoma City Thunder'] }
+    ];
+
+    async function loadBasketballPoll() {
+        const section = document.getElementById('basketballPollSection');
+        const grid = document.getElementById('basketballPollGrid');
+        if (!section || !grid) return;
+        if (playerModeActive || duelActive || currentSport !== 'basketball') return; // 🛡️ sadece basketbol ana ekranı
+
+        try {
+            const res = await fetch('/poll/results');
+            if (!res.ok) return;
+            let results = [];
+            try {
+                results = await res.json();
+                if (!Array.isArray(results)) results = [];
+            } catch (e) {
+                results = [];
+            }
+
+            grid.innerHTML = '';
+            BB_POLL_LEAGUES.forEach(leagueInfo => {
+                const card = document.createElement('div');
+                card.style.cssText = 'background: rgba(var(--fg-rgb), 0.04); border: 1px solid rgba(var(--fg-rgb), 0.09); border-radius: 10px; padding: 14px;';
+
+                const teamVotes = leagueInfo.teams.map(team => {
+                    const found = results.find(r => r.league === leagueInfo.key && r.team === team);
+                    return { team, votes: found ? found.votes : 0 };
+                });
+                const totalVotes = teamVotes.reduce((sum, t) => sum + t.votes, 0);
+                const voted = hasVotedInPoll(leagueInfo.key);
+
+                let html = `<div style="font-size:0.82rem; font-weight:700; margin-bottom:10px; color: rgb(var(--fg-rgb));">${leagueInfo.label}</div>`;
+
+                teamVotes.forEach(({ team, votes }) => {
+                    const pct = totalVotes > 0 ? Math.round((votes / totalVotes) * 100) : Math.round(100 / leagueInfo.teams.length);
+                    const logoUrl = getBasketballLogo(team);
+                    const logoHtml = logoUrl ? `<img src="${logoUrl}" alt="" style="width:20px; height:20px; object-fit:contain; margin-right:6px; vertical-align:-5px;" onerror="this.remove()">` : '';
+
+                    if (voted) {
+                        html += `
+                            <div style="margin-bottom:8px;">
+                                <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.78rem; margin-bottom:3px;">
+                                    <span>${logoHtml}${escapeHtml(team)}</span>
+                                    <span style="font-weight:700;">%${pct}</span>
+                                </div>
+                                <div style="height:6px; background:rgba(var(--fg-rgb),0.08); border-radius:3px; overflow:hidden;">
+                                    <div style="height:100%; width:${pct}%; background:var(--accent-gold); border-radius:3px;"></div>
+                                </div>
+                            </div>`;
+                    } else {
+                        html += `
+                            <button class="bb-poll-vote-btn" data-league="${leagueInfo.key}" data-team="${escapeHtml(team)}"
+                                style="display:flex; align-items:center; width:100%; padding:8px 10px; margin-bottom:6px; background:rgba(var(--fg-rgb),0.06); border:1px solid rgba(var(--fg-rgb),0.12); border-radius:6px; color:rgb(var(--fg-rgb)); font-size:0.8rem; font-weight:600; cursor:pointer; text-align:left;">
+                                ${logoHtml}${escapeHtml(team)}
+                            </button>`;
+                    }
+                });
+
+                if (voted) {
+                    html += `<div style="font-size:0.68rem; opacity:0.5; margin-top:4px;">Toplam ${totalVotes} oy</div>`;
+                }
+
+                card.innerHTML = html;
+                grid.appendChild(card);
+            });
+
+            grid.querySelectorAll('.bb-poll-vote-btn').forEach(btn => {
+                btn.addEventListener('click', async () => {
+                    const league = btn.dataset.league;
+                    const team = btn.dataset.team;
+                    if (hasVotedInPoll(league)) return;
+                    markVotedInPoll(league);
+                    try {
+                        await fetch(`/poll/vote?league=${encodeURIComponent(league)}&team=${encodeURIComponent(team)}`, { method: 'POST' });
+                    } catch (e) { /* sessizce geç */ }
+                    loadBasketballPoll();
+                });
+            });
+
+            section.style.display = 'block';
+        } catch (e) {
+            // sessizce geç, bölüm gizli kalır
+        }
     }
 
     async function loadChampionshipPoll() {
@@ -5074,6 +5178,8 @@
         if (bioEnter) bioEnter.style.display = 'none';
         const pollEnter = document.getElementById('championshipPollSection');
         if (pollEnter) pollEnter.style.display = 'none';
+        const bbPollEnter = document.getElementById('basketballPollSection');
+        if (bbPollEnter) bbPollEnter.style.display = 'none';
         const feeQuizEnter = document.getElementById('transferFeeQuizSection');
         if (feeQuizEnter) feeQuizEnter.style.display = 'none';
         document.getElementById('luckyModeBtn').style.display = 'none';
@@ -5106,6 +5212,7 @@
         const bioDuelExit = document.getElementById('dailyPlayerBioSection');
         if (bioDuelExit && bioDuelExit.dataset.hasContent) bioDuelExit.style.display = 'block';
         loadChampionshipPoll(); // 🗳️ ana ekrana dönünce güncel oylarla göster
+        loadBasketballPoll(); // 🏀 ana ekrana dönünce güncel oylarla göster
         loadTransferFeeQuiz(); // 💰 ana ekrana dönünce göster
         document.getElementById('luckyModeBtn').style.display = '';
         document.getElementById('hunterModeWrapper').style.display = '';
@@ -5681,6 +5788,8 @@
             if (bioPlayerEnter) bioPlayerEnter.style.display = 'none';
             const pollPlayerEnter = document.getElementById('championshipPollSection');
             if (pollPlayerEnter) pollPlayerEnter.style.display = 'none';
+            const bbPollPlayerEnter = document.getElementById('basketballPollSection');
+            if (bbPollPlayerEnter) bbPollPlayerEnter.style.display = 'none';
             const feeQuizPlayerEnter = document.getElementById('transferFeeQuizSection');
             if (feeQuizPlayerEnter) feeQuizPlayerEnter.style.display = 'none';
             luckyBtn.style.display = 'none';
@@ -6501,11 +6610,14 @@
         if (sport === 'football') {
             loadChampionshipPoll(); // 🗳️ futbola dönünce göster
             loadTransferFeeQuiz(); // 💰 futbola dönünce göster
+            const bbPollSection = document.getElementById('basketballPollSection');
+            if (bbPollSection) bbPollSection.style.display = 'none';
         } else {
             const pollSection = document.getElementById('championshipPollSection');
             if (pollSection) pollSection.style.display = 'none';
             const feeQuizSection = document.getElementById('transferFeeQuizSection');
             if (feeQuizSection) feeQuizSection.style.display = 'none';
+            loadBasketballPoll(); // 🏀 basketbola dönünce göster
         }
         loadDailyPlayerBio(); // 📰/🏀 spor değişince doğru içerikle yeniden çiz
 
