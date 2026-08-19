@@ -223,7 +223,55 @@ fun main() {
                     — özellikle parasal gücü yüksek bir rakip devreye girdiğinde. TransferKolik'te "PSV" ve 
                     "Chelsea" aratarak, bu iki kulüpte de forma giymiş oyuncuları bulabilirsiniz.</p>
                     """.trimIndent()
-                )
+                ),
+                "ray-allen-kevin-garnett-telefon-numarasi" to Pair(
+                    "Silinen Bir Telefon Numarası: Ray Allen'ın Rakip Takıma Geçişi",
+                    """
+                    <p>2012 yazında Ray Allen, NBA tarihinin en dramatik takım değiştirme hikayelerinden birine 
+                    imza attı. Boston Celtics'te Kevin Garnett ve Paul Pierce ile birlikte "Big Three" olarak 
+                    2008 şampiyonluğunu yaşamış olan Allen, serbest kalınca herkesi şok eden bir karar aldı: 
+                    Boston'un en büyük rakibi Miami Heat'e transfer oldu.</p>
+                    <p>Bu karar, eski takım arkadaşlarını derinden yaraladı. Kevin Garnett, basın toplantısında 
+                    gazetecilere açıkça şunu söyledi: "Artık Ray'in telefon numarası bende yok. İletişim kurmaya 
+                    çalışmıyorum." Paul Pierce ise "Kariyerimizi birlikte bitireceğimizi düşünüyordum" diyerek 
+                    hayal kırıklığını dile getirdi.</p>
+                    <p>Gerginlik sadece sözlerle kalmadı — Allen'ın Miami formasıyla Boston'a ilk dönüşünde, 
+                    Garnett onunla el sıkışmayı ve hatta ona bakmayı bile reddetti. Bu soğukluk yıllarca sürdü; 
+                    Allen, aradan geçen zamanda Garnett ile hiç konuşmadığını defalarca doğruladı.</p>
+                    <p>Sportif açıdan ise Allen'ın kararı isabetliydi — Miami'de bir şampiyonluk daha kazandı. 
+                    Ama bu transfer, basketbolda "takım sadakati" kavramının ne kadar hassas bir konu olduğunu 
+                    gösteren, yıllarca konuşulan bir örnek olarak kaldı.</p>
+                    """.trimIndent()
+                ),
+                "kevin-durant-yenildigi-takima-katildi" to Pair(
+                    "Kaybettiği Seride Rakibine Katılan Yıldız: Kevin Durant'ın Tartışmalı Kararı",
+                    """
+                    <p>2016 yazı, NBA tarihinin en çok tartışılan transfer kararlarından birine sahne oldu. 
+                    Kevin Durant'ın takımı Oklahoma City Thunder, o sezonki konferans finalinde Golden State 
+                    Warriors'a karşı 3-1 öne geçmişti — şampiyonluğa adeta bir adım kalmıştı. Ama Warriors, 
+                    inanılmaz bir geri dönüşle seriyi çevirdi ve finale kendisi gitti.</p>
+                    <p>Herkesin beklediği, Durant'ın bu yenilginin acısını çıkarmak için takımını güçlendirmesiydi. 
+                    Ama yaz transfer döneminde Durant, tam da kendisini eleyen o Warriors kadrosuna katılma 
+                    kararı aldı. Bu haber, sosyal medyada adeta bir kaosa yol açtı — bazı Thunder taraftarları, 
+                    tepkilerini göstermek için Durant formalarını yakacak kadar ileri gitti.</p>
+                    <p>Eleştirmenler, Durant'ı "kendi gücüyle şampiyonluk kazanmak yerine, kendisini yenen takıma 
+                    sığınmakla" suçladı. Ama Durant, kararının arkasında durdu ve Golden State'te geçirdiği üç 
+                    sezonda üst üste iki şampiyonluk kazanıp iki kez Final MVP'si seçildi.</p>
+                    <p>Bu hikaye, bugün hâlâ "bir yıldızın kariyer kararı ile sportmenlik anlayışı çatışabilir mi" 
+                    tartışmasının en somut örneği olarak basketbol dünyasında konuşulmaya devam ediyor.</p>
+                    """.trimIndent()
+                ),
+            )
+
+            // 🏷️ Hangi makale hangi spora ait — mevcut makale tanımlarına dokunmadan,
+            // ayrı bir eşleme ile /blog listesinde futbol/basketbol ayrımı yapıyoruz.
+            val articleSport = mapOf(
+                "de-gea-fax-makinesi-transferi-batirdi" to "futbol",
+                "alexis-sanchez-mourinho-telefon-hamlesi" to "futbol",
+                "robinho-chelsea-tisortleri-iptal-transfer" to "futbol",
+                "robben-united-tesislerini-gezdi-chelseaya-gitti" to "futbol",
+                "ray-allen-kevin-garnett-telefon-numarasi" to "basketbol",
+                "kevin-durant-yenildigi-takima-katildi" to "basketbol"
             )
 
             fun blogPageHtml(title: String, bodyHtml: String, description: String): String = """
@@ -241,7 +289,8 @@ fun main() {
                         a { color: #d4af37; }
                         p { margin-bottom: 16px; font-size: 0.95rem; }
                         .back-link { display: inline-block; margin-right: 16px; margin-bottom: 24px; font-size: 0.85rem; opacity: 0.7; }
-                        .article-list a { display: block; padding: 14px 0; border-bottom: 1px solid rgba(255,255,255,0.08); text-decoration: none; font-weight: 700; color: rgba(255,255,255,0.9); }
+                        .article-list a { display: block; padding: 14px 0; border-bottom: 1px solid rgba(255,255,255,0.08); text-decoration: none; font-weight: 500; font-size: 0.98rem; letter-spacing: 0.2px; color: rgba(255,255,255,0.88); transition: opacity 0.15s; }
+                        .article-list a:hover { opacity: 0.75; }
                     </style>
                 </head>
                 <body>
@@ -253,13 +302,23 @@ fun main() {
             """.trimIndent()
 
             get("/blog") {
-                val listHtml = blogArticles.entries.joinToString("") { (slug, pair) ->
-                    "<a href=\"/blog/$slug\">${pair.first}</a>"
-                }
+                val footballHtml = blogArticles.entries
+                    .filter { articleSport[it.key] == "futbol" }
+                    .joinToString("") { (slug, pair) -> "<a href=\"/blog/$slug\">${pair.first}</a>" }
+                val basketballHtml = blogArticles.entries
+                    .filter { articleSport[it.key] == "basketbol" }
+                    .joinToString("") { (slug, pair) -> "<a href=\"/blog/$slug\">${pair.first}</a>" }
                 val html = blogPageHtml(
                     "Transfer Hikayeleri",
-                    "<h1>⚽ Transfer Hikayeleri</h1><p>Futbol tarihinin en dramatik, en şaşırtıcı transfer anları.</p><div class=\"article-list\">$listHtml</div>",
-                    "Futbol dünyasının en dramatik ve şaşırtıcı transfer hikayeleri — TransferKolik Blog."
+                    """
+                    <h1>✍️ Bonservissiz Yazarın Kaleminden — Haftanın Blogları</h1>
+                    <p style="opacity:0.6;">Futbol ve basketbol tarihinin en dramatik, en şaşırtıcı transfer anları.</p>
+                    <h2>⚽ Futbol</h2>
+                    <div class="article-list">$footballHtml</div>
+                    <h2>🏀 Basketbol</h2>
+                    <div class="article-list">$basketballHtml</div>
+                    """.trimIndent(),
+                    "Futbol ve basketbol dünyasının en dramatik ve şaşırtıcı transfer hikayeleri — TransferKolik Blog."
                 )
                 call.respondText(html, ContentType.Text.Html)
             }
