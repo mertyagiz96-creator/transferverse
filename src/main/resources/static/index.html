@@ -4537,7 +4537,7 @@
             } catch (e) {}
             const feedback = document.getElementById('feeQuizFeedback');
             if (feedback) {
-                feedback.textContent = savedCorrect ? '✅ Bugün doğru bildin!' : '❌ Bugün yanlış tahmin etmiştin — yarın tekrar dene!';
+                feedback.textContent = savedCorrect ? '✅ Bugün doğru bildin!' : '❌ Bugün yanlış tahmin ettin — yarın tekrar dene!';
                 feedback.style.color = savedCorrect ? 'var(--accent-gold)' : 'rgba(var(--fg-rgb), 0.6)';
             }
         } else {
@@ -5058,10 +5058,55 @@
                         statusEl.textContent = isNewBest
                             ? `🎉 Doğru! ${elapsedSeconds} saniyede buldun — bugünkü yeni kişisel rekorun!`
                             : `✅ Doğru! ${elapsedSeconds} saniyede buldun.`;
+                        renderShareButton('dailyQuestionStatus', elapsedSeconds);
                     }
                 }
             });
         }
+    }
+
+    // 🔥 PAYLAŞILABİLİR SONUÇ + SERİ SAYACI — Wordle tarzı, tamamen yeni ve
+    // bağımsız bir özellik. Mevcut hiçbir fonksiyona dokunmuyor, sadece başarı
+    // anında ÇAĞRILAN ayrı bir fonksiyon. Sunucuya hiç gitmiyor, tamamen
+    // client-side (localStorage tabanlı).
+    const DAILY_STREAK_KEY = 'transferkolik_daily_streak';
+    function updateAndGetStreak(today) {
+        try {
+            const raw = localStorage.getItem(DAILY_STREAK_KEY);
+            const parsed = raw ? JSON.parse(raw) : null;
+            const yesterday = new Date(new Date(today).getTime() - 86400000).toISOString().slice(0, 10);
+
+            if (parsed && parsed.lastDate === today) {
+                return parsed.streak; // 💡 bugün zaten kaydedilmiş, tekrar artırma
+            }
+            const newStreak = (parsed && parsed.lastDate === yesterday) ? parsed.streak + 1 : 1;
+            localStorage.setItem(DAILY_STREAK_KEY, JSON.stringify({ lastDate: today, streak: newStreak }));
+            return newStreak;
+        } catch (e) {
+            return 1;
+        }
+    }
+
+    function renderShareButton(containerId, elapsedSeconds) {
+        const statusEl = document.getElementById(containerId);
+        if (!statusEl) return;
+        const today = getTodayDateString();
+        const streak = updateAndGetStreak(today);
+
+        const shareBtn = document.createElement('button');
+        shareBtn.textContent = '📤 Sonucu Paylaş';
+        shareBtn.style.cssText = 'margin-top:8px; padding:6px 14px; background:rgba(var(--fg-rgb),0.08); border:1px solid rgba(var(--fg-rgb),0.15); border-radius:6px; color:rgb(var(--fg-rgb)); font-size:0.72rem; font-weight:700; cursor:pointer;';
+        shareBtn.addEventListener('click', () => {
+            const shareText = `TransferKolik Günün Sorusu ✅\n⏱️ ${elapsedSeconds} saniyede bildim!\n🔥 ${streak} günlük seri\ntransferkolik.com`;
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(shareText).then(() => {
+                    shareBtn.textContent = '✅ Kopyalandı!';
+                    setTimeout(() => { shareBtn.textContent = '📤 Sonucu Paylaş'; }, 2000);
+                }).catch(() => { /* sessizce geç */ });
+            }
+        });
+        statusEl.appendChild(document.createElement('br'));
+        statusEl.appendChild(shareBtn);
     }
 
     function getDailyBestTimeText(today) {
@@ -5165,6 +5210,7 @@
                         statusEl.textContent = isNewBest
                             ? `🎉 Doğru! ${elapsedSeconds} saniyede buldun — bugünkü yeni kişisel rekorun!`
                             : `✅ Doğru! ${elapsedSeconds} saniyede buldun.`;
+                        renderShareButton('dailyQuestionStatus', elapsedSeconds);
                     }
                 }
             });

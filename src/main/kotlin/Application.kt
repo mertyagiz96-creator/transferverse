@@ -261,6 +261,120 @@ fun main() {
                     tartışmasının en somut örneği olarak basketbol dünyasında konuşulmaya devam ediyor.</p>
                     """.trimIndent()
                 ),
+                "hamilton-ferrari-1-nisan-mi-bu" to Pair(
+                    "'1 Nisan mı Bu?': Hamilton'ın Ferrari Şoku",
+                    """
+                    <p>Şubat 2024'te Formula 1 dünyası, sporun tarihindeki en büyük sürpriz transferlerinden 
+                    birine sahne oldu. Lewis Hamilton, Mercedes ile sadece altı ay önce iki yıllık yeni bir 
+                    sözleşme imzalamıştı — kariyerinin tamamının Mercedes'te geçeceği düşünülüyordu, kulüple 
+                    tam 11 yıllık bir ortaklığı vardı ve yedi kez dünya şampiyonu olmuştu.</p>
+                    <p>Ama sözleşmesindeki gizli bir madde, bir yıl sonra ayrılma hakkı tanıyordu — ve Hamilton, 
+                    bunu kullandı. Haberi, takım patronu Toto Wolff'un bizzat açıkladığı bir toplantıda öğrenen 
+                    Mercedes çalışanları arasında, Hamilton'ın uzun yıllık yarış mühendisi "Bono" bile "Bu 1 Nisan 
+                    şakası mı?" diye sormuştu — haber o kadar inanılmazdı.</p>
+                    <p>Ferrari, aslında o dönem Carlos Sainz ile sözleşme yenileme görüşmelerindeydi. Ama Ferrari 
+                    Başkanı John Elkann, Hamilton'ın müsait olabileceğini öğrenince görüşmeleri hemen değiştirdi 
+                    ve İngiliz pilotu kapmak için harekete geçti. Sainz'e veda edilirken, 39 yaşındaki Hamilton, 
+                    2025 sezonundan itibaren kırmızılara geçiş yaptı.</p>
+                    <p>Bu transfer, "kariyerinin sonuna kadar aynı takımda kalacağı" düşünülen bir efsanenin bile, 
+                    doğru fırsat karşısında köklü bir değişiklik yapabileceğinin en çarpıcı kanıtı oldu.</p>
+                    """.trimIndent()
+                ),
+                "verstappen-bir-haftada-sampiyon-koltuguna" to Pair(
+                    "Bir Haftada Yedek Pilottan Yarış Galibiyetine: Verstappen'in Şok Terfisi",
+                    """
+                    <p>Mayıs 2016'da Formula 1'de, sporun tarihinde eşi benzeri az görülen bir karar alındı. 
+                    Red Bull, o ana kadar küçük kardeş takımı Toro Rosso'da yarışan 18 yaşındaki Max Verstappen'i, 
+                    ana takıma terfi ettirmeye karar verdi — mevcut pilotu Daniil Kvyat'ın yerine, üstelik 
+                    sezonun ortasında.</p>
+                    <p>Bu karar, çoğu kişiye acımasız göründü — Kvyat, sadece birkaç hafta önce Çin'de podyuma 
+                    çıkmıştı. Ama Rusya'daki iki çarpışmanın ardından Red Bull yönetimi kararını verdi. Değişiklik, 
+                    İspanya Grand Prix'sinden dört gün önce açıklandı — Verstappen'in yeni takımıyla ilk yarışına 
+                    sadece birkaç günü kalmıştı.</p>
+                    <p>Sonuç, kimsenin tahmin edemeyeceği kadar muhteşemdi: Verstappen, Red Bull'daki ilk yarışında 
+                    — kariyerinin sadece 24. yarışında — birinci sırada bitirdi ve F1 tarihinin en genç yarış 
+                    galibi oldu. Takım patronu Christian Horner bile şaka yollu "İlk yarışını kazandın, bundan 
+                    sonra sadece kötüye gidebilir!" demişti.</p>
+                    <p>Bu zafer, Red Bull'un riskli kararını anında haklı çıkardı ve Verstappen'in, yıllar sonra 
+                    dünya şampiyonluğuna uzanacak kariyerinin ilk büyük dönüm noktası oldu.</p>
+                    """.trimIndent()
+                ),
+                "schumacher-zayif-ferrariyi-secti" to Pair(
+                    "Şampiyon Takımı Bırakıp Zayıf Ferrari'ye İmza Atan Pilot",
+                    """
+                    <p>1996 yılında Michael Schumacher, F1 tarihinin en akılda kalıcı kararlarından birini aldı. 
+                    Benetton takımıyla üst üste iki dünya şampiyonluğu kazanmış olan Alman pilot, güçlü ve 
+                    şampiyonluğa aday bir takımdan ayrılıp, o dönem yıllardır şampiyonluk kazanamayan, sportif 
+                    açıdan zayıf bir Ferrari'ye transfer oldu.</p>
+                    <p>Karar, birçok kişiyi şaşırttı — neden şampiyon bir pilot, kazanan bir takımı bırakıp 
+                    mücadele eden bir takıma gitsin ki? Ama Schumacher'in vizyonu farklıydı: Ferrari'yi yeniden 
+                    inşa etmek istiyordu. İlk sezonlarında sonuçlar beklenildiği gibi zorlu geçti, takım hâlâ 
+                    rakiplerinin gerisindeydi.</p>
+                    <p>Ama Schumacher sabırla çalışmaya devam etti, teknik ekibiyle (özellikle Ross Brawn ve 
+                    Rory Byrne ile) güçlü bir ortaklık kurdu. Yıllar süren bu inşa süreci sonunda meyvesini verdi: 
+                    2000-2004 yılları arasında Ferrari ile üst üste beş dünya şampiyonluğu kazanarak, takımı 
+                    F1 tarihinin en başarılı dönemlerinden birine taşıdı.</p>
+                    <p>Bu hikaye, bazen "geriye gitmiş" görünen bir transferin, aslında uzun vadeli bir vizyonun 
+                    parçası olabileceğini gösteren, F1 tarihinin en öğretici örneklerinden biri.</p>
+                    """.trimIndent()
+                ),
+                "vettel-alonsonun-ayrildigi-koltuga-oturdu" to Pair(
+                    "Alonso'nun Terk Ettiği Koltuğa Oturan Şampiyon: Vettel'in Ferrari Dönemi",
+                    """
+                    <p>2014 sezonu sonunda Fernando Alonso, yıllarca şampiyonluk için mücadele ettiği ama bir 
+                    türlü kazanamadığı Ferrari'den ayrılma kararı aldı — hayal kırıklığı doluydu, takımın 
+                    rekabetçi olamamasından bıkmıştı. Bu ayrılık, F1 dünyasında büyük yankı uyandırdı; İspanyol 
+                    pilot, kariyerinin en parlak yıllarını kırmızılarla mücadele ederek geçirmişti.</p>
+                    <p>Tam bu sırada, dört kez üst üste dünya şampiyonu olmuş Sebastian Vettel, Red Bull'daki 
+                    başarılı döneminin ardından sürpriz bir şekilde Ferrari'ye transfer oldu — adeta Alonso'nun 
+                    bıraktığı koltuğa oturdu. Vettel için bu, çocukluk hayaliydi; Ferrari'de yarışmak, kendisinin 
+                    de belirttiği gibi "her pilotun içinde yatan bir arzu"ydu.</p>
+                    <p>İlk sezonunda Vettel, Ferrari'ye 2008'den beri ilk kez bir Grand Prix galibiyeti yaşattı 
+                    ve şampiyonada üçüncü sırada bitirdi — takımın yeniden rekabetçi olabileceğinin sinyalini 
+                    verdi. Ne yazık ki beklenen dünya şampiyonluğu bir türlü gelmedi, altı sezon boyunca birkaç 
+                    kez şampiyonluğa çok yaklaşsa da kazanamadı.</p>
+                    <p>Bu hikaye, bir pilotun çocukluk hayalini gerçekleştirmesinin bile, garantili bir başarı 
+                    anlamına gelmediğinin çarpıcı bir örneği olarak F1 tarihinde yerini aldı.</p>
+                    """.trimIndent()
+                ),
+                "lebron-karari-canli-yayinda-acikladi" to Pair(
+                    "'Yeteneklerimi Miami'ye Taşıyorum': Canlı Yayında Açıklanan Karar",
+                    """
+                    <p>2010 yazında LeBron James, NBA tarihinin en tartışmalı ve en özgün transfer duyurusuna 
+                    imza attı. Cleveland Cavaliers'te geçirdiği yedi sezonun ardından serbest kalan James, 
+                    kararını açıklamak için sıradan bir basın toplantısı yerine, ESPN'de canlı yayınlanan özel 
+                    bir televizyon programı düzenledi — adı basitçe "The Decision" (Karar) olacaktı.</p>
+                    <p>Milyonlarca izleyicinin ekran başında beklediği o an geldiğinde James, tarihe geçecek 
+                    cümleyi kurdu: "Bu sonbahar yeteneklerimi Miami'ye taşıyacağım." Bu sözler, Cleveland 
+                    taraftarlarını derinden yaraladı — kulüp sahibi Dan Gilbert, James'e açık bir mektupla sert 
+                    bir tepki verdi ve onu "hain" olarak nitelendirdi.</p>
+                    <p>Miami'de Dwyane Wade ve Chris Bosh ile bir araya gelen James, "Big Three" olarak anılan 
+                    bu kadroyla dört yıl üst üste finale çıktı ve iki şampiyonluk kazandı. Ama "Decision" programı, 
+                    sportif başarısından bağımsız olarak, bir oyuncunun takım değiştirme kararını nasıl "aşırı 
+                    gösterişli" bir şekilde sunabileceğinin sembolü haline geldi.</p>
+                    <p>James, yıllar sonra bu duyuru şeklinin bir hata olduğunu kabul etti — ama bu olay, 
+                    basketbol tarihinde "star oyuncu transferi" kavramını sonsuza dek değiştirdi.</p>
+                    """.trimIndent()
+                ),
+                "carmelo-anthony-knicksi-zorla-kazandi" to Pair(
+                    "Gitmek İstediği Takımı Zorla Elde Eden Yıldız: Carmelo Anthony",
+                    """
+                    <p>2011 yılı başında Carmelo Anthony, Denver Nuggets'teki geleceğinin belirsiz olduğunu 
+                    açıkça belirtti — sözleşmesi bitmek üzereydi ve New York Knicks'e gitmek istediğini kamuoyuna 
+                    duyurdu. Bu, basketbolda nadir görülen bir stratejiydi: bir oyuncu, sadece "istediği" için 
+                    bir kulübü, kendisini istemediği bir takasa zorluyordu.</p>
+                    <p>Nuggets yönetimi başta direndi, farklı takımlarla görüşmeler yürüttü. Ama Anthony'nin 
+                    kararlılığı ve New York'a gitme konusundaki ısrarı, sonunda kulübü zorladı. Şubat 2011'de 
+                    dev bir çoklu takas gerçekleşti — Knicks, Anthony'yi elde etmek için kadrosunun büyük bir 
+                    kısmını (Danilo Gallinari, Wilson Chandler ve daha fazlasını) Denver'a gönderdi.</p>
+                    <p>Bu transfer, NBA'de "oyuncu gücü" kavramının ne kadar etkili olabileceğinin erken bir 
+                    örneğiydi — yıldız oyuncular, artık sadece kulüplerin kararlarına bağlı kalmıyor, kendi 
+                    gelecekleri üzerinde doğrudan söz sahibi olabiliyordu.</p>
+                    <p>Anthony, Knicks'te geçirdiği yıllar boyunca takımın yıldızı oldu, ama beklenen şampiyonluk 
+                    bir türlü gelmedi. Yine de bu hikaye, modern NBA'de oyuncu-kulüp ilişkisinin nasıl değiştiğinin 
+                    önemli bir dönüm noktası olarak basketbol tarihine geçti.</p>
+                    """.trimIndent()
+                ),
             )
 
             // 🏷️ Hangi makale hangi spora ait — mevcut makale tanımlarına dokunmadan,
@@ -271,7 +385,13 @@ fun main() {
                 "robinho-chelsea-tisortleri-iptal-transfer" to "futbol",
                 "robben-united-tesislerini-gezdi-chelseaya-gitti" to "futbol",
                 "ray-allen-kevin-garnett-telefon-numarasi" to "basketbol",
-                "kevin-durant-yenildigi-takima-katildi" to "basketbol"
+                "kevin-durant-yenildigi-takima-katildi" to "basketbol",
+                "lebron-karari-canli-yayinda-acikladi" to "basketbol",
+                "carmelo-anthony-knicksi-zorla-kazandi" to "basketbol",
+                "hamilton-ferrari-1-nisan-mi-bu" to "f1",
+                "verstappen-bir-haftada-sampiyon-koltuguna" to "f1",
+                "schumacher-zayif-ferrariyi-secti" to "f1",
+                "vettel-alonsonun-ayrildigi-koltuga-oturdu" to "f1"
             )
 
             fun blogPageHtml(title: String, bodyHtml: String, description: String): String = """
@@ -308,17 +428,22 @@ fun main() {
                 val basketballHtml = blogArticles.entries
                     .filter { articleSport[it.key] == "basketbol" }
                     .joinToString("") { (slug, pair) -> "<a href=\"/blog/$slug\">${pair.first}</a>" }
+                val f1Html = blogArticles.entries
+                    .filter { articleSport[it.key] == "f1" }
+                    .joinToString("") { (slug, pair) -> "<a href=\"/blog/$slug\">${pair.first}</a>" }
                 val html = blogPageHtml(
                     "Transfer Hikayeleri",
                     """
                     <h1>✍️ Bonservissiz Yazarın Kaleminden — Haftanın Blogları</h1>
-                    <p style="opacity:0.6;">Futbol ve basketbol tarihinin en dramatik, en şaşırtıcı transfer anları.</p>
+                    <p style="opacity:0.6;">Futbol, basketbol ve Formula 1 tarihinin en dramatik, en şaşırtıcı transfer anları.</p>
                     <h2>⚽ Futbol</h2>
                     <div class="article-list">$footballHtml</div>
                     <h2>🏀 Basketbol</h2>
                     <div class="article-list">$basketballHtml</div>
+                    <h2>🏎️ Formula 1</h2>
+                    <div class="article-list">$f1Html</div>
                     """.trimIndent(),
-                    "Futbol ve basketbol dünyasının en dramatik ve şaşırtıcı transfer hikayeleri — TransferKolik Blog."
+                    "Futbol, basketbol ve Formula 1 dünyasının en dramatik ve şaşırtıcı transfer hikayeleri — TransferKolik Blog."
                 )
                 call.respondText(html, ContentType.Text.Html)
             }
