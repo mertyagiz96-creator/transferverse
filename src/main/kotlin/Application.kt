@@ -133,7 +133,10 @@ fun main() {
             // kendi saatine değil, buna göre hesaplanıyor. Böylece farklı saat
             // dilimindeki/yanlış saatli cihazlar bile HERKESE AYNI günü görür.
             get("/serverDate") {
-                val today = java.time.LocalDate.now(java.time.ZoneOffset.UTC).toString()
+                // 💡 DÜZELTME: UTC yerine Türkiye saati (Europe/Istanbul) kullanıyoruz —
+                // hedef kitlemiz Türkiye olduğu için "gün değişimi" onların gece
+                // yarısına göre olmalı, UTC'ye göre değil (UTC 3 saat GERİDE kalıyordu).
+                val today = java.time.LocalDate.now(java.time.ZoneId.of("Europe/Istanbul")).toString()
                 call.respond(mapOf("date" to today))
             }
 

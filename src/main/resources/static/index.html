@@ -1574,6 +1574,20 @@
                 padding: 10px 8px;
             }
 
+            /* 💡 Bil Bakalım/Arkadaşla Yarış ve Futbol/Basketbol çiftleri, genel
+               "tam genişlik" kuralını ezerek mobilde YAN YANA kalsın — hem daha
+               modern görünür hem dikey yerden tasarruf sağlar. */
+            #gameModeButtonGroup, #sportToggleWrapper {
+                width: 100%;
+                gap: 8px !important;
+            }
+            #gameModeButtonGroup .toolbar-btn, #sportToggleWrapper .toolbar-btn {
+                width: 50%;
+                flex: 1;
+                font-size: 0.62rem;
+                padding: 10px 6px;
+            }
+
             .toolbar-wrapper {
                 width: 100%;
             }
@@ -1736,13 +1750,15 @@
             🏠 Ana Menü
         </button>
 
-        <button id="playerModeBtn" class="toolbar-btn" title="İki büyük kulüpte birden oynamış gizemli bir oyuncuyu tahmin etmeye çalışın" disabled>
-            🎮 Bil Bakalım
-        </button>
+        <div id="gameModeButtonGroup" style="display: flex; gap: 8px;">
+            <button id="playerModeBtn" class="toolbar-btn" title="İki büyük kulüpte birden oynamış gizemli bir oyuncuyu tahmin etmeye çalışın" disabled>
+                🎮 Bil Bakalım
+            </button>
 
-        <button id="duelModeBtn" class="toolbar-btn" title="Bir arkadaşınla aynı soruyu aynı anda çöz, kim önce bilirse kazanır" disabled>
-            🏆 Arkadaşla Yarış
-        </button>
+            <button id="duelModeBtn" class="toolbar-btn" title="Bir arkadaşınla aynı soruyu aynı anda çöz, kim önce bilirse kazanır" disabled>
+                🏆 Arkadaşla Yarış
+            </button>
+        </div>
     </div>
 
     <div id="topLoader" class="top-loader">

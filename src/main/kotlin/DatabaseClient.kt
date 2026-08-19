@@ -282,7 +282,7 @@ object DatabaseClient {
                 header("Content-Type", "application/json")
                 parameter("league", "eq.$league")
                 parameter("team", "eq.$team")
-                setBody(PollVoteUpdate(currentVotes + 1))
+                setBody(Json.encodeToString(PollVoteUpdate(currentVotes + 1)))
             }
             if (!response.status.isSuccess()) {
                 println("🔥 Anket oy yazma hatası: HTTP ${response.status} — ${response.bodyAsText()}")
