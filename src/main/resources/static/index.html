@@ -1673,6 +1673,9 @@
             <span class="logo-badge">⚽</span>
             <span class="logo-text">Transfer<span class="logo-text-accent">Kolik</span></span>
         </a>
+        <a href="/blog" style="margin-left: auto; font-size: 0.78rem; font-weight: 700; color: rgba(var(--fg-rgb), 0.7); text-decoration: none; white-space: nowrap;" title="Transfer Hikayeleri">
+            📰 Blog
+        </a>
     </div>
 </header>
 
@@ -1850,6 +1853,12 @@
     <div id="dailyPlayerBioSection" style="margin-top: 40px; padding-top: 30px; border-top: 1px solid rgba(var(--fg-rgb), 0.09); font-size: 0.88rem; line-height: 1.75; color: rgba(var(--fg-rgb), 0.75); display: none;">
         <h2 style="font-size: 1.15rem; font-weight: 800; color: var(--accent-gold); margin-bottom: 14px;">📰 Günün Oyuncusu</h2>
         <div id="dailyPlayerBioContent"></div>
+    </div>
+
+    <div id="blogLinkSection" style="margin-top: 40px; padding-top: 30px; border-top: 1px solid rgba(var(--fg-rgb), 0.09); text-align: center;">
+        <a href="/blog" style="display: inline-block; padding: 10px 22px; background: rgba(var(--fg-rgb), 0.06); border: 1px solid rgba(var(--fg-rgb), 0.12); border-radius: 8px; color: var(--accent-gold); font-weight: 700; font-size: 0.85rem; text-decoration: none;">
+            📰 Transfer Hikayeleri — Blog
+        </a>
     </div>
 
     <div id="aboutContentSection" style="margin-top: 40px; padding-top: 30px; border-top: 1px solid rgba(var(--fg-rgb), 0.09); font-size: 0.88rem; line-height: 1.75; color: rgba(var(--fg-rgb), 0.75);">
@@ -4180,6 +4189,8 @@
         if (sportToggleExit1) sportToggleExit1.style.display = 'flex';
         const aboutExit = document.getElementById('aboutContentSection');
         if (aboutExit) aboutExit.style.display = '';
+        const blogExit = document.getElementById('blogLinkSection');
+        if (blogExit) blogExit.style.display = '';
         const bioExit = document.getElementById('dailyPlayerBioSection');
         if (bioExit && bioExit.dataset.hasContent) bioExit.style.display = 'block';
         loadChampionshipPoll(); // 🗳️ ana ekrana dönünce güncel oylarla göster
@@ -5181,6 +5192,8 @@
         if (sportToggleEnter2) sportToggleEnter2.style.display = 'none';
         const aboutEnter = document.getElementById('aboutContentSection');
         if (aboutEnter) aboutEnter.style.display = 'none';
+        const blogEnter = document.getElementById('blogLinkSection');
+        if (blogEnter) blogEnter.style.display = 'none';
         const bioEnter = document.getElementById('dailyPlayerBioSection');
         if (bioEnter) bioEnter.style.display = 'none';
         const pollEnter = document.getElementById('championshipPollSection');
@@ -5216,6 +5229,8 @@
         if (sportToggleExit2) sportToggleExit2.style.display = 'flex';
         const aboutDuelExit = document.getElementById('aboutContentSection');
         if (aboutDuelExit) aboutDuelExit.style.display = '';
+        const blogDuelExit = document.getElementById('blogLinkSection');
+        if (blogDuelExit) blogDuelExit.style.display = '';
         const bioDuelExit = document.getElementById('dailyPlayerBioSection');
         if (bioDuelExit && bioDuelExit.dataset.hasContent) bioDuelExit.style.display = 'block';
         loadChampionshipPoll(); // 🗳️ ana ekrana dönünce güncel oylarla göster
@@ -5791,6 +5806,8 @@
             if (sportToggleEnter1) sportToggleEnter1.style.display = 'none';
             const aboutPlayerEnter = document.getElementById('aboutContentSection');
             if (aboutPlayerEnter) aboutPlayerEnter.style.display = 'none';
+            const blogPlayerEnter = document.getElementById('blogLinkSection');
+            if (blogPlayerEnter) blogPlayerEnter.style.display = 'none';
             const bioPlayerEnter = document.getElementById('dailyPlayerBioSection');
             if (bioPlayerEnter) bioPlayerEnter.style.display = 'none';
             const pollPlayerEnter = document.getElementById('championshipPollSection');
