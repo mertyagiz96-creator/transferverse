@@ -1582,11 +1582,9 @@
                 gap: 8px !important;
             }
             #gameModeButtonGroup .toolbar-btn {
-                width: 50%;
-                flex: 1;
-                font-size: 0.56rem;
-                padding: 10px 3px;
-                letter-spacing: 0.3px;
+                font-size: 0.62rem;
+                padding: 10px 10px;
+                white-space: nowrap;
             }
             #sportToggleWrapper .toolbar-btn {
                 width: 50%;
@@ -2202,9 +2200,18 @@
     function getBasketballLogo(teamName) {
         if (!teamName) return null;
         const key = normalize(teamName);
-        if (basketballLogosMap[key]) return basketballLogosMap[key]; // 💡 toplu yüklenen haritadan ANINDA
+        if (basketballLogosMap[key]) return basketballLogosMap[key]; // 💡 toplu yüklenen haritadan ANINDA (tam eşleşme)
+
+        // 💡 Tam eşleşme yoksa esnek (substring) arama — "Olympiacos" ile
+        // "Olympiacos Piraeus" gibi kısa/uzun yazım farklarını yakalamak için.
+        for (const k in basketballLogosMap) {
+            if (k.includes(key) || key.includes(k)) {
+                return basketballLogosMap[k];
+            }
+        }
+
         if (sportsDbBasketballLogos[key]) return sportsDbBasketballLogos[key];
-        fetchSportsDbBasketballLogo(teamName); // 💡 sadece toplu haritada da yoksa, arka planda tembel istek
+        fetchSportsDbBasketballLogo(teamName); // 💡 hiçbir yerde yoksa, arka planda tembel istek
         return null;
     }
 
