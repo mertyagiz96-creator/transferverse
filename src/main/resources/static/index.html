@@ -1835,6 +1835,25 @@
         🏀 Basketbol modu EuroLeague, EuroCup ve NBA takımlarını içerir.
     </p>
 
+    <div id="connectionGameSection" style="margin-top: 40px; padding-top: 30px; border-top: 1px solid rgba(var(--fg-rgb), 0.09); display: none;">
+        <div style="display:flex; align-items:center; justify-content:center; gap:10px; flex-wrap:wrap;">
+            <h2 style="font-size: 1.15rem; font-weight: 800; color: var(--accent-gold); margin: 0;">🔗 Transfer Bağlantısı</h2>
+            <button id="connectionHowToPlayBtn" style="font-size:0.65rem; padding:3px 8px; background:rgba(var(--fg-rgb),0.06); border:1px solid rgba(var(--fg-rgb),0.15); border-radius:10px; color:rgb(var(--fg-rgb)); cursor:pointer;">❓ Nasıl Oynanır?</button>
+        </div>
+        <div id="connectionHowToPlayBox" style="display:none; font-size:0.72rem; line-height:1.6; background:rgba(var(--fg-rgb),0.04); border-radius:8px; padding:10px 14px; max-width:420px; margin: 8px auto 0;">
+            Verilen iki oyuncuyu, ortak bir takım arkadaşı ile birbirine bağla!<br>
+            📌 Örnek: <b>Arda Güler ➔ ( ? ) ➔ Cristiano Ronaldo</b><br>
+            ✍️ Kutuya <b>Luka Modrić</b> yazarsan zinciri kurarsın (çünkü ikisiyle de aynı takımda oynadı).<br>
+            En az denemeyle hedefe ulaş, skorunu paylaş!
+        </div>
+        <div id="connectionGameContent" style="margin-top: 14px;"></div>
+    </div>
+
+    <div id="transferFeeQuizSection" style="margin-top: 40px; padding-top: 30px; border-top: 1px solid rgba(var(--fg-rgb), 0.09); display: none;">
+        <h2 style="font-size: 1.15rem; font-weight: 800; color: var(--accent-gold); margin-bottom: 14px;">💰 Hangi Transfer Daha Pahalıydı?</h2>
+        <div id="transferFeeQuizContent"></div>
+    </div>
+
     <div id="championshipPollSection" style="margin-top: 40px; padding-top: 30px; border-top: 1px solid rgba(var(--fg-rgb), 0.09); display: none;">
         <h2 style="font-size: 1.15rem; font-weight: 800; color: var(--accent-gold); margin-bottom: 14px;">🗳️ Bu Sezon Kim Şampiyon Olur?</h2>
         <div id="championshipPollGrid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px;"></div>
@@ -1843,11 +1862,6 @@
     <div id="basketballPollSection" style="margin-top: 40px; padding-top: 30px; border-top: 1px solid rgba(var(--fg-rgb), 0.09); display: none;">
         <h2 style="font-size: 1.15rem; font-weight: 800; color: var(--accent-gold); margin-bottom: 14px;">🏀 Bu Sezon Kim Şampiyon Olur?</h2>
         <div id="basketballPollGrid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px;"></div>
-    </div>
-
-    <div id="transferFeeQuizSection" style="margin-top: 40px; padding-top: 30px; border-top: 1px solid rgba(var(--fg-rgb), 0.09); display: none;">
-        <h2 style="font-size: 1.15rem; font-weight: 800; color: var(--accent-gold); margin-bottom: 14px;">💰 Hangi Transfer Daha Pahalıydı?</h2>
-        <div id="transferFeeQuizContent"></div>
     </div>
 
     <div id="dailyPlayerBioSection" style="margin-top: 40px; padding-top: 30px; border-top: 1px solid rgba(var(--fg-rgb), 0.09); font-size: 0.88rem; line-height: 1.75; color: rgba(var(--fg-rgb), 0.75); display: none;">
@@ -4196,6 +4210,7 @@
         loadChampionshipPoll(); // 🗳️ ana ekrana dönünce güncel oylarla göster
         loadBasketballPoll(); // 🏀 ana ekrana dönünce güncel oylarla göster
         loadTransferFeeQuiz(); // 💰 ana ekrana dönünce göster
+        loadConnectionGame(); // 🔗 aynı akış, transfer bağlantısı oyunu
         document.getElementById('luckyModeBtn').style.display = '';
         document.getElementById('hunterModeWrapper').style.display = '';
         document.getElementById('yearFilterWrapper').style.display = '';
@@ -4478,6 +4493,181 @@
     }
     function formatFeeMillions(fee) {
         return (fee / 1_000_000).toFixed(1).replace('.0', '') + 'M€';
+    }
+
+    // 🔗 TRANSFER BAĞLANTISI — doğrulanmış, koda gömülü çiftler (canlı veritabanı
+    // graph taraması YOK, Gemini'nin önerdiği "önceden hesapla" yöntemi). Her çift,
+    // gerçekten HİÇ aynı takımda oynamamış iki oyuncu + onları bağlayan, ikisiyle de
+    // gerçekten oynamış bir köprü oyuncu(lar).
+    const CONNECTION_POOL = [
+        { start: 'Erling Haaland', end: 'David Silva', club: 'Manchester City', bridges: ['Kevin De Bruyne'] },
+        { start: 'Jude Bellingham', end: 'Cristiano Ronaldo', club: 'Real Madrid', bridges: ['Luka Modric', 'Toni Kroos'] },
+        { start: 'Kim Min-jae', end: 'Robert Lewandowski', club: 'Bayern Munich', bridges: ['Thomas Muller'] },
+        { start: 'Kylian Mbappe', end: 'Zlatan Ibrahimovic', club: 'Paris SG', bridges: ['Marco Verratti'] },
+        { start: 'Mohamed Salah', end: 'Steven Gerrard', club: 'Liverpool', bridges: ['Jordan Henderson'] },
+        { start: 'Arda Guler', end: 'Sergio Ramos', club: 'Real Madrid', bridges: ['Toni Kroos', 'Luka Modric', 'Vinicius Junior', 'Rodrygo'] }
+    ];
+
+    function loadConnectionGame() {
+        const section = document.getElementById('connectionGameSection');
+        const content = document.getElementById('connectionGameContent');
+        if (!section || !content) return;
+        if (playerModeActive || duelActive || currentSport !== 'football') return; // 🛡️ sadece futbol ana ekranı
+
+        const howToBtn = document.getElementById('connectionHowToPlayBtn');
+        const howToBox = document.getElementById('connectionHowToPlayBox');
+        if (howToBtn && howToBox && !howToBtn.dataset.bound) {
+            howToBtn.dataset.bound = 'true';
+            howToBtn.addEventListener('click', () => {
+                howToBox.style.display = howToBox.style.display === 'none' ? 'block' : 'none';
+            });
+        }
+
+        const today = getTodayDateString();
+        const seed = seededHash(today + '-connection-game');
+        const pair = CONNECTION_POOL[seed % CONNECTION_POOL.length];
+
+        const STATE_KEY = 'transferkolik_connection_state';
+        let savedState = null;
+        try {
+            const raw = localStorage.getItem(STATE_KEY);
+            if (raw) {
+                const parsed = JSON.parse(raw);
+                if (parsed.date === today) savedState = parsed;
+            }
+        } catch (e) { /* sessizce geç */ }
+
+        content.innerHTML = `
+            <div style="display:flex; align-items:center; justify-content:center; gap:16px; flex-wrap:wrap; margin-bottom:14px;">
+                <span style="font-weight:800; font-size:0.92rem;">${escapeHtml(pair.start)}</span>
+                <span style="opacity:0.5; font-weight:700;">➔ ( ? ) ➔</span>
+                <span style="font-weight:800; font-size:0.92rem;">${escapeHtml(pair.end)}</span>
+            </div>
+            <div id="connectionAttemptsBox" style="max-width:380px; margin:0 auto 10px;"></div>
+            <div id="connectionCounter" style="font-size:0.7rem; opacity:0.6; text-align:center;">Deneme: 0</div>
+            <div style="width:100%; max-width:320px; display:flex; gap:8px; margin: 8px auto 0;">
+                <input type="text" id="connectionGuessInput" placeholder="Köprü oyuncuyu yaz..." autocomplete="off" style="flex:1; padding:10px 12px; border-radius:3px; border:1px solid rgba(var(--fg-rgb),0.18); background:rgba(var(--fg-rgb),0.02); color:rgb(var(--fg-rgb)); font-size: 0.9rem; outline: none;">
+                <button id="connectionSubmitBtn" class="toolbar-btn" style="padding:8px 14px; font-size:0.72rem;">Dene</button>
+            </div>
+            <div id="connectionStatus" style="font-size:0.78rem; font-weight:600; color: rgb(var(--fg-rgb)); text-align:center; margin-top:8px;"></div>
+        `;
+
+        const attemptsBox = document.getElementById('connectionAttemptsBox');
+        const counterEl = document.getElementById('connectionCounter');
+        const statusEl = document.getElementById('connectionStatus');
+        const guessInput = document.getElementById('connectionGuessInput');
+        const submitBtn = document.getElementById('connectionSubmitBtn');
+
+        let attempts = 0;
+        let solved = false;
+
+        function addAttemptRow(text, correct) {
+            const row = document.createElement('div');
+            row.style.cssText = `padding:6px 10px; margin-bottom:4px; border-radius:6px; font-size:0.78rem; background:${correct ? 'rgba(76,175,80,0.15)' : 'rgba(244,67,54,0.1)'}; color:rgb(var(--fg-rgb));`;
+            row.textContent = (correct ? '🟩 ' : '🟥 ') + text;
+            attemptsBox.appendChild(row);
+        }
+
+        function finish(won) {
+            solved = won;
+            guessInput.disabled = true;
+            submitBtn.disabled = true;
+            if (won) playCorrectSound();
+            statusEl.textContent = won
+                ? `🎉 Doğru! ${attempts} denemede bağlantıyı kurdun.`
+                : `Bugünkü bağlantı: ${pair.bridges[0]}. Yarın tekrar dene!`;
+            try {
+                localStorage.setItem(STATE_KEY, JSON.stringify({ date: today, attempts, solved: won, pair }));
+            } catch (e) { /* sessizce geç */ }
+
+            const shareBtn = document.createElement('button');
+            shareBtn.textContent = '📤 Sonucu Paylaş';
+            shareBtn.style.cssText = 'margin-top:8px; padding:6px 14px; background:rgba(var(--fg-rgb),0.08); border:1px solid rgba(var(--fg-rgb),0.15); border-radius:6px; color:rgb(var(--fg-rgb)); font-size:0.72rem; font-weight:700; cursor:pointer;';
+            shareBtn.addEventListener('click', () => {
+                const resultLine = won ? `🔗 ${attempts} denemede bağladım!` : '🔗 Bugün bağlayamadım!';
+                const shareText = `⚽ TransferKolik Transfer Bağlantısı\n${escapeHtml(pair.start)} ➔ ➔ ➔ ${escapeHtml(pair.end)}\n${resultLine}\ntransferkolik.com`;
+                if (navigator.clipboard) {
+                    navigator.clipboard.writeText(shareText).then(() => {
+                        shareBtn.textContent = '✅ Kopyalandı!';
+                        setTimeout(() => { shareBtn.textContent = '📤 Sonucu Paylaş'; }, 2000);
+                    }).catch(() => { /* sessizce geç */ });
+                }
+            });
+            statusEl.appendChild(document.createElement('br'));
+            statusEl.appendChild(shareBtn);
+        }
+
+        async function handleSubmit() {
+            if (solved) return;
+            const rawGuess = guessInput.value.trim();
+            if (!rawGuess) return;
+            const guessNorm = normalizeGuess(rawGuess);
+            submitBtn.disabled = true;
+
+            // ⚡ Önce hızlı, hazır listeye bak — bulunursa anında cevap.
+            // 💡 Tam isim VEYA sadece soyadı kabul ediyoruz — "Muller" yazınca
+            // "Thomas Muller" için de doğru sayılmalı (Wordle modundaki gibi).
+            let isCorrect = pair.bridges.some(b => {
+                const bNorm = normalizeGuess(b);
+                if (bNorm === guessNorm) return true;
+                const bWords = b.trim().split(/\s+/);
+                const bSurname = normalizeGuess(bWords[bWords.length - 1]);
+                return bSurname === guessNorm;
+            });
+
+            // 🔍 Listede yoksa, veritabanına sor — unuttuğum ama GERÇEKTEN
+            // geçerli bir isim olup olmadığını kesin olarak doğrular.
+            if (!isCorrect) {
+                try {
+                    const res = await fetch(`/verifyBridge?name=${encodeURIComponent(rawGuess)}&club=${encodeURIComponent(pair.club)}`);
+                    if (res.ok) {
+                        const data = await res.json();
+                        isCorrect = !!data.valid;
+                    }
+                } catch (e) { /* sessizce geç, listeye güvenmeye devam */ }
+            }
+
+            attempts++;
+            guessInput.value = '';
+            addAttemptRow(rawGuess, isCorrect);
+            if (counterEl) counterEl.textContent = `Deneme: ${attempts}`;
+
+            // 💾 Her denemeden sonra kaydet — sadece round bitince değil.
+            try {
+                localStorage.setItem(STATE_KEY, JSON.stringify({ date: today, attempts, solved: false, pair, inProgress: true }));
+            } catch (e) { /* sessizce geç */ }
+
+            if (isCorrect) {
+                finish(true);
+            } else if (attempts >= 5) {
+                finish(false);
+            } else {
+                submitBtn.disabled = false;
+            }
+        }
+
+        submitBtn.addEventListener('click', handleSubmit);
+        guessInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleSubmit(); });
+
+        // 💾 Bugün zaten oynanmışsa durumu geri yükle
+        if (savedState) {
+            attempts = savedState.attempts || 0;
+            if (counterEl) counterEl.textContent = `Deneme: ${attempts}`;
+            if (savedState.solved) {
+                guessInput.disabled = true;
+                submitBtn.disabled = true;
+                statusEl.textContent = `✅ Bugün bu bağlantıyı ${attempts} denemede kurmuştun!`;
+            } else if (savedState.inProgress) {
+                // 💡 Round DEVAM EDİYOR — kilitleme, kaldığı yerden sürsün.
+                submitBtn.disabled = false;
+            } else {
+                guessInput.disabled = true;
+                submitBtn.disabled = true;
+                statusEl.textContent = `Bugünkü bağlantı: ${pair.bridges[0]}. Yarın tekrar dene!`;
+            }
+        }
+
+        section.style.display = 'block';
     }
 
     function loadTransferFeeQuiz() {
@@ -4878,7 +5068,7 @@
             const [club1, club2] = [pool[idx1], pool[idx2]];
 
             try {
-                const res = await fetch(`/playerMode?clubs=${encodeURIComponent([club1, club2].join(','))}&isCountry=0,0`);
+                const res = await fetch(`/playerMode?clubs=${encodeURIComponent([club1, club2].join(','))}&isCountry=0,0&minYear=2010`);
                 if (res.ok) {
                     const data = await res.json();
                     if (currentSport !== 'football') return; // 🛡️ bu arada basketbola geçilmişse kartı ezme
@@ -5087,7 +5277,7 @@
         }
     }
 
-    function renderShareButton(containerId, elapsedSeconds) {
+    function renderShareButton(containerId, elapsedSeconds, guessGrid) {
         const statusEl = document.getElementById(containerId);
         if (!statusEl) return;
         const today = getTodayDateString();
@@ -5097,7 +5287,11 @@
         shareBtn.textContent = '📤 Sonucu Paylaş';
         shareBtn.style.cssText = 'margin-top:8px; padding:6px 14px; background:rgba(var(--fg-rgb),0.08); border:1px solid rgba(var(--fg-rgb),0.15); border-radius:6px; color:rgb(var(--fg-rgb)); font-size:0.72rem; font-weight:700; cursor:pointer;';
         shareBtn.addEventListener('click', () => {
-            const shareText = `TransferKolik Günün Sorusu ✅\n⏱️ ${elapsedSeconds} saniyede bildim!\n🔥 ${streak} günlük seri\ntransferkolik.com`;
+            const gridText = (guessGrid && guessGrid.length) ? '\n' + guessGrid.join('\n') : '';
+            const resultLine = guessGrid
+                ? `🎯 ${guessGrid.length}/5 Tahminde Bildim!`
+                : `⏱️ ${elapsedSeconds} saniyede bildim!`;
+            const shareText = `⚽ TransferKolik Günün Sorusu${gridText}\n${resultLine}\n🔥 ${streak} günlük seri\ntransferkolik.com`;
             if (navigator.clipboard) {
                 navigator.clipboard.writeText(shareText).then(() => {
                     shareBtn.textContent = '✅ Kopyalandı!';
@@ -5122,6 +5316,85 @@
         return '🏁 Bugün henüz çözmedin, ilk seferini dene!';
     }
 
+    function computeAgeFromBirthDate(birthDateStr) {
+        if (!birthDateStr) return null;
+        const match = birthDateStr.match(/(\d{4})/);
+        if (!match) return null;
+        const birthYear = parseInt(match[1], 10);
+        const currentYear = new Date().getFullYear();
+        return currentYear - birthYear;
+    }
+
+    function normalizeCompareText(s) {
+        return normalize((s || '').trim());
+    }
+
+    // 🎯 Bir tahmin satırının HTML'ini üretir — uyruk/mevki/yaş karşılaştırması
+    function cleanNationalityForDisplay(nat) {
+        if (!nat) return '?';
+        // 💡 "Germany  England" gibi çoklu uyruklardan sadece İLKİNİ gösteriyoruz — temiz.
+        return nat.trim().split(/\s{2,}|\//)[0].trim();
+    }
+
+    function cleanPositionForDisplay(pos) {
+        if (!pos) return '?';
+        // 💡 "Midfield - Attacking Midfield" gibi uzun metinlerden, " - " sonrasındaki
+        // (daha spesifik) kısmı gösteriyoruz — kısa ve net.
+        const parts = pos.split(' - ');
+        return parts[parts.length - 1].trim();
+    }
+
+    // 💡 <div>.innerHTML = '<tr>...</tr>' geçersizdir — tarayıcı, tablo bağlamı
+    // dışındaki <tr>'yi SESSİZCE ATAR. Geçerli bir <tbody> bağlamı üzerinden
+    // ayrıştırıp doğru <tr> elemanını çıkarıyoruz.
+    function parseTrHtml(trHtmlString) {
+        const tempTbody = document.createElement('tbody');
+        tempTbody.innerHTML = trHtmlString;
+        return tempTbody.firstElementChild;
+    }
+
+    function buildDailyHintRowHtml(guessName, guessInfo, targetNationality, targetPosition, targetAge) {
+        const natMatch = guessInfo && guessInfo.nationality && targetNationality
+            ? normalizeCompareText(guessInfo.nationality) === normalizeCompareText(targetNationality)
+            : null;
+        const posMatch = guessInfo && guessInfo.position && targetPosition
+            ? normalizeCompareText(guessInfo.position) === normalizeCompareText(targetPosition)
+            : null;
+        const guessAge = guessInfo ? computeAgeFromBirthDate(guessInfo.birthDate) : null;
+
+        let ageText = '?';
+        let ageEmoji = '⬛';
+        if (guessAge !== null && targetAge !== null) {
+            if (guessAge === targetAge) {
+                ageText = `🎯 ${guessAge}`; ageEmoji = '🟩';
+            } else if (guessAge > targetAge) {
+                ageText = `${guessAge} ⬇️`; ageEmoji = '🟨';
+            } else {
+                ageText = `${guessAge} ⬆️`; ageEmoji = '🟨';
+            }
+        } else if (guessAge !== null) {
+            ageText = `${guessAge}`;
+        }
+
+        const natDisplay = natMatch === null ? '?' : (natMatch ? '🟩' : `🟥 ${escapeHtml(cleanNationalityForDisplay(guessInfo.nationality))}`);
+        const posDisplay = posMatch === null ? '?' : (posMatch ? '🟩' : `🟥 ${escapeHtml(cleanPositionForDisplay(guessInfo.position))}`);
+
+        const emojiRow = (natMatch === true ? '🟩' : natMatch === false ? '🟥' : '⬛')
+            + (posMatch === true ? '🟩' : posMatch === false ? '🟥' : '⬛')
+            + ageEmoji;
+
+        // 💡 Gerçek bir <table> satırı — flex/grid hizalama sorunlarından kaçınmak için.
+        const html = `
+            <tr style="border-bottom:1px solid rgba(var(--fg-rgb),0.08); font-size:0.74rem;">
+                <td style="padding:7px 4px; font-weight:700; text-align:left;">${escapeHtml(guessName)}</td>
+                <td style="padding:7px 4px; text-align:center;">${natDisplay}</td>
+                <td style="padding:7px 4px; text-align:center;">${posDisplay}</td>
+                <td style="padding:7px 4px; text-align:center;">${ageText}</td>
+            </tr>
+        `;
+        return { html, emojiRow };
+    }
+
     function renderDailyQuestionCard(found) {
         const container = document.getElementById('dailyQuestionCard');
         if (!container || !found || !found.clubs || found.clubs.length !== 2) return;
@@ -5135,6 +5408,9 @@
         const cleanFullName = found.playerName.replace(/\s*\(\d+\)\s*/g, "").trim();
         const [clubA, clubB] = found.clubs;
         const today = getTodayDateString();
+        const targetAge = computeAgeFromBirthDate(found.birthDate);
+        const targetNationality = found.nationality || '';
+        const targetPosition = found.position || '';
 
         function clubBlockHtml(club) {
             const flag = getFlagEmoji(club.club);
@@ -5156,64 +5432,219 @@
             `;
         }
 
+        // 💾 Bugün zaten oynanmış mı kontrol et (localStorage) — sayfa yenilense
+        // bile durum korunsun, tekrar tekrar oynanamasın.
+        const WORDLE_STATE_KEY = 'transferkolik_daily_wordle_state';
+        let savedState = null;
+        try {
+            const raw = localStorage.getItem(WORDLE_STATE_KEY);
+            if (raw) {
+                const parsed = JSON.parse(raw);
+                if (parsed.date === today) savedState = parsed;
+            }
+        } catch (e) { /* sessizce geç */ }
+
         container.style.display = 'block';
         container.innerHTML = `
             <div class="daily-question-box">
-                <div style="font-size: 0.72rem; text-transform: uppercase; letter-spacing: 1.2px; color: var(--accent-gold); font-weight: 700;">
-                    ${realCalendarIconHtml()} Günün Sorusu — İki takımda da oynayan oyuncu kim?
+                <div style="display:flex; align-items:center; justify-content:center; gap:10px; flex-wrap:wrap;">
+                    <div style="font-size: 0.72rem; text-transform: uppercase; letter-spacing: 1.2px; color: var(--accent-gold); font-weight: 700;">
+                        ${realCalendarIconHtml()} Günün Sorusu — İki takımda da oynayan oyuncu kim?
+                    </div>
+                    <button id="dailyHowToPlayBtn" style="font-size:0.65rem; padding:3px 8px; background:rgba(var(--fg-rgb),0.06); border:1px solid rgba(var(--fg-rgb),0.15); border-radius:10px; color:rgb(var(--fg-rgb)); cursor:pointer;">❓ Nasıl Oynanır?</button>
+                </div>
+                <div id="dailyHowToPlayBox" style="display:none; font-size:0.72rem; line-height:1.6; background:rgba(var(--fg-rgb),0.04); border-radius:8px; padding:10px 14px; max-width:420px; text-align:left;">
+                    İki takımda da oynamış gizemli oyuncuyu bul!<br>
+                    Yanlış tahmin yaptıkça sistem sana <b>Uyruk</b>, <b>Mevki</b> ve <b>Yaş</b> ipucu verir.<br>
+                    🟩 Doğru &nbsp; 🟥 Yanlış &nbsp; ⬆️⬇️ Yaş: daha büyük/küçük ara.<br>
+                    Toplam <b>5 tahmin hakkın</b> var. Her gün yeni soru!
                 </div>
                 <div style="display:flex; align-items:flex-start; gap: 20px; justify-content:center;">
                     ${clubBlockHtml(clubA)}
                     <span style="opacity:0.5; font-weight:800; font-size: 0.95rem; color: rgb(var(--fg-rgb)); margin-top: 16px;">VS</span>
                     ${clubBlockHtml(clubB)}
                 </div>
+                <table id="dailyGuessHistoryTable" style="width:100%; max-width:420px; border-collapse:collapse;">
+                    <thead>
+                        <tr style="font-size:0.6rem; font-weight:800; opacity:0.5; text-transform:uppercase; border-bottom:1px solid rgba(var(--fg-rgb),0.15);">
+                            <th style="padding:4px; text-align:left;">Tahmin</th>
+                            <th style="padding:4px; text-align:center;">Uyruk</th>
+                            <th style="padding:4px; text-align:center;">Mevki</th>
+                            <th style="padding:4px; text-align:center;">Yaş</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+                <div id="dailyGuessCounter" style="font-size:0.7rem; opacity:0.6;">Tahmin: 0/5</div>
                 <div style="width:100%; max-width:320px; display:flex; gap:8px;">
                     <input type="text" id="dailyGuessInput" placeholder="Tahminini yaz..." autocomplete="off" style="flex:1; padding:10px 12px; border-radius:3px; border:1px solid rgba(var(--fg-rgb),0.18); background:rgba(var(--fg-rgb),0.02); color:rgb(var(--fg-rgb)); font-size: 0.9rem; outline: none;">
-                    <span id="dailyGuessCheck" class="guess-check">✔️</span>
+                    <button id="dailyGuessSubmitBtn" class="toolbar-btn" style="padding:8px 14px; font-size:0.72rem;">Tahmin Et</button>
                 </div>
-                <div id="dailyQuestionStatus" style="font-size:0.78rem; font-weight: 600; color: rgb(var(--fg-rgb));">${getDailyBestTimeText(today)}</div>
+                <div id="dailyQuestionStatus" style="font-size:0.78rem; font-weight: 600; color: rgb(var(--fg-rgb));"></div>
             </div>
         `;
 
+        const historyTableEl = document.getElementById('dailyGuessHistoryTable');
+        const historyTable = historyTableEl ? historyTableEl.querySelector('tbody') : null;
+        const counterEl = document.getElementById('dailyGuessCounter');
+        const statusEl = document.getElementById('dailyQuestionStatus');
         const guessInput = document.getElementById('dailyGuessInput');
-        if (guessInput) {
-            guessInput.addEventListener('input', () => {
-                if (dailyQuestionSolved) return;
-                const guessNormalized = normalizeGuess(guessInput.value);
-                const realNormalized = normalizeGuess(cleanFullName);
-                const words = cleanFullName.trim().split(/\s+/);
-                const surname = words[words.length - 1];
-                const surnameNormalized = normalizeGuess(surname);
+        const submitBtn = document.getElementById('dailyGuessSubmitBtn');
+        const howToBtn = document.getElementById('dailyHowToPlayBtn');
+        const howToBox = document.getElementById('dailyHowToPlayBox');
 
-                if (guessNormalized.length > 0 && (guessNormalized === realNormalized || guessNormalized === surnameNormalized)) {
-                    dailyQuestionSolved = true;
-                    guessInput.disabled = true;
-                    guessInput.classList.add('correct');
-                    const dailyCheck = document.getElementById('dailyGuessCheck');
-                    if (dailyCheck) dailyCheck.style.display = 'flex';
-                    playCorrectSound();
-
-                    const elapsedSeconds = Math.max(1, Math.round((Date.now() - dailyQuestionStartTime) / 1000));
-                    const statusEl = document.getElementById('dailyQuestionStatus');
-                    let isNewBest = false;
-
-                    try {
-                        const raw = localStorage.getItem(DAILY_BEST_TIME_STORAGE_KEY);
-                        const parsed = raw ? JSON.parse(raw) : null;
-                        if (!parsed || parsed.date !== today || elapsedSeconds < parsed.seconds) {
-                            isNewBest = true;
-                            localStorage.setItem(DAILY_BEST_TIME_STORAGE_KEY, JSON.stringify({ date: today, seconds: elapsedSeconds }));
-                        }
-                    } catch (e) { /* sessizce geç */ }
-
-                    if (statusEl) {
-                        statusEl.textContent = isNewBest
-                            ? `🎉 Doğru! ${elapsedSeconds} saniyede buldun — bugünkü yeni kişisel rekorun!`
-                            : `✅ Doğru! ${elapsedSeconds} saniyede buldun.`;
-                        renderShareButton('dailyQuestionStatus', elapsedSeconds);
-                    }
-                }
+        if (howToBtn && howToBox) {
+            howToBtn.addEventListener('click', () => {
+                howToBox.style.display = howToBox.style.display === 'none' ? 'block' : 'none';
             });
+        }
+
+        let guessCount = 0;
+        let emojiGrid = [];
+        let historyHtmlList = []; // 💡 her satırın TAM HTML'i — geri yükleme için
+        let roundOver = false;
+
+        function lockRound() {
+            roundOver = true;
+            if (guessInput) guessInput.disabled = true;
+            if (submitBtn) submitBtn.disabled = true;
+        }
+
+        function finishWin(elapsedSeconds) {
+            dailyQuestionSolved = true;
+            playCorrectSound();
+            lockRound();
+            let isNewBest = false;
+            try {
+                const raw = localStorage.getItem(DAILY_BEST_TIME_STORAGE_KEY);
+                const parsed = raw ? JSON.parse(raw) : null;
+                if (!parsed || parsed.date !== today || elapsedSeconds < parsed.seconds) {
+                    isNewBest = true;
+                    localStorage.setItem(DAILY_BEST_TIME_STORAGE_KEY, JSON.stringify({ date: today, seconds: elapsedSeconds }));
+                }
+            } catch (e) { /* sessizce geç */ }
+
+            if (statusEl) {
+                statusEl.textContent = isNewBest
+                    ? `🎉 Doğru! ${guessCount}/5 tahminde buldun — bugünkü yeni kişisel rekorun!`
+                    : `✅ Doğru! ${guessCount}/5 tahminde buldun.`;
+                renderShareButton('dailyQuestionStatus', elapsedSeconds, emojiGrid);
+            }
+            try {
+                localStorage.setItem('transferkolik_daily_wordle_state', JSON.stringify({ date: today, solved: true, guessCount, emojiGrid, historyHtmlList, playerName: cleanFullName }));
+            } catch (e) { /* sessizce geç */ }
+        }
+
+        function finishLoss() {
+            lockRound();
+            if (statusEl) {
+                statusEl.textContent = `❌ Bu seferlik olmadı — doğru cevap: ${cleanFullName}. Yarın tekrar dene!`;
+            }
+            try {
+                localStorage.setItem('transferkolik_daily_wordle_state', JSON.stringify({ date: today, solved: false, guessCount, emojiGrid, historyHtmlList, playerName: cleanFullName }));
+            } catch (e) { /* sessizce geç */ }
+        }
+
+        async function handleSubmit() {
+            if (roundOver || dailyQuestionSolved) return;
+            const rawGuess = guessInput.value.trim();
+            if (!rawGuess) return;
+
+            const guessNormalized = normalizeGuess(rawGuess);
+            const realNormalized = normalizeGuess(cleanFullName);
+            const words = cleanFullName.trim().split(/\s+/);
+            const surname = words[words.length - 1];
+            const surnameNormalized = normalizeGuess(surname);
+            const isCorrect = guessNormalized.length > 0 && (guessNormalized === realNormalized || guessNormalized === surnameNormalized);
+
+            guessCount++;
+            guessInput.value = '';
+            submitBtn.disabled = true;
+
+            if (isCorrect) {
+                const winHtml = buildDailyHintRowHtml(cleanFullName, { nationality: targetNationality, position: targetPosition, birthDate: found.birthDate }, targetNationality, targetPosition, targetAge).html;
+                emojiGrid.push('🟩🟩🟩');
+                historyHtmlList.push(winHtml);
+                const rowEl = parseTrHtml(winHtml);
+                if (rowEl && historyTable) historyTable.appendChild(rowEl);
+                const elapsedSeconds = Math.max(1, Math.round((Date.now() - dailyQuestionStartTime) / 1000));
+                finishWin(elapsedSeconds);
+                return;
+            }
+
+            // Yanlış tahmin — tahmin edilen oyuncunun bilgilerini çek
+            let guessInfo = null;
+            try {
+                const clubsParam = encodeURIComponent(`${clubA.club},${clubB.club}`);
+                const res = await fetch(`/playerInfo?name=${encodeURIComponent(rawGuess)}&clubs=${clubsParam}`);
+                if (res.ok) guessInfo = await res.json();
+            } catch (e) { /* sessizce geç */ }
+
+            const { html, emojiRow } = buildDailyHintRowHtml(rawGuess, guessInfo, targetNationality, targetPosition, targetAge);
+            emojiGrid.push(emojiRow);
+            historyHtmlList.push(html);
+            const rowEl2 = parseTrHtml(html);
+            if (rowEl2 && historyTable) historyTable.appendChild(rowEl2);
+
+            if (counterEl) counterEl.textContent = `Tahmin: ${guessCount}/5`;
+
+            // 💾 Her tahminden sonra kaydet — sadece round bitince değil, ARA
+            // durumda da (menü gezip geri dönünce ilerleme kaybolmasın diye).
+            try {
+                localStorage.setItem('transferkolik_daily_wordle_state', JSON.stringify({
+                    date: today, solved: false, guessCount, emojiGrid, historyHtmlList, playerName: cleanFullName, inProgress: true
+                }));
+            } catch (e) { /* sessizce geç */ }
+
+            if (guessCount >= 5) {
+                finishLoss();
+            } else {
+                submitBtn.disabled = false;
+            }
+        }
+
+        if (submitBtn) submitBtn.addEventListener('click', handleSubmit);
+        if (guessInput) {
+            guessInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') handleSubmit();
+            });
+        }
+
+        // 💾 Bugün zaten oynanmışsa, durumu geri yükle (tekrar oynatma)
+        if (savedState) {
+            guessCount = savedState.guessCount || 0;
+            emojiGrid = savedState.emojiGrid || [];
+            historyHtmlList = savedState.historyHtmlList || [];
+            if (counterEl) counterEl.textContent = `Tahmin: ${guessCount}/5`;
+            if (historyHtmlList.length > 0) {
+                // 💡 Kaydedilmiş GERÇEK kart HTML'i varsa onu kullan (düzgün görünüm).
+                historyHtmlList.forEach(rowHtml => {
+                    const rowEl = parseTrHtml(rowHtml);
+                    if (rowEl && historyTable) historyTable.appendChild(rowEl);
+                });
+            } else {
+                // 🛡️ Eski (bu düzeltmeden önceki) kayıtlar için geriye dönük uyumluluk —
+                // sadece ham emoji var, en azından basit bir özet göster (tbody içinde
+                // geçerli olması için <tr><td> yapısında).
+                emojiGrid.forEach(row => {
+                    const placeholderTr = parseTrHtml(`<tr><td colspan="4" style="padding:6px; text-align:center; font-size:0.74rem;">${escapeHtml(row)}</td></tr>`);
+                    if (placeholderTr && historyTable) historyTable.appendChild(placeholderTr);
+                });
+            }
+            if (savedState.solved) {
+                dailyQuestionSolved = true;
+                lockRound();
+                if (statusEl) {
+                    statusEl.textContent = `✅ Bugün bu soruyu ${guessCount}/5 tahminde bilmiştin!`;
+                    renderShareButton('dailyQuestionStatus', 0, emojiGrid);
+                }
+            } else if (savedState.inProgress) {
+                // 💡 Round DEVAM EDİYOR (5 hak dolmamış) — kilitleme, kaldığı yerden sürsün.
+                submitBtn.disabled = false;
+            } else {
+                lockRound();
+                if (statusEl) statusEl.textContent = `❌ Bugün bilemedin — doğru cevap: ${cleanFullName}. Yarın tekrar dene!`;
+            }
         }
     }
 
@@ -5248,6 +5679,8 @@
         if (bbPollEnter) bbPollEnter.style.display = 'none';
         const feeQuizEnter = document.getElementById('transferFeeQuizSection');
         if (feeQuizEnter) feeQuizEnter.style.display = 'none';
+        const connEnter = document.getElementById('connectionGameSection');
+        if (connEnter) connEnter.style.display = 'none';
         document.getElementById('luckyModeBtn').style.display = 'none';
         document.getElementById('hunterModeWrapper').style.display = 'none';
         document.getElementById('yearFilterWrapper').style.display = 'none';
@@ -5282,6 +5715,7 @@
         loadChampionshipPoll(); // 🗳️ ana ekrana dönünce güncel oylarla göster
         loadBasketballPoll(); // 🏀 ana ekrana dönünce güncel oylarla göster
         loadTransferFeeQuiz(); // 💰 ana ekrana dönünce göster
+        loadConnectionGame(); // 🔗 aynı akış, transfer bağlantısı oyunu
         document.getElementById('luckyModeBtn').style.display = '';
         document.getElementById('hunterModeWrapper').style.display = '';
         document.getElementById('yearFilterWrapper').style.display = '';
@@ -5862,6 +6296,8 @@
             if (bbPollPlayerEnter) bbPollPlayerEnter.style.display = 'none';
             const feeQuizPlayerEnter = document.getElementById('transferFeeQuizSection');
             if (feeQuizPlayerEnter) feeQuizPlayerEnter.style.display = 'none';
+            const connPlayerEnter = document.getElementById('connectionGameSection');
+            if (connPlayerEnter) connPlayerEnter.style.display = 'none';
             luckyBtn.style.display = 'none';
             hunterWrapper.style.display = 'none';
             yearWrapper.style.display = 'none';
@@ -6680,6 +7116,7 @@
         if (sport === 'football') {
             loadChampionshipPoll(); // 🗳️ futbola dönünce göster
             loadTransferFeeQuiz(); // 💰 futbola dönünce göster
+            loadConnectionGame(); // 🔗 aynı akış, transfer bağlantısı oyunu
             const bbPollSection = document.getElementById('basketballPollSection');
             if (bbPollSection) bbPollSection.style.display = 'none';
         } else {
@@ -6687,6 +7124,8 @@
             if (pollSection) pollSection.style.display = 'none';
             const feeQuizSection = document.getElementById('transferFeeQuizSection');
             if (feeQuizSection) feeQuizSection.style.display = 'none';
+            const connSection = document.getElementById('connectionGameSection');
+            if (connSection) connSection.style.display = 'none';
             loadBasketballPoll(); // 🏀 basketbola dönünce göster
         }
         loadDailyPlayerBio(); // 📰/🏀 spor değişince doğru içerikle yeniden çiz
@@ -6930,6 +7369,7 @@
             loadDailyPlayerBio();
             loadChampionshipPoll();
             loadTransferFeeQuiz();
+            loadConnectionGame(); // 🔗 aynı akış, transfer bağlantısı oyunu
         })();
         // 🏀 Basketbol takım listelerini de SPOR SEÇİMİNDEN BAĞIMSIZ, sayfa
         // açılır açılmaz arka planda yüklüyoruz. Rastgele Eşleşme butonu bu

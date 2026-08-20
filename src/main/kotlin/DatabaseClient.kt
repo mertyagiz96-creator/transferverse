@@ -22,7 +22,18 @@ data class MultiClubPlayerResult(
     val playerName: String,
     val position: String,
     val clubs: List<ClubSeason>,
-    val imageUrl: String? = null // 💡 YENİ: Cevap açıldıktan sonra göstermek için
+    val imageUrl: String? = null, // 💡 YENİ: Cevap açıldıktan sonra göstermek için
+    val nationality: String? = null, // 🎯 Wordle modu ipucu için — oyuncunun uyruğu
+    val birthDate: String? = null // 🎯 Wordle modu ipucu için — yaş karşılaştırması
+)
+
+// 🎯 Günün Sorusu (Wordle modu) — tahmin edilen oyuncunun kendi bilgileri
+@Serializable
+data class PlayerBasicInfo(
+    val name: String,
+    val position: String?,
+    val nationality: String?,
+    val birthDate: String?
 )
 
 // 🏆 Supabase'e YAZILAN skor kaydı — Postgres sütun adı `score` (tek sütun, tek satır).
@@ -1444,7 +1455,142 @@ object DatabaseClient {
     // 💡 GENİŞLETİLMİŞ: her terim artık ya KULÜP ya da ÜLKE olabilir (Pair'in ikinci
     // değeri isCountry). Ülke terimleri nationality_std üzerinden, kulüp terimleri
     // eskisi gibi from_club_std/to_club_std üzerinden eşleştiriliyor.
-    fun fetchPlayerAcrossClubs(terms: List<Pair<String, Boolean>>): MultiClubPlayerResult? {
+    // 🎯 GÜNÜN SORUSU (Wordle modu) İÇİN: kullanıcının yazdığı tahmin edilen
+    // oyuncunun kendi bilgilerini (uyruk/mevki/yaş) çekiyoruz — hedef oyuncuyla
+    // karşılaştırıp renkli ipucu üretebilmek için. Sadece isimle arıyor, en iyi
+    // (en çok transfer kaydı olan, muhtemelen en "gerçek/bilinen") eşleşmeyi döndürüyor.
+    // 🔗 TRANSFER BAĞLANTISI İÇİN: sabit bir köprü listesine güvenmek yerine,
+    // kullanıcının yazdığı ismin GERÇEKTEN o kulüpte oynayıp oynamadığını
+    // veritabanına soruyoruz — böylece listede unuttuğum bir isim bile
+    // (Vinícius, Rodrygo gibi) doğru şekilde kabul ediliyor.
+    fun verifyPlayerPlayedForClub(playerName: String, clubName: String): Boolean {
+        val cleanName = playerName.trim()
+        if (cleanName.isEmpty()) return false
+        val resolvedClub = resolveClubSearchTerm(clubName)
+        val sql = """
+            SELECT t.from_club, t.to_club
+            FROM players p
+            JOIN transfers t ON p.id = t.transfer_id
+            WHERE p.name LIKE ?
+        """.trimIndent()
+        var found = false
+        try {
+            withConnection { conn ->
+                conn.prepareStatement(sql).use { stmt ->
+                    stmt.setString(1, "%$cleanName%")
+                    stmt.executeQuery().use { rs ->
+                        while (rs.next() && !found) {
+                            val fromClub = rs.getString("from_club") ?: ""
+                            val toClub = rs.getString("to_club") ?: ""
+                            if (matchesOriginalClub(fromClub, resolvedClub) || matchesOriginalClub(toClub, resolvedClub)) {
+                                found = true
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            println("🔥 verifyPlayerPlayedForClub HATASI: ${e.message}")
+        }
+        return found
+    }
+
+    // 💡 SQLite'ın LIKE'ı aksan-duyarsız DEĞİL ("Müller" ile "Muller" eşleşmez).
+    // Java'nın Normalizer'ı ile, frontend'deki normalizeGuess ile AYNI mantıkla
+    // aksanları temizliyoruz — tutarlı karşılaştırma için.
+    private fun stripAccentsForCompare(s: String): String {
+        val normalized = java.text.Normalizer.normalize(s, java.text.Normalizer.Form.NFD)
+        return normalized.replace(Regex("\\p{M}"), "").lowercase()
+    }
+
+    fun fetchPlayerBasicInfoByName(name: String, contextClubs: List<String> = emptyList()): PlayerBasicInfo? {
+        val cleanName = name.trim()
+        if (cleanName.isEmpty()) return null
+        val targetNorm = stripAccentsForCompare(cleanName)
+
+        // 💡 SQL'in LIKE'ı aksanları kaçırabileceği için, geniş bir aday havuzu
+        // çekip GERÇEK karşılaştırmayı Kotlin tarafında aksan-duyarsız yapıyoruz.
+        // Adayları sadece isim başlangıcına/soyadına göre kabaca daraltıyoruz.
+        val sql = """
+            SELECT p.id, p.name, p.position, p.nationality, p.birthdate,
+                   t.from_club, t.to_club,
+                   (SELECT COUNT(*) FROM transfers t2 WHERE t2.transfer_id = p.id) as transfer_count
+            FROM players p
+            LEFT JOIN transfers t ON p.id = t.transfer_id
+            WHERE p.name LIKE ?
+        """.trimIndent()
+
+        data class Candidate(val id: Int, val name: String, val position: String?, val nationality: String, val birthDate: String?, val transferCount: Int, var matchesClub: Boolean)
+        val candidates = mutableMapOf<Int, Candidate>()
+
+        try {
+            withConnection { conn ->
+                // 💡 KRİTİK: SQL'deki kaba filtre de aksan-duyarlıydı — ham
+                // LIKE, aksanlı DB içeriğine karşı aksansız terimle hiç eşleşmiyordu.
+                // Ünlü harfleri '_' (SQL'de "herhangi bir karakter") ile değiştirerek,
+                // "mull" aramasının "müll", "mòll" gibi varyasyonları da YAKALAMASINI
+                // sağlıyoruz — kesin doğrulama zaten Kotlin tarafında yapılıyor.
+                val roughBase = if (targetNorm.length >= 4) targetNorm.take(4) else targetNorm
+                val roughFilter = roughBase.replace(Regex("[aeiou]"), "_")
+                conn.prepareStatement(sql).use { stmt ->
+                    stmt.setString(1, "%$roughFilter%")
+                    stmt.executeQuery().use { rs ->
+                        while (rs.next()) {
+                            val pId = rs.getInt("id")
+                            val pName = rs.getString("name") ?: continue
+                            // 🎯 GERÇEK doğrulama: aksan-duyarsız tam/soyad eşleşmesi
+                            val nameNorm = stripAccentsForCompare(pName.replace(Regex("\\s*\\(\\d+\\)\\s*"), ""))
+                            val words = nameNorm.trim().split(Regex("\\s+"))
+                            val surnameNorm = words.lastOrNull() ?: ""
+                            if (nameNorm != targetNorm && surnameNorm != targetNorm) continue
+
+                            val fromClub = rs.getString("from_club") ?: ""
+                            val toClub = rs.getString("to_club") ?: ""
+                            val clubMatch = contextClubs.any { c ->
+                                val resolved = resolveClubSearchTerm(c)
+                                matchesOriginalClub(fromClub, resolved) || matchesOriginalClub(toClub, resolved)
+                            }
+
+                            val existing = candidates[pId]
+                            if (existing == null) {
+                                candidates[pId] = Candidate(
+                                    id = pId, name = pName,
+                                    position = rs.getString("position"),
+                                    nationality = cleanNationalityText(rs.getString("nationality") ?: ""),
+                                    birthDate = rs.getString("birthdate"),
+                                    transferCount = rs.getInt("transfer_count"),
+                                    matchesClub = clubMatch
+                                )
+                            } else if (clubMatch) {
+                                existing.matchesClub = true // 💡 herhangi bir satırda kulüp eşleşmesi varsa işaretle
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            println("🔥 fetchPlayerBasicInfoByName HATASI: ${e.message}")
+            return null
+        }
+
+        if (candidates.isEmpty()) return null
+
+        // 🎯 SEÇİM ÖNCELİĞİ: (1) bağlam kulüplerinden birinde oynamış olan —
+        // "Muller" araması Bayern bağlamındaysa, alakasız bir Brezilyalı'yı
+        // değil, gerçek Bayern oyuncusunu seçmeli. (2) Yoksa en çok transferli.
+        val best = candidates.values
+            .sortedWith(compareByDescending<Candidate> { it.matchesClub }.thenByDescending { it.transferCount })
+            .first()
+
+        return PlayerBasicInfo(
+            name = best.name,
+            position = best.position,
+            nationality = best.nationality,
+            birthDate = best.birthDate
+        )
+    }
+
+    fun fetchPlayerAcrossClubs(terms: List<Pair<String, Boolean>>, minYear: Int? = null): MultiClubPlayerResult? {
         if (terms.size < 2) return null
 
         val resolvedClubTerms = terms.map { (term, isCountry) -> if (isCountry) null else resolveClubSearchTerm(term) }
@@ -1458,7 +1604,7 @@ object DatabaseClient {
         val sql = buildString {
             append(
                 """
-                SELECT p.id, p.name, p.position, p.nationality, p.image_url, t.from_club, t.to_club, t.season
+                SELECT p.id, p.name, p.position, p.nationality, p.birthdate, p.image_url, t.from_club, t.to_club, t.season
                 FROM players p
                 JOIN transfers t ON p.id = t.transfer_id
                 WHERE 
@@ -1476,6 +1622,7 @@ object DatabaseClient {
         val playerPositions = mutableMapOf<Int, String>()
         val playerImageUrls = mutableMapOf<Int, String?>()
         val playerNationalities = mutableMapOf<Int, String>()
+        val playerBirthDates = mutableMapOf<Int, String?>()
 
         try {
             withConnection { conn ->
@@ -1498,6 +1645,7 @@ object DatabaseClient {
                             val position = rs.getString("position") ?: ""
                             val imageUrl = rs.getString("image_url")
                             val rawNat = rs.getString("nationality") ?: ""
+                            val birthDate = rs.getString("birthdate")
                             val fromClub = rs.getString("from_club") ?: ""
                             val toClub = rs.getString("to_club") ?: ""
                             val season = rs.getString("season") ?: continue
@@ -1506,6 +1654,7 @@ object DatabaseClient {
                             playerPositions[pId] = position
                             playerImageUrls[pId] = imageUrl
                             playerNationalities[pId] = cleanNationalityText(rawNat)
+                            playerBirthDates[pId] = birthDate
 
                             terms.forEachIndexed { tIdx, (originalTerm, isCountry) ->
                                 if (isCountry) {
@@ -1534,7 +1683,20 @@ object DatabaseClient {
         }
 
         // Sadece istenen TÜM terimlerde eşleşmiş oyuncular kalsın
-        val fullMatches = playerTermSeasons.filter { (_, m) -> terms.all { (term, _) -> m.containsKey(term) } }
+        var fullMatches = playerTermSeasons.filter { (_, m) -> terms.all { (term, _) -> m.containsKey(term) } }
+
+        // 🎯 GÜNÜN SORUSU İÇİN: minYear verilmişse, en az bir kulüpteki sezonu
+        // o yıl veya sonrasına denk gelen oyuncularla sınırlıyoruz — genel arama
+        // (minYear=null) bundan HİÇ etkilenmiyor, geriye dönük tam uyumlu.
+        if (minYear != null) {
+            val yearFiltered = fullMatches.filter { (_, m) ->
+                m.values.any { season -> season != "-" && parseSeasonToSortValue(season) >= minYear }
+            }
+            if (yearFiltered.isNotEmpty()) fullMatches = yearFiltered
+            // 💡 yıl filtresi hiç eşleşme bırakmazsa (nadir durum), filtresiz listeye
+            // sessizce geri dönüyoruz — soru üretilemeyip kullanıcının karşısına
+            // boş ekran çıkmasındansa, filtre dışı bile olsa bir soru göstermek daha iyi.
+        }
 
         if (fullMatches.isEmpty()) return null
 
@@ -1546,7 +1708,9 @@ object DatabaseClient {
             playerName = playerName,
             position = position,
             clubs = terms.map { (term, _) -> ClubSeason(term, termSeasonMap[term] ?: "-") },
-            imageUrl = playerImageUrls[chosenId]
+            imageUrl = playerImageUrls[chosenId],
+            nationality = playerNationalities[chosenId],
+            birthDate = playerBirthDates[chosenId]
         )
     }
 

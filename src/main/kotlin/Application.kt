@@ -533,6 +533,39 @@ fun main() {
             // 💡 YENİ: "Oyuncu Modu" — mevcut 3 endpoint'e hiç dokunulmadı, bu tamamen
             // ayrı/ek bir uç nokta. Verilen kulüplerin (virgülle ayrılmış) HEPSİNDE
             // gerçekten oynamış rastgele bir oyuncuyu döndürür, yoksa 404 döner.
+            // 🎯 Günün Sorusu (Wordle modu) — tahmin edilen oyuncunun bilgilerini
+            // döndürüyor, hedefle karşılaştırıp renkli ipucu üretmek için.
+            // 🔗 Transfer Bağlantısı — kullanıcının yazdığı köprü oyuncunun
+            // gerçekten o kulüpte oynayıp oynamadığını doğrular.
+            get("/verifyBridge") {
+                val name = call.request.queryParameters["name"]
+                val club = call.request.queryParameters["club"]
+                if (name.isNullOrBlank() || club.isNullOrBlank()) {
+                    call.respond(HttpStatusCode.BadRequest)
+                    return@get
+                }
+                val valid = DatabaseClient.verifyPlayerPlayedForClub(name, club)
+                call.respond(mapOf("valid" to valid))
+            }
+
+            get("/playerInfo") {
+                val name = call.request.queryParameters["name"]
+                if (name.isNullOrBlank()) {
+                    call.respond(HttpStatusCode.BadRequest)
+                    return@get
+                }
+                // 🎯 Bağlam kulüpleri (Günün Sorusu'ndaki 2 hedef kulüp gibi) — aynı
+                // soyadlı birden fazla oyuncu varsa, doğru olanı seçmeye yardımcı olur.
+                val clubsParam = call.request.queryParameters["clubs"]
+                val contextClubs = clubsParam?.split(",")?.map { it.trim() }?.filter { it.isNotBlank() } ?: emptyList()
+                val info = DatabaseClient.fetchPlayerBasicInfoByName(name, contextClubs)
+                if (info == null) {
+                    call.respond(HttpStatusCode.NotFound)
+                } else {
+                    call.respond(info)
+                }
+            }
+
             get("/playerMode") {
                 val clubsParam = call.request.queryParameters["clubs"]
                 if (clubsParam.isNullOrBlank()) {
@@ -556,7 +589,8 @@ fun main() {
                     term to (isCountryFlags?.getOrNull(idx) ?: false)
                 }
 
-                val result = DatabaseClient.fetchPlayerAcrossClubs(terms)
+                val minYear = call.request.queryParameters["minYear"]?.toIntOrNull()
+                val result = DatabaseClient.fetchPlayerAcrossClubs(terms, minYear)
                 if (result == null) {
                     call.respond(HttpStatusCode.NotFound)
                 } else {
