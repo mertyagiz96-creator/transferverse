@@ -1463,28 +1463,52 @@ object DatabaseClient {
     // kullanıcının yazdığı ismin GERÇEKTEN o kulüpte oynayıp oynamadığını
     // veritabanına soruyoruz — böylece listede unuttuğum bir isim bile
     // (Vinícius, Rodrygo gibi) doğru şekilde kabul ediliyor.
-    fun verifyPlayerPlayedForClub(playerName: String, clubName: String): Boolean {
+    fun verifyPlayerPlayedForClub(playerName: String, clubName: String, startYear: Int? = null, endYear: Int? = null): Boolean {
         val cleanName = playerName.trim()
         if (cleanName.isEmpty()) return false
         val resolvedClub = resolveClubSearchTerm(clubName)
+        val targetNorm = stripAccentsForCompare(cleanName)
         val sql = """
-            SELECT t.from_club, t.to_club
+            SELECT p.name, t.from_club, t.to_club, t.season
             FROM players p
             JOIN transfers t ON p.id = t.transfer_id
             WHERE p.name LIKE ?
         """.trimIndent()
+        // 🎯 KRİTİK DÜZELTME: sadece "kulüpte oynadı mı" değil, "HANGİ YILLARDA
+        // oynadığı" da kontrol ediyoruz — Benzema (Arda katılmadan ÖNCE ayrılan)
+        // gibi, kulüpte oynamış ama HEDEF OYUNCULARLA ZAMAN OLARAK ÖRTÜŞMEYEN
+        // birinin yanlışlıkla kabul edilmesini önlüyor.
+        var overlapsStart = startYear == null
+        var overlapsEnd = endYear == null
         var found = false
         try {
             withConnection { conn ->
+                val roughBase = if (targetNorm.length >= 4) targetNorm.take(4) else targetNorm
+                val roughFilter = roughBase.replace(Regex("[aeiou]"), "_")
                 conn.prepareStatement(sql).use { stmt ->
-                    stmt.setString(1, "%$cleanName%")
+                    stmt.setString(1, "%$roughFilter%")
                     stmt.executeQuery().use { rs ->
-                        while (rs.next() && !found) {
+                        while (rs.next()) {
+                            val pName = rs.getString("name") ?: continue
+                            val nameNorm = stripAccentsForCompare(pName.replace(Regex("\\s*\\(\\d+\\)\\s*"), ""))
+                            val words = nameNorm.trim().split(Regex("\\s+"))
+                            val surnameNorm = words.lastOrNull() ?: ""
+                            if (nameNorm != targetNorm && surnameNorm != targetNorm) continue
+
                             val fromClub = rs.getString("from_club") ?: ""
                             val toClub = rs.getString("to_club") ?: ""
-                            if (matchesOriginalClub(fromClub, resolvedClub) || matchesOriginalClub(toClub, resolvedClub)) {
-                                found = true
-                            }
+                            if (!(matchesOriginalClub(fromClub, resolvedClub) || matchesOriginalClub(toClub, resolvedClub))) continue
+
+                            found = true
+                            val seasonYear = parseSeasonToSortValue(rs.getString("season"))
+                            // 🎯 DÜZELTME: tolerans KALDIRILDI — "22/23" (Benzema'nın son
+                            // sezonu) ile "23/24" (Arda'nın ilk sezonu) ARDIŞIK ama HİÇ
+                            // örtüşmeyen sezonlar. ±1 tolerans bunu yanlışlıkla kabul
+                            // ediyordu. Artık TAM sezon eşleşmesi istiyoruz — uzun süre
+                            // orada kalan gerçek köprü oyuncuların zaten HER sezon için
+                            // ayrı kaydı olduğundan, bu onları etkilemez.
+                            if (startYear != null && seasonYear == startYear) overlapsStart = true
+                            if (endYear != null && seasonYear == endYear) overlapsEnd = true
                         }
                     }
                 }
@@ -1492,7 +1516,7 @@ object DatabaseClient {
         } catch (e: Exception) {
             println("🔥 verifyPlayerPlayedForClub HATASI: ${e.message}")
         }
-        return found
+        return found && overlapsStart && overlapsEnd
     }
 
     // 💡 SQLite'ın LIKE'ı aksan-duyarsız DEĞİL ("Müller" ile "Muller" eşleşmez).

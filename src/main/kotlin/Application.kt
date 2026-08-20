@@ -544,7 +544,9 @@ fun main() {
                     call.respond(HttpStatusCode.BadRequest)
                     return@get
                 }
-                val valid = DatabaseClient.verifyPlayerPlayedForClub(name, club)
+                val startYear = call.request.queryParameters["startYear"]?.toIntOrNull()
+                val endYear = call.request.queryParameters["endYear"]?.toIntOrNull()
+                val valid = DatabaseClient.verifyPlayerPlayedForClub(name, club, startYear, endYear)
                 call.respond(mapOf("valid" to valid))
             }
 

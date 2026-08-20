@@ -4500,21 +4500,21 @@
     // gerçekten HİÇ aynı takımda oynamamış iki oyuncu + onları bağlayan, ikisiyle de
     // gerçekten oynamış bir köprü oyuncu(lar).
     const CONNECTION_POOL = [
-        { start: 'Erling Haaland', end: 'David Silva', club: 'Manchester City', bridges: ['Kevin De Bruyne'] },
-        { start: 'Jude Bellingham', end: 'Cristiano Ronaldo', club: 'Real Madrid', bridges: ['Luka Modric', 'Toni Kroos'] },
-        { start: 'Kim Min-jae', end: 'Robert Lewandowski', club: 'Bayern Munich', bridges: ['Thomas Muller'] },
-        { start: 'Kylian Mbappe', end: 'Zlatan Ibrahimovic', club: 'Paris SG', bridges: ['Marco Verratti'] },
-        { start: 'Mohamed Salah', end: 'Steven Gerrard', club: 'Liverpool', bridges: ['Jordan Henderson'] },
-        { start: 'Arda Guler', end: 'Sergio Ramos', club: 'Real Madrid', bridges: ['Toni Kroos', 'Luka Modric', 'Vinicius Junior', 'Rodrygo'] },
-        { start: 'Harry Kane', end: 'Robert Lewandowski', club: 'Bayern Munich', bridges: ['Thomas Muller', 'Joshua Kimmich', 'Leon Goretzka'] },
-        { start: 'N\'Golo Kante', end: 'Frank Lampard', club: 'Chelsea', bridges: ['Cesar Azpilicueta', 'John Terry'] },
-        { start: 'Erling Haaland', end: 'Sergio Aguero', club: 'Manchester City', bridges: ['Kevin De Bruyne', 'Ilkay Gundogan'] },
-        { start: 'Marcus Rashford', end: 'Ryan Giggs', club: 'Manchester United', bridges: ['Michael Carrick'] },
-        { start: 'Achraf Hakimi', end: 'Zlatan Ibrahimovic', club: 'Paris SG', bridges: ['Marquinhos', 'Presnel Kimpembe'] },
-        { start: 'Vinicius Junior', end: 'Iker Casillas', club: 'Real Madrid', bridges: ['Marcelo'] },
-        { start: 'Federico Chiesa', end: 'Paul Pogba', club: 'Juventus', bridges: ['Leonardo Bonucci', 'Giorgio Chiellini'] },
-        { start: 'Marcus Thuram', end: 'Romelu Lukaku', club: 'Inter', bridges: ['Nicolo Barella', 'Alessandro Bastoni'] },
-        { start: 'Vinicius Junior', end: 'Xabi Alonso', club: 'Real Madrid', bridges: ['Sergio Ramos', 'Karim Benzema', 'Luka Modric'] }
+        { start: 'Erling Haaland', end: 'David Silva', club: 'Manchester City', startYear: 2022, endYear: 2020, bridges: ['Kevin De Bruyne'] },
+        { start: 'Jude Bellingham', end: 'Cristiano Ronaldo', club: 'Real Madrid', startYear: 2023, endYear: 2018, bridges: ['Luka Modric', 'Toni Kroos'] },
+        { start: 'Kim Min-jae', end: 'Robert Lewandowski', club: 'Bayern Munich', startYear: 2023, endYear: 2022, bridges: ['Thomas Muller'] },
+        { start: 'Kylian Mbappe', end: 'Zlatan Ibrahimovic', club: 'Paris SG', startYear: 2017, endYear: 2016, bridges: ['Marco Verratti'] },
+        { start: 'Mohamed Salah', end: 'Steven Gerrard', club: 'Liverpool', startYear: 2017, endYear: 2015, bridges: ['Jordan Henderson'] },
+        { start: 'Arda Guler', end: 'Sergio Ramos', club: 'Real Madrid', startYear: 2023, endYear: 2021, bridges: ['Toni Kroos', 'Luka Modric', 'Vinicius Junior', 'Rodrygo'] },
+        { start: 'Harry Kane', end: 'Robert Lewandowski', club: 'Bayern Munich', startYear: 2023, endYear: 2022, bridges: ['Thomas Muller', 'Joshua Kimmich', 'Leon Goretzka'] },
+        { start: 'N\'Golo Kante', end: 'Frank Lampard', club: 'Chelsea', startYear: 2016, endYear: 2014, bridges: ['Cesar Azpilicueta', 'John Terry'] },
+        { start: 'Erling Haaland', end: 'Sergio Aguero', club: 'Manchester City', startYear: 2022, endYear: 2021, bridges: ['Kevin De Bruyne', 'Ilkay Gundogan'] },
+        { start: 'Marcus Rashford', end: 'Ryan Giggs', club: 'Manchester United', startYear: 2016, endYear: 2014, bridges: ['Michael Carrick'] },
+        { start: 'Achraf Hakimi', end: 'Zlatan Ibrahimovic', club: 'Paris SG', startYear: 2021, endYear: 2016, bridges: ['Marquinhos', 'Presnel Kimpembe'] },
+        { start: 'Vinicius Junior', end: 'Iker Casillas', club: 'Real Madrid', startYear: 2018, endYear: 2015, bridges: ['Marcelo'] },
+        { start: 'Federico Chiesa', end: 'Paul Pogba', club: 'Juventus', startYear: 2020, endYear: 2016, bridges: ['Leonardo Bonucci', 'Giorgio Chiellini'] },
+        { start: 'Marcus Thuram', end: 'Romelu Lukaku', club: 'Inter', startYear: 2023, endYear: 2021, bridges: ['Nicolo Barella', 'Alessandro Bastoni'] },
+        { start: 'Vinicius Junior', end: 'Xabi Alonso', club: 'Real Madrid', startYear: 2018, endYear: 2014, bridges: ['Sergio Ramos', 'Karim Benzema', 'Luka Modric'] }
     ];
 
     function loadConnectionGame() {
@@ -4624,11 +4624,17 @@
                 return bSurname === guessNorm;
             });
 
-            // 🔍 Listede yoksa, veritabanına sor — unuttuğum ama GERÇEKTEN
-            // geçerli bir isim olup olmadığını kesin olarak doğrular.
+            // 🔍 Listede yoksa, veritabanına sor — ama artık SADECE kulüp değil,
+            // AYNI ZAMAN DİLİMİNDE de oynadığını kontrol ediyor (±1 yıl tolerans).
+            // Bu, Benzema gibi (Arda katılmadan ÖNCE ayrılan) yanlış cevapların
+            // yanlışlıkla kabul edilmesini önlüyor.
             if (!isCorrect) {
                 try {
-                    const res = await fetch(`/verifyBridge?name=${encodeURIComponent(rawGuess)}&club=${encodeURIComponent(pair.club)}`);
+                    const params = new URLSearchParams({
+                        name: rawGuess, club: pair.club,
+                        startYear: pair.startYear, endYear: pair.endYear
+                    });
+                    const res = await fetch(`/verifyBridge?${params.toString()}`);
                     if (res.ok) {
                         const data = await res.json();
                         isCorrect = !!data.valid;
