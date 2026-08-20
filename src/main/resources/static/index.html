@@ -1455,10 +1455,10 @@
         @media (max-width: 650px) {
             /* 💡 CERRAHİ DÜZELTME: Settings paneli, hangi kenardan açılırsa açılsın
                ekran genişliğini ASLA aşmasın diye viewport'a göre üst sınır koyuyoruz —
-               yoksa bazı mobil tarayıcılar taşmayı önlemek için TÜM sayfayı küçültüyordu. */
+               yoksa bazı mobil tarayıcılar taşmayı önlemek için TÜM sayfayı küçültüyordu.
+               min-width'e DOKUNMUYORUZ — sadece bir üst sınır, alt sınır değil. */
             #utilityMenuPanel {
                 max-width: calc(100vw - 24px);
-                min-width: 0;
             }
 
             .daily-question-box {
