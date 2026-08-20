@@ -4505,7 +4505,16 @@
         { start: 'Kim Min-jae', end: 'Robert Lewandowski', club: 'Bayern Munich', bridges: ['Thomas Muller'] },
         { start: 'Kylian Mbappe', end: 'Zlatan Ibrahimovic', club: 'Paris SG', bridges: ['Marco Verratti'] },
         { start: 'Mohamed Salah', end: 'Steven Gerrard', club: 'Liverpool', bridges: ['Jordan Henderson'] },
-        { start: 'Arda Guler', end: 'Sergio Ramos', club: 'Real Madrid', bridges: ['Toni Kroos', 'Luka Modric', 'Vinicius Junior', 'Rodrygo'] }
+        { start: 'Arda Guler', end: 'Sergio Ramos', club: 'Real Madrid', bridges: ['Toni Kroos', 'Luka Modric', 'Vinicius Junior', 'Rodrygo'] },
+        { start: 'Harry Kane', end: 'Robert Lewandowski', club: 'Bayern Munich', bridges: ['Thomas Muller', 'Joshua Kimmich', 'Leon Goretzka'] },
+        { start: 'N\'Golo Kante', end: 'Frank Lampard', club: 'Chelsea', bridges: ['Cesar Azpilicueta', 'John Terry'] },
+        { start: 'Erling Haaland', end: 'Sergio Aguero', club: 'Manchester City', bridges: ['Kevin De Bruyne', 'Ilkay Gundogan'] },
+        { start: 'Marcus Rashford', end: 'Ryan Giggs', club: 'Manchester United', bridges: ['Michael Carrick'] },
+        { start: 'Achraf Hakimi', end: 'Zlatan Ibrahimovic', club: 'Paris SG', bridges: ['Marquinhos', 'Presnel Kimpembe'] },
+        { start: 'Vinicius Junior', end: 'Iker Casillas', club: 'Real Madrid', bridges: ['Marcelo'] },
+        { start: 'Federico Chiesa', end: 'Paul Pogba', club: 'Juventus', bridges: ['Leonardo Bonucci', 'Giorgio Chiellini'] },
+        { start: 'Marcus Thuram', end: 'Romelu Lukaku', club: 'Inter', bridges: ['Nicolo Barella', 'Alessandro Bastoni'] },
+        { start: 'Vinicius Junior', end: 'Xabi Alonso', club: 'Real Madrid', bridges: ['Sergio Ramos', 'Karim Benzema', 'Luka Modric'] }
     ];
 
     function loadConnectionGame() {
@@ -4922,6 +4931,8 @@
         }
     }
 
+    // 🏀 Basketbol için SABİT, koda gömülü 14 oyuncu havuzu (7 NBA + 7 Avrupa) —
+    // futboldaki gibi canlı veritabanı sorgusu YOK, elle yazılmış kısa tanıtımlar.
     // 🏀 Basketbol için SABİT, koda gömülü 14 oyuncu havuzu (7 NBA + 7 Avrupa) —
     // futboldaki gibi canlı veritabanı sorgusu YOK, elle yazılmış kısa tanıtımlar.
     const basketballBioPool = [
@@ -5354,11 +5365,15 @@
     }
 
     function buildDailyHintRowHtml(guessName, guessInfo, targetNationality, targetPosition, targetAge) {
+        // 🎯 KRİTİK DÜZELTME: Karşılaştırmayı, GÖRÜNÜMDE kullandığımız TEMİZLENMİŞ
+        // değerlerle yapıyoruz (sadece ilk uyruk, sadece spesifik mevki) — yoksa
+        // "Chile  Italy" gibi çoklu uyruklu biri, tek uyruklu "Chile" ile YANLIŞLIKLA
+        // eşleşmiyor görünüyordu (Medel/Vidal tutarsızlığının sebebi buydu).
         const natMatch = guessInfo && guessInfo.nationality && targetNationality
-            ? normalizeCompareText(guessInfo.nationality) === normalizeCompareText(targetNationality)
+            ? normalizeCompareText(cleanNationalityForDisplay(guessInfo.nationality)) === normalizeCompareText(cleanNationalityForDisplay(targetNationality))
             : null;
         const posMatch = guessInfo && guessInfo.position && targetPosition
-            ? normalizeCompareText(guessInfo.position) === normalizeCompareText(targetPosition)
+            ? normalizeCompareText(cleanPositionForDisplay(guessInfo.position)) === normalizeCompareText(cleanPositionForDisplay(targetPosition))
             : null;
         const guessAge = guessInfo ? computeAgeFromBirthDate(guessInfo.birthDate) : null;
 
@@ -5376,8 +5391,8 @@
             ageText = `${guessAge}`;
         }
 
-        const natDisplay = natMatch === null ? '?' : (natMatch ? '🟩' : `🟥 ${escapeHtml(cleanNationalityForDisplay(guessInfo.nationality))}`);
-        const posDisplay = posMatch === null ? '?' : (posMatch ? '🟩' : `🟥 ${escapeHtml(cleanPositionForDisplay(guessInfo.position))}`);
+        const natDisplay = natMatch === null ? '?' : (natMatch ? `🟩 ${escapeHtml(cleanNationalityForDisplay(guessInfo.nationality))}` : `🟥 ${escapeHtml(cleanNationalityForDisplay(guessInfo.nationality))}`);
+        const posDisplay = posMatch === null ? '?' : (posMatch ? `🟩 ${escapeHtml(cleanPositionForDisplay(guessInfo.position))}` : `🟥 ${escapeHtml(cleanPositionForDisplay(guessInfo.position))}`);
 
         const emojiRow = (natMatch === true ? '🟩' : natMatch === false ? '🟥' : '⬛')
             + (posMatch === true ? '🟩' : posMatch === false ? '🟥' : '⬛')
