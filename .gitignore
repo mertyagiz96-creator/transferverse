@@ -42,3 +42,4 @@ football.db-wal
 football.db-shm
 *.db-shm
 *.db-wal
+.idea/

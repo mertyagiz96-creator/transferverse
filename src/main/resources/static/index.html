@@ -889,6 +889,8 @@
             padding: 16px 20px;
             display: flex;
             align-items: center;
+            flex-wrap: wrap;
+            row-gap: 6px;
         }
 
         .logo-mark {
@@ -1770,7 +1772,8 @@
                     </div>
                 </div>
             </div>
-        <a href="/blog" style="margin-left: auto; font-size: 0.78rem; font-weight: 700; color: rgba(var(--fg-rgb), 0.7); text-decoration: none; white-space: nowrap;" title="Transfer Hikayeleri">
+        <button id="langToggleBtn" style="margin-left: auto; background: none; border: none; font-size: 1.15rem; cursor: pointer; padding: 4px;" title="Switch language / Dili değiştir">🇬🇧</button>
+        <a href="/blog" style="margin-left: 10px; font-size: 0.78rem; font-weight: 700; color: rgba(var(--fg-rgb), 0.7); text-decoration: none; white-space: nowrap;" title="Transfer Hikayeleri">
             📰 Blog
         </a>
     </div>
@@ -1785,11 +1788,11 @@
 
         <div id="gameModeButtonGroup" style="display: flex; gap: 8px;">
             <button id="playerModeBtn" class="toolbar-btn" title="İki büyük kulüpte birden oynamış gizemli bir oyuncuyu tahmin etmeye çalışın" disabled>
-                🎮 Bil Bakalım
+                <span id="i18n-playerModeBtn">🎮 Bil Bakalım</span>
             </button>
 
             <button id="duelModeBtn" class="toolbar-btn" title="Bir arkadaşınla aynı soruyu aynı anda çöz, kim önce bilirse kazanır" disabled>
-                🏆 Arkadaşla Yarış
+                <span id="i18n-duelModeBtn">🏆 Arkadaşla Yarış</span>
             </button>
         </div>
     </div>
@@ -1798,34 +1801,34 @@
         <div class="loader-track">
             <div class="rolling-ball">⚽</div>
         </div>
-        <span>Transferler Taranıyor...</span>
+        <span id="i18n-topLoader">Transferler Taranıyor...</span>
     </div>
 
     <div id="sportToggleWrapper" style="display: flex; justify-content: flex-end; gap: 8px; margin-bottom: 14px; flex-wrap: wrap;">
-        <button id="sportFootballBtn" class="toolbar-btn active" data-sport="football">⚽ Futbol</button>
-        <button id="sportBasketballBtn" class="toolbar-btn" data-sport="basketball">🏀 Basketbol</button>
+        <button id="sportFootballBtn" class="toolbar-btn active" data-sport="football"><span id="i18n-footballBtn">⚽ Futbol</span></button>
+        <button id="sportBasketballBtn" class="toolbar-btn" data-sport="basketball"><span id="i18n-basketballBtn">🏀 Basketbol</span></button>
     </div>
 
     <div class="search-card" style="position: relative;">
-        <p class="subtitle" style="grid-column: 1 / -1; margin: 0 0 4px 0;">İki Kulüp Arasındaki Ortak Oyuncular veya Kulüp / Ülke Araması</p>
+        <p class="subtitle" id="i18n-subtitle" style="grid-column: 1 / -1; margin: 0 0 4px 0;">İki Kulüp Arasındaki Ortak Oyuncular veya Kulüp / Ülke Araması</p>
         <div style="grid-column: 1 / -1; display: flex; justify-content: flex-end; margin-bottom: -6px;">
             <button id="luckyModeBtn" class="toolbar-btn" style="font-size: 0.62rem; padding: 6px 10px;" title="Rastgele iki takım/ülke seçer, aramayı siz başlatırsınız — tahmin oyunu için ideal">
-                🎲 Rastgele Eşleşme
+                <span id="i18n-luckyBtn">🎲 Rastgele Eşleşme</span>
             </button>
         </div>
         <div class="input-group">
-            <label for="club1Input">1. Kulüp veya Ülke <span id="club1LogoIcon" class="input-logo-icon"></span></label>
+            <label for="club1Input"><span id="i18n-label1">1. Kulüp veya Ülke</span> <span id="club1LogoIcon" class="input-logo-icon"></span></label>
             <input id="club1Input" type="text" autocomplete="off" placeholder="Örn: Galatasaray veya Türkiye" value="Galatasaray">
             <div id="club1Dropdown" class="autocomplete-dropdown"></div>
         </div>
 
         <div class="input-group">
-            <label for="club2Input">2. Kulüp veya Ülke <span id="club2LogoIcon" class="input-logo-icon"></span></label>
+            <label for="club2Input"><span id="i18n-label2">2. Kulüp veya Ülke</span> <span id="club2LogoIcon" class="input-logo-icon"></span></label>
             <input id="club2Input" type="text" autocomplete="off" placeholder="Örn: Kocaelispor veya Almanya" value="Chelsea">
             <div id="club2Dropdown" class="autocomplete-dropdown"></div>
         </div>
 
-        <button id="searchBtn" class="btn-search">Ara</button>
+        <button id="searchBtn" class="btn-search"><span id="i18n-searchBtn">Ara</span></button>
     </div>
 
     <div class="main-guess-row" id="mainGuessRow" style="display: none;">
@@ -1837,11 +1840,11 @@
         <table>
             <thead id="resultsTableHead" style="display: none;">
             <tr>
-                <th>Oyuncu Adı</th>
+                <th id="i18n-thName">Oyuncu Adı</th>
                 <th id="colMevki">Mevki</th>
                 <th id="colUyruk">Uyruk</th>
-                <th>1. Kulüp / Ülke Sezonu</th>
-                <th>2. Kulüp / Ülke Sezonu</th>
+                <th id="i18n-thSeason1">1. Kulüp / Ülke Sezonu</th>
+                <th id="i18n-thSeason2">2. Kulüp / Ülke Sezonu</th>
             </tr>
             </thead>
             <tbody id="resultsTable"></tbody>
@@ -1862,7 +1865,7 @@
 
     <div id="connectionGameSection" style="margin-top: 40px; padding-top: 30px; border-top: 1px solid rgba(var(--fg-rgb), 0.09); display: none;">
         <div style="display:flex; align-items:center; justify-content:center; gap:10px; flex-wrap:wrap;">
-            <h2 style="font-size: 1.15rem; font-weight: 800; color: var(--accent-gold); margin: 0;">🔗 Transfer Bağlantısı</h2>
+            <h2 id="i18n-connectionTitle" style="font-size: 1.15rem; font-weight: 800; color: var(--accent-gold); margin: 0;">🔗 Transfer Bağlantısı</h2>
             <button id="connectionHowToPlayBtn" style="font-size:0.65rem; padding:3px 8px; background:rgba(var(--fg-rgb),0.06); border:1px solid rgba(var(--fg-rgb),0.15); border-radius:10px; color:rgb(var(--fg-rgb)); cursor:pointer;">❓ Nasıl Oynanır?</button>
         </div>
         <div id="connectionHowToPlayBox" style="display:none; font-size:0.72rem; line-height:1.6; background:rgba(var(--fg-rgb),0.04); border-radius:8px; padding:10px 14px; max-width:420px; margin: 8px auto 0;">
@@ -1875,7 +1878,7 @@
     </div>
 
     <div id="transferFeeQuizSection" style="margin-top: 40px; padding-top: 30px; border-top: 1px solid rgba(var(--fg-rgb), 0.09); display: none;">
-        <h2 style="font-size: 1.15rem; font-weight: 800; color: var(--accent-gold); margin-bottom: 14px;">💰 Hangi Transfer Daha Pahalıydı?</h2>
+        <h2 id="i18n-feeQuizTitle" style="font-size: 1.15rem; font-weight: 800; color: var(--accent-gold); margin-bottom: 14px;">💰 Hangi Transfer Daha Pahalıydı?</h2>
         <div id="transferFeeQuizContent"></div>
     </div>
 
@@ -1901,8 +1904,8 @@
     </div>
 
     <div id="aboutContentSection" style="margin-top: 40px; padding-top: 30px; border-top: 1px solid rgba(var(--fg-rgb), 0.09); font-size: 0.88rem; line-height: 1.75; color: rgba(var(--fg-rgb), 0.75);">
-        <h2 style="font-size: 1.15rem; font-weight: 800; color: var(--accent-gold); margin-bottom: 14px;">TransferKolik Nedir?</h2>
-        <p style="margin-bottom: 22px;">
+        <h2 id="i18n-aboutTitle" style="font-size: 1.15rem; font-weight: 800; color: var(--accent-gold); margin-bottom: 14px;">TransferKolik Nedir?</h2>
+        <p id="i18n-aboutBody" style="margin-bottom: 22px;">
             TransferKolik, futbolseverlerin bir oyuncunun kariyeri boyunca hangi kulüplerde ve milli takımda forma giydiğini kolayca araştırabildiği, Türkçe ve Türk futboluna odaklanmış ücretsiz bir platformdur. İki kulüp veya ülke ismi girerek, o iki takımda ortak oynamış tüm futbolcuları saniyeler içinde bulabilirsiniz — hem eski günlerin efsanelerini hatırlamak hem de bugünün transferlerini takip etmek için pratik bir araçtır. Aşağıda, sitedeki her modu ve özelliği daha ayrıntılı anlatıyoruz.
         </p>
 
@@ -1914,38 +1917,38 @@
              data-full-width-responsive="true"></ins>
         <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
 
-        <h3 style="font-size: 1rem; font-weight: 700; color: rgb(var(--fg-rgb)); margin-bottom: 8px;">🔍 Kulüp / Ülke Arama</h3>
-        <p style="margin-bottom: 20px;">
+        <h3 id="i18n-h3-search" style="font-size: 1rem; font-weight: 700; color: rgb(var(--fg-rgb)); margin-bottom: 8px;">🔍 Kulüp / Ülke Arama</h3>
+        <p id="i18n-p-search" style="margin-bottom: 20px;">
             Ana ekrandaki iki kutuya istediğiniz iki kulübü (örneğin "Galatasaray" ve "Chelsea") ya da bir kulüp ile bir ülkeyi (örneğin "Fenerbahçe" ve "Brezilya") yazıp "Ara"ya basmanız yeterli. TransferKolik, veritabanındaki milyonlarca transfer kaydını tarayarak, o iki takımda/ülkede gerçekten oynamış tüm futbolcuları; mevkileri, uyrukları ve hangi sezonlarda forma giydikleri bilgisiyle birlikte listeler. Bu, özellikle "acaba şu oyuncu bizim takımda da oynamış mıydı?" tarzı tartışmaları saniyeler içinde çözmek için idealdir.
         </p>
 
-        <h3 style="font-size: 1rem; font-weight: 700; color: rgb(var(--fg-rgb)); margin-bottom: 8px;">🎯 Bil Bakalım — Genel Mod</h3>
-        <p style="margin-bottom: 20px;">
+        <h3 id="i18n-h3-general" style="font-size: 1rem; font-weight: 700; color: rgb(var(--fg-rgb)); margin-bottom: 8px;">🎯 Bil Bakalım — Genel Mod</h3>
+        <p id="i18n-p-general" style="margin-bottom: 20px;">
             Bil Bakalım, arama aracını gerçek bir tahmin oyununa dönüştürür. Sistem, iki kulüp arasında ortak oynamış gizemli bir oyuncu seçer; siz de ipuçlarına (mevki, maskeli isim, fotoğraf) bakarak ya da hiç bakmadan doğrudan ismi tahmin etmeye çalışırsınız. Her soru için 30 saniyeniz var, pas hakkınız tükenene kadar oyun devam eder. Doğru bildikçe seviye atlar, ekstra pas hakları kazanır ve global rekoru zorlarsınız. Genel Mod, Avrupa'nın ve dünyanın en bilindik kulüplerinden (Real Madrid, Barcelona, Bayern Münih, Manchester United, Galatasaray, Fenerbahçe ve daha fazlası) oluşan geniş, çeşitli bir havuz kullanır — hem kolay hem zorlayıcı sorularla dengeli bir zorluk eğrisi sunar.
         </p>
 
-        <h3 style="font-size: 1rem; font-weight: 700; color: rgb(var(--fg-rgb)); margin-bottom: 8px;">🇹🇷 Bil Bakalım — Türkiye Ligi Modu</h3>
-        <p style="margin-bottom: 20px;">
+        <h3 id="i18n-h3-turkey" style="font-size: 1rem; font-weight: 700; color: rgb(var(--fg-rgb)); margin-bottom: 8px;">🇹🇷 Bil Bakalım — Türkiye Ligi Modu</h3>
+        <p id="i18n-p-turkey" style="margin-bottom: 20px;">
             Kendini gerçek bir Türk futbolu uzmanı olarak görenler için hazırladığımız bu mod, yalnızca Süper Lig kulüplerini ve Bursaspor gibi tarihi öneme sahip takımları kapsar. Isınma turunda, Süper Lig tarihinde şampiyonluk yaşamış yalnızca 5 kulüp (Galatasaray, Fenerbahçe, Beşiktaş, Trabzonspor, Bursaspor) arasından sorular gelir; skorunuz yükseldikçe havuz genişleyip zorluk artar. Ülke karışımı olmadan, saf kulüp-kulüp sorularla ilerleyen bu mod, Genel Mod'a kıyasla belirgin şekilde daha zorlayıcıdır.
         </p>
 
-        <h3 style="font-size: 1rem; font-weight: 700; color: rgb(var(--fg-rgb)); margin-bottom: 8px;">🏆 Arkadaşla Yarış</h3>
-        <p style="margin-bottom: 20px;">
+        <h3 id="i18n-h3-duel" style="font-size: 1rem; font-weight: 700; color: rgb(var(--fg-rgb)); margin-bottom: 8px;">🏆 Arkadaşla Yarış</h3>
+        <p id="i18n-p-duel" style="margin-bottom: 20px;">
             Yalnız oynamak istemeyenler için tasarlanan bu mod, bir arkadaşınızla gerçek zamanlı, karşılıklı bir yarışma sunar. Oda kurduğunuzda size 4 haneli bir kod verilir; bu kodu arkadaşınıza gönderirsiniz, o da "Odaya Katıl" ile aynı odaya girer. İkiniz de aynı soruyu aynı anda görür, kim önce doğru bilirse o turu kazanır. İlk 5'e ya da ilk 10'a yarışma seçeneği, isteğe bağlı maskeleme ipucu ve Genel/Türkiye Ligi havuz seçimi mevcuttur. Hesap açmaya, uygulama indirmeye gerek yoktur — link paylaşır paylaşmaz oynamaya başlayabilirsiniz.
         </p>
 
-        <h3 style="font-size: 1rem; font-weight: 700; color: rgb(var(--fg-rgb)); margin-bottom: 8px;">📅 Günün Sorusu</h3>
-        <p style="margin-bottom: 20px;">
+        <h3 id="i18n-h3-daily" style="font-size: 1rem; font-weight: 700; color: rgb(var(--fg-rgb)); margin-bottom: 8px;">📅 Günün Sorusu</h3>
+        <p id="i18n-p-daily" style="margin-bottom: 20px;">
             Her gün değişen, herkese aynı gösterilen özel bir soru. Siteye her girişinizde, o günün iki kulübünü görür ve aralarında oynamış oyuncuyu tahmin etmeye çalışırsınız. Kişisel en iyi sürenizi (gerçek, cihazınızda saklanan bir veri — asla uydurma bir sayı değil) takip edebilir, her gün kendinizi bir öncekiyle kıyaslayabilirsiniz.
         </p>
 
-        <h3 style="font-size: 1rem; font-weight: 700; color: rgb(var(--fg-rgb)); margin-bottom: 8px;">🎲 Rastgele Eşleşme ve 🎭 Maskeleme Modu</h3>
-        <p style="margin-bottom: 20px;">
+        <h3 id="i18n-h3-random" style="font-size: 1rem; font-weight: 700; color: rgb(var(--fg-rgb)); margin-bottom: 8px;">🎲 Rastgele Eşleşme ve 🎭 Maskeleme Modu</h3>
+        <p id="i18n-p-random" style="margin-bottom: 20px;">
             Rastgele Eşleşme, sizin yerinize iki takım/ülke seçip aramayı elle başlatmanızı bekler — arkadaşlarınızla "önce kim bilir" tarzı sözlü bir yarışma için idealdir. Maskeleme Modu ise, arama sonuçlarındaki oyuncu isimlerini gizleyip kendi kendinize (ya da grup hâlinde) bir tahmin oyununa çevirir; Çaylak seviyesinde harflerin çoğu görünür kalırken, Usta seviyesinde sadece ilk harf açık kalır.
         </p>
 
-        <h3 style="font-size: 1rem; font-weight: 700; color: rgb(var(--fg-rgb)); margin-bottom: 8px;">📊 Veriler ve Kaynaklar</h3>
-        <p>
+        <h3 id="i18n-h3-data" style="font-size: 1rem; font-weight: 700; color: rgb(var(--fg-rgb)); margin-bottom: 8px;">📊 Veriler ve Kaynaklar</h3>
+        <p id="i18n-p-data">
             TransferKolik'teki transfer geçmişi ve oyuncu bilgileri, halka açık futbol veritabanlarından derlenmiştir; kulüp logoları ve stadyum görselleri ise TheSportsDB ve Wikimedia Commons gibi kaynaklardan sağlanmaktadır. Veriler belirli bir tarihte alınmış bir görüntüyü yansıttığı için çok yakın zamanlı transferler henüz yer almayabilir. Site, herhangi bir kayıt gerektirmeden anında kullanılabilir ve masaüstü, tablet, mobil dahil tüm cihazlarla uyumludur.
         </p>
 
@@ -2655,6 +2658,80 @@
     // veritabanındaki kulüp isimleri genelde Türkçe karaktersiz kayıtlı (örn.
     // "Besiktas", "Fenerbahce"), bu dönüşüm olmadan "Beşiktaş" yazınca öneri
     // bulunamıyordu. Backend'deki toStandardSearch() ile aynı mantık.
+    // 🌍 BASİT DİL DEĞİŞTİRİCİ — sadece ANA SAYFADAKİ sabit metinleri kapsar
+    // (arama arayüzü, mod butonları, "Hakkımızda" bölümü). Oyunların kendi
+    // dinamik içerikleri (Günün Sorusu'nun canlı metni gibi) şimdilik kapsam
+    // dışı — bu, ayrı ve daha büyük bir iş.
+    const TRANSLATIONS = {
+        'i18n-subtitle': { en: 'Common Players Between Two Clubs or Club / Country Search' },
+        'i18n-luckyBtn': { en: '🎲 Random Match' },
+        'i18n-label1': { en: '1. Club or Country' },
+        'i18n-label2': { en: '2. Club or Country' },
+        'i18n-searchBtn': { en: 'Search' },
+        'i18n-thName': { en: 'Player Name' },
+        'i18n-thSeason1': { en: '1. Club / Country Season' },
+        'i18n-thSeason2': { en: '2. Club / Country Season' },
+        'i18n-playerModeBtn': { en: '🎮 Guess Who' },
+        'i18n-duelModeBtn': { en: '🏆 Race a Friend' },
+        'i18n-topLoader': { en: 'Scanning Transfers...' },
+        'i18n-footballBtn': { en: '⚽ Football' },
+        'i18n-basketballBtn': { en: '🏀 Basketball' },
+        'i18n-aboutTitle': { en: 'What is TransferKolik?' },
+        'i18n-aboutBody': { en: `TransferKolik is a free platform, focused on Turkish and Turkish football, where football fans can easily research which clubs and national teams a player has represented throughout their career. By entering two club or country names, you can find every player who has played for both in seconds — a practical tool for both reminiscing about legends of the past and tracking today's transfers. Below, we explain every mode and feature on the site in more detail.` },
+        'i18n-h3-search': { en: '🔍 Club / Country Search' },
+        'i18n-p-search': { en: `Simply type your two chosen clubs (e.g. "Galatasaray" and "Chelsea"), or a club and a country (e.g. "Fenerbahçe" and "Brazil"), into the two boxes on the main screen and press "Search". TransferKolik scans millions of transfer records in its database and lists every player who has genuinely played for both teams/countries, along with their position, nationality, and which seasons they wore that shirt. This is ideal for settling "did that player ever play for our club?" debates in seconds.` },
+        'i18n-h3-general': { en: '🎯 Guess Who — General Mode' },
+        'i18n-p-general': { en: `Guess Who turns the search tool into a real guessing game. The system picks a mystery player who has played for two clubs; you try to guess their name using hints (position, masked name, photo) or go straight for it without any hints at all. You have 30 seconds per question, and the game continues until you run out of passes. Answering correctly levels you up, earns extra passes, and pushes the global record. General Mode uses a large, varied pool built from Europe's and the world's best-known clubs (Real Madrid, Barcelona, Bayern Munich, Manchester United, Galatasaray, Fenerbahçe, and more) — offering a balanced difficulty curve with both easy and challenging questions.` },
+        'i18n-h3-turkey': { en: '🇹🇷 Guess Who — Turkish League Mode' },
+        'i18n-p-turkey': { en: `Built for those who consider themselves true Turkish football experts, this mode covers only Süper Lig clubs and historically significant teams like Bursaspor. The warm-up round draws questions only from the 5 clubs that have won the Süper Lig title (Galatasaray, Fenerbahçe, Beşiktaş, Trabzonspor, Bursaspor); as your score rises, the pool expands and difficulty increases. With no country mixed in — pure club-vs-club questions — this mode is noticeably more challenging than General Mode.` },
+        'i18n-h3-duel': { en: '🏆 Race a Friend' },
+        'i18n-p-duel': { en: `Designed for those who don't want to play alone, this mode offers a real-time, head-to-head competition with a friend. When you create a room, you get a 4-digit code; send it to your friend, who joins the same room via "Join Room". Both of you see the same question at the same time — whoever answers correctly first wins the round. Options include racing to 5 or 10 points first, an optional masking hint, and choosing the General or Turkish League pool. No account or app download needed — you can start playing the moment you share the link.` },
+        'i18n-h3-daily': { en: '📅 Question of the Day' },
+        'i18n-p-daily': { en: `A special question that changes every day and is shown identically to everyone. Every time you visit the site, you'll see that day's two clubs and try to guess the player who played for both. You can track your personal best time (a real number stored on your device — never a fabricated one) and compare yourself day to day.` },
+        'i18n-h3-random': { en: '🎲 Random Match and 🎭 Masking Mode' },
+        'i18n-p-random': { en: `Random Match picks two teams/countries for you and waits for you to start the search yourself — ideal for a verbal "who knows first" competition with friends. Masking Mode hides player names in the search results, turning it into a guessing game for yourself (or a group); at Beginner level most letters stay visible, while at Expert level only the first letter is revealed.` },
+        'i18n-h3-data': { en: '📊 Data and Sources' },
+        'i18n-p-data': { en: `The transfer history and player information on TransferKolik has been compiled from publicly available football databases; club logos and stadium images are sourced from providers like TheSportsDB and Wikimedia Commons. Since the data reflects a snapshot taken at a specific point in time, very recent transfers may not yet appear. The site works instantly with no registration required and is compatible with all devices, including desktop, tablet, and mobile.` },
+        'i18n-connectionTitle': { en: '🔗 Transfer Connection' },
+        'i18n-feeQuizTitle': { en: '💰 Which Transfer Was More Expensive?' }
+    };
+    const TR_ORIGINALS = {}; // 💡 Türkçeye geri dönmek için orijinal metinleri saklıyoruz
+    let currentLang = 'tr'; // 🌍 Dinamik (JS ile oluşturulan) başlıkların kontrol edebilmesi için
+
+    function applyLanguage(lang) {
+        currentLang = lang;
+        Object.keys(TRANSLATIONS).forEach(id => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            if (!TR_ORIGINALS[id]) TR_ORIGINALS[id] = el.textContent; // ilk seferde orijinali kaydet
+            el.textContent = lang === 'en' ? TRANSLATIONS[id].en : TR_ORIGINALS[id];
+        });
+        const btn = document.getElementById('langToggleBtn');
+        if (btn) btn.textContent = lang === 'en' ? '🇹🇷' : '🇬🇧';
+        try { localStorage.setItem('transferkolik_lang', lang); } catch (e) { /* sessizce geç */ }
+        // 💡 Günün Sorusu başlığı JS ile dinamik oluşuyor — dil değişince yeniden çiziyoruz.
+        const dqHeading = document.getElementById('i18n-dailyQTitle');
+        if (dqHeading) {
+            dqHeading.innerHTML = dqHeading.dataset.iconHtml + (lang === 'en'
+                ? ' Question of the Day — Who played for both teams?'
+                : ' Günün Sorusu — İki takımda da oynayan oyuncu kim?');
+        }
+    }
+
+    function initLanguage() {
+        let saved = 'tr';
+        try { saved = localStorage.getItem('transferkolik_lang') || 'tr'; } catch (e) { /* sessizce geç */ }
+        if (saved === 'en') applyLanguage('en');
+        const btn = document.getElementById('langToggleBtn');
+        if (btn) {
+            btn.addEventListener('click', () => {
+                const current = btn.textContent.trim() === '🇬🇧' ? 'tr' : 'en';
+                const next = current === 'tr' ? 'en' : 'tr';
+                applyLanguage(next);
+            });
+        }
+    }
+
     function normalize(str) {
         return str
             .toLocaleLowerCase('tr-TR')
@@ -5494,8 +5571,8 @@
         container.innerHTML = `
             <div class="daily-question-box">
                 <div style="display:flex; align-items:center; justify-content:center; gap:10px; flex-wrap:wrap;">
-                    <div style="font-size: 0.72rem; text-transform: uppercase; letter-spacing: 1.2px; color: var(--accent-gold); font-weight: 700;">
-                        ${realCalendarIconHtml()} Günün Sorusu — İki takımda da oynayan oyuncu kim?
+                    <div id="i18n-dailyQTitle" data-icon-html="${realCalendarIconHtml().replace(/"/g, '&quot;')}" style="font-size: 0.72rem; text-transform: uppercase; letter-spacing: 1.2px; color: var(--accent-gold); font-weight: 700;">
+                        ${realCalendarIconHtml()} ${currentLang === 'en' ? 'Question of the Day — Who played for both teams?' : 'Günün Sorusu — İki takımda da oynayan oyuncu kim?'}
                     </div>
                     <button id="dailyHowToPlayBtn" style="font-size:0.65rem; padding:3px 8px; background:rgba(var(--fg-rgb),0.06); border:1px solid rgba(var(--fg-rgb),0.15); border-radius:10px; color:rgb(var(--fg-rgb)); cursor:pointer;">❓ Nasıl Oynanır?</button>
                 </div>
@@ -7398,6 +7475,7 @@
 
     window.onload = () => {
         window.scrollTo(0, 0);
+        initLanguage();
         applyQueryParamsToInputs();
         setupClubLogoIcons();
         setupInstallBanner();
