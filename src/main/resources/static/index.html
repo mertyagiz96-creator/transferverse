@@ -1612,17 +1612,20 @@
                modern görünür hem dikey yerden tasarruf sağlar. */
             #gameModeButtonGroup, #sportToggleWrapper {
                 width: 100%;
-                gap: 6px !important;
-                flex-wrap: wrap;
+                gap: 4px !important;
+                flex-wrap: nowrap;
             }
             #gameModeButtonGroup .toolbar-btn {
-                font-size: 0.48rem;
-                padding: 8px 2px;
+                font-size: 0.52rem;
+                padding: 8px 3px;
                 white-space: nowrap;
-                flex: 1;
                 text-align: center;
+                flex: 1;
+                min-width: 0;
                 overflow: hidden;
-                text-overflow: ellipsis;
+            }
+            #playerModeBtn, #duelModeBtn, #transfermatikModeBtn {
+                flex: 1;
             }
             #sportToggleWrapper .toolbar-btn {
                 width: 50%;
