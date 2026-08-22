@@ -1458,6 +1458,20 @@
         }
 
         @media (max-width: 650px) {
+            /* 💡 Transfermatik'te girdi kutusu + Ekle + Dur butonları, dar ekranda
+               taşıyordu (özel bir küçültme kuralı yoktu) — hepsini kompaklaştırıyoruz. */
+            #tm1Input, #tm2Input {
+                padding: 8px 6px !important;
+            }
+            #tm1SubmitBtn, #tm2SubmitBtn {
+                padding: 6px 8px !important;
+                font-size: 0.6rem !important;
+            }
+            #tm1StandBtn, #tm2StandBtn {
+                padding: 6px 6px !important;
+                font-size: 0.6rem !important;
+            }
+
             /* 💡 BASİT ÇÖZÜM: karmaşık genişlik hesapları yerine, panel ve TÜM iç
                menülerdeki (Yıl Filtresi dahil) yazı/dolguyu ~%20-25 küçültüyoruz —
                böylece doğal içerik genişliği zaten ekrana sığıyor, hiçbir taşma
@@ -1641,6 +1655,7 @@
             }
             #duelModeBtn {
                 flex: 1.3;
+                font-size: 0.48rem !important;
             }
             #sportToggleWrapper .toolbar-btn {
                 width: 50%;
@@ -7931,13 +7946,15 @@
         topLoader.style.display = "flex";
         if (playSound) playSearchSound();
 
-        // 🔒 Arama sürerken Bil Bakalım/Arkadaşla Yarış'a geçilirse, geç gelen
-        // arama sonucu o ekranı ezebiliyordu — arama boyunca bu butonları
-        // geçici olarak kilitliyoruz.
+        // 🔒 Arama sürerken Bil Bakalım/Arkadaşla Yarış/Transfermatik'e geçilirse,
+        // geç gelen arama sonucu o ekranı ezebiliyordu — arama boyunca bu
+        // butonları geçici olarak kilitliyoruz.
         const playerBtnLock = document.getElementById('playerModeBtn');
         const duelBtnLock = document.getElementById('duelModeBtn');
+        const tmBtnLock = document.getElementById('transfermatikModeBtn');
         if (playerBtnLock) playerBtnLock.disabled = true;
         if (duelBtnLock) duelBtnLock.disabled = true;
+        if (tmBtnLock) tmBtnLock.disabled = true;
 
         try {
             let url = input1 && input2
@@ -7966,6 +7983,7 @@
             topLoader.style.display = "none";
             if (playerBtnLock) playerBtnLock.disabled = false;
             if (duelBtnLock) duelBtnLock.disabled = false;
+            if (tmBtnLock) tmBtnLock.disabled = false;
         }
     }
 

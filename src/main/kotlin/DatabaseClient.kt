@@ -1629,7 +1629,8 @@ object DatabaseClient {
         expr = "LOWER($expr)"
         val lowerReplacements = listOf(
             "ı" to "i", "ğ" to "g", "ş" to "s", "ç" to "c", "ö" to "o", "ü" to "u",
-            "á" to "a", "é" to "e", "í" to "i", "ó" to "o", "ú" to "u", "ñ" to "n"
+            "á" to "a", "é" to "e", "í" to "i", "ó" to "o", "ú" to "u", "ñ" to "n",
+            "ć" to "c", "č" to "c", "š" to "s", "ž" to "z", "đ" to "d"
         )
         for ((from, to) in lowerReplacements) {
             expr = "REPLACE($expr, '$from', '$to')"
