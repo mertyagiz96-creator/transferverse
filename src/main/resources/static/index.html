@@ -1616,13 +1616,22 @@
                 flex-wrap: nowrap;
             }
             #gameModeButtonGroup .toolbar-btn {
-                font-size: 0.52rem;
+                font-size: 0.56rem;
                 padding: 8px 3px;
                 white-space: nowrap;
                 text-align: center;
                 flex: 1;
                 min-width: 0;
                 overflow: hidden;
+            }
+            /* 💡 Ana Menü butonu, mod butonlarının YANINDA duruyor (#gameModeButtonGroup
+               DIŞINDA) — genel (daha büyük) kurala düşüp boyut uyumsuzluğu yaratıyordu.
+               Yanındaki butonlarla AYNI kompakt boyutu veriyoruz. */
+            #homeMenuBtn {
+                font-size: 0.56rem;
+                padding: 8px 6px;
+                width: auto;
+                flex-shrink: 0;
             }
             #playerModeBtn, #duelModeBtn, #transfermatikModeBtn {
                 flex: 1;
@@ -1899,7 +1908,7 @@
                     <div id="tm1ProgressFill" style="height:100%; width:0%; background:var(--light-green); transition: width 0.3s ease, background 0.3s ease;"></div>
                 </div>
                 <div style="position:relative; display:flex; gap:6px;">
-                    <input type="text" id="tm1Input" placeholder="Oyuncu ismi yaz..." autocomplete="off" style="flex:1; padding:9px 10px; border-radius:3px; border:1px solid rgba(var(--fg-rgb),0.18); background:rgba(var(--fg-rgb),0.02); color:rgb(var(--fg-rgb)); font-size:0.85rem; outline:none;">
+                    <input type="text" id="tm1Input" placeholder="Oyuncu ismi yaz..." autocomplete="off" style="flex:1; padding:9px 10px; border-radius:3px; border:1px solid rgba(var(--fg-rgb),0.18); background:rgba(var(--fg-rgb),0.02); color:rgb(var(--fg-rgb)); font-size:16px; outline:none;">
                     <div id="tm1Dropdown" class="autocomplete-dropdown"></div>
                     <button id="tm1SubmitBtn" class="toolbar-btn" style="padding:7px 12px; font-size:0.68rem;">Ekle</button>
                     <button id="tm1StandBtn" class="toolbar-btn" style="padding:7px 10px; font-size:0.68rem;">✋ Dur</button>
@@ -1913,7 +1922,7 @@
                     <div id="tm2ProgressFill" style="height:100%; width:0%; background:var(--light-green); transition: width 0.3s ease, background 0.3s ease;"></div>
                 </div>
                 <div style="position:relative; display:flex; gap:6px;">
-                    <input type="text" id="tm2Input" placeholder="Oyuncu ismi yaz..." autocomplete="off" disabled style="flex:1; padding:9px 10px; border-radius:3px; border:1px solid rgba(var(--fg-rgb),0.18); background:rgba(var(--fg-rgb),0.02); color:rgb(var(--fg-rgb)); font-size:0.85rem; outline:none;">
+                    <input type="text" id="tm2Input" placeholder="Oyuncu ismi yaz..." autocomplete="off" disabled style="flex:1; padding:9px 10px; border-radius:3px; border:1px solid rgba(var(--fg-rgb),0.18); background:rgba(var(--fg-rgb),0.02); color:rgb(var(--fg-rgb)); font-size:16px; outline:none;">
                     <div id="tm2Dropdown" class="autocomplete-dropdown"></div>
                     <button id="tm2SubmitBtn" class="toolbar-btn" style="padding:7px 12px; font-size:0.68rem;" disabled>Ekle</button>
                     <button id="tm2StandBtn" class="toolbar-btn" style="padding:7px 10px; font-size:0.68rem;" disabled>✋ Dur</button>
@@ -1924,7 +1933,7 @@
 
         <div id="tmStatus" style="margin-top:16px; font-size:0.9rem; font-weight:700; min-height:24px;"></div>
 
-        <div style="margin-top:14px; display:flex; gap:10px; justify-content:center;">
+        <div style="margin-top:14px; margin-bottom:30px; display:flex; gap:10px; justify-content:center;">
             <button id="tmResetBtn" class="toolbar-btn" style="font-size:0.72rem;">🔄 Yeniden Başla</button>
             <button id="tmExitBtn" class="toolbar-btn" style="font-size:0.72rem;">🏠 Ana Menü</button>
         </div>
