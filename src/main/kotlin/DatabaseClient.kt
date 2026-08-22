@@ -1470,9 +1470,12 @@ object DatabaseClient {
         val targetNorm = stripAccentsForCompare(cleanName)
         val sql = """
             SELECT p.name, t.from_club, t.to_club, t.season
-            FROM players p
+            FROM (
+                SELECT id, name FROM players
+                WHERE ${sqlAccentStripExpr("name")} LIKE ?
+                LIMIT 30
+            ) p
             JOIN transfers t ON p.id = t.transfer_id
-            WHERE ${sqlAccentStripExpr("p.name")} LIKE ?
         """.trimIndent()
         // 🎯 KRİTİK DÜZELTME: sadece "kulüpte oynadı mı" değil, "HANGİ YILLARDA
         // oynadığı" da kontrol ediyoruz — Benzema (Arda katılmadan ÖNCE ayrılan)
@@ -1553,63 +1556,145 @@ object DatabaseClient {
     @Serializable
     data class PlayerTransferCountResult(val name: String, val transferCount: Int)
 
+    // 🃏 TRANSFERMATİK — YENİ SİSTEM: serbest yazı yerine, her el 3 rastgele
+    // tanınmış oyuncu sunuyoruz, kullanıcı birini SEÇİYOR. Bu hem bugünkü tüm
+    // hizalama sorunlarını ortadan kaldırıyor (artık yazı kutusu yok) hem de
+    // kullanıcıların hep aynı "ezberlenmiş" ismi girmesini engelliyor.
+    private val EASY_CLUBS_TM = listOf(
+        "Real Madrid", "Barcelona", "Manchester United", "Manchester City", "Chelsea", "Liverpool",
+        "Juventus", "Inter", "Bayern Munich", "Paris SG", "Galatasaray", "Fenerbahce", "Besiktas"
+    )
+
+    fun fetchRandomTransferCandidates(excludeNames: List<String>, count: Int = 3): List<PlayerTransferCountResult> {
+        val excludeNorm = excludeNames.map { stripAccentsForCompare(it) }.toSet()
+        val clubLikeParams = EASY_CLUBS_TM.flatMap { listOf("%$it%", "%$it%") }
+        val whereClubs = EASY_CLUBS_TM.joinToString(" OR ") { "t.from_club LIKE ? OR t.to_club LIKE ?" }
+
+        // 1. AŞAMA: bu kulüplerden birine bağlı, rastgele bir grup oyuncu ID'si çek
+        val candidateIds = mutableSetOf<Int>()
+        try {
+            withConnection { conn ->
+                val sql = """
+                    SELECT DISTINCT p.id
+                    FROM players p
+                    JOIN transfers t ON p.id = t.transfer_id
+                    WHERE ($whereClubs)
+                    ORDER BY RANDOM()
+                    LIMIT 60
+                """.trimIndent()
+                conn.prepareStatement(sql).use { stmt ->
+                    clubLikeParams.forEachIndexed { i, p -> stmt.setString(i + 1, p) }
+                    stmt.executeQuery().use { rs ->
+                        while (rs.next()) candidateIds.add(rs.getInt("id"))
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            println("🔥 fetchRandomTransferCandidates (aday ID) HATASI: ${e.message}")
+            return emptyList()
+        }
+
+        // 2. AŞAMA: her adayın GERÇEK (gençlik hariç) transfer sayısını hesapla,
+        // zaten kullanılmışları (excludeNames) ele, sonuçtan rastgele "count" tanesini seç.
+        val results = mutableListOf<PlayerTransferCountResult>()
+        for (pId in candidateIds.shuffled()) {
+            if (results.size >= count) break
+            try {
+                var pName = ""
+                var realCount = 0
+                withConnection { conn ->
+                    conn.prepareStatement("SELECT name, from_club, to_club FROM players p JOIN transfers t ON p.id = t.transfer_id WHERE p.id = ?").use { stmt ->
+                        stmt.setInt(1, pId)
+                        stmt.executeQuery().use { rs ->
+                            while (rs.next()) {
+                                if (pName.isEmpty()) pName = (rs.getString("name") ?: "").replace(Regex("\\s*\\(\\d+\\)\\s*"), "").trim()
+                                val fromClub = rs.getString("from_club")
+                                val toClub = rs.getString("to_club")
+                                if (!isYouthClub(fromClub) && !isYouthClub(toClub)) realCount++
+                            }
+                        }
+                    }
+                }
+                if (pName.isEmpty() || realCount == 0) continue
+                if (stripAccentsForCompare(pName) in excludeNorm) continue
+                if (results.any { it.name == pName }) continue
+                results.add(PlayerTransferCountResult(pName, realCount))
+            } catch (e: Exception) {
+                println("🔥 fetchRandomTransferCandidates (detay) HATASI: ${e.message}")
+            }
+        }
+        return results
+    }
+
+
     fun fetchPlayerTransferCount(query: String): PlayerTransferCountResult? {
         val cleanQuery = query.trim()
         if (cleanQuery.isEmpty()) return null
         val targetNorm = stripAccentsForCompare(cleanQuery)
-        // 💡 Artık transfer_count'u SQL'de değil, aşağıda Kotlin'de hesaplıyoruz —
-        // çünkü "gençlik/altyapı" transferlerini (Yth, U19, B takımı vb.) HARİÇ
-        // tutmamız gerekiyor, bu SQL'de kolayca yapılamıyor. Mevcut isYouthClub()
-        // fonksiyonunu kullanarak, sitenin GERÇEK yetişkin transfer sayısıyla
-        // TUTARLI bir rakam üretiyoruz (Transfermatik'te şişirilmiş sayı olmasın diye).
-        val sql = """
-            SELECT p.id, p.name, t.from_club, t.to_club
-            FROM players p
-            LEFT JOIN transfers t ON p.id = t.transfer_id
-            WHERE ${sqlAccentStripExpr("p.name")} LIKE ?
-            LIMIT 2000
-        """.trimIndent()
 
-        // playerId -> (isim, gerçek/yetişkin transfer sayısı)
-        data class Agg(val name: String, var count: Int)
-        val aggregates = mutableMapOf<Int, Agg>()
-
-        fun runQuery(likePattern: String) {
+        // 🚀 KESİN PERFORMANS DÜZELTMESİ: önceki "alt sorgu" denemesi muhtemelen
+        // SQLite'ın sorgu planlayıcısı tarafından eski (yavaş) hâline geri
+        // döndürüldü ("subquery flattening"). Bu sefer, planlayıcının araya
+        // GİREMEYECEĞİ şekilde, Kotlin'de İKİ AYRI, BASİT sorgu çalıştırıyoruz:
+        // 1. Adım: SADECE players tablosunda (küçük, ~92 bin satır) isim ara.
+        // 2. Adım: SADECE eşleşen birkaç ID için transfers'a doğrudan/indeksli sorgu.
+        data class MatchedPlayer(val id: Int, val name: String)
+        val matched = mutableListOf<MatchedPlayer>()
+        try {
             withConnection { conn ->
-                conn.prepareStatement(sql).use { stmt ->
-                    stmt.setString(1, likePattern)
+                val sql1 = "SELECT id, name FROM players WHERE ${sqlAccentStripExpr("name")} LIKE ? LIMIT 30"
+                conn.prepareStatement(sql1).use { stmt ->
+                    stmt.setString(1, "%$targetNorm%")
                     stmt.executeQuery().use { rs ->
                         while (rs.next()) {
                             val pId = rs.getInt("id")
-                            val name = rs.getString("name") ?: continue
-                            val cleanName = name.replace(Regex("\\s*\\(\\d+\\)\\s*"), "").trim()
+                            val rawName = rs.getString("name") ?: continue
+                            val cleanName = rawName.replace(Regex("\\s*\\(\\d+\\)\\s*"), "").trim()
                             val nameNorm = stripAccentsForCompare(cleanName)
-                            if (!nameNorm.contains(targetNorm) && nameNorm != targetNorm) continue
-
-                            val fromClub = rs.getString("from_club")
-                            val toClub = rs.getString("to_club")
-                            val agg = aggregates.getOrPut(pId) { Agg(cleanName, 0) }
-                            // 🎯 Sadece HİÇBİR TARAFI gençlik takımı olmayan (gerçek,
-                            // yetişkin) transferleri sayıyoruz.
-                            if (!isYouthClub(fromClub) && !isYouthClub(toClub)) {
-                                agg.count++
+                            if (nameNorm.contains(targetNorm) || nameNorm == targetNorm) {
+                                matched.add(MatchedPlayer(pId, cleanName))
                             }
                         }
                     }
                 }
             }
-        }
-
-        try {
-            // 🎯 KÖKTEN DÜZELTME: SQL'in kendisi artık aksansızlaştırıp karşılaştırıyor.
-            runQuery("%$targetNorm%")
         } catch (e: Exception) {
-            println("🔥 fetchPlayerTransferCount HATASI: ${e.message}")
+            println("🔥 fetchPlayerTransferCount (1. adım) HATASI: ${e.message}")
+            return null
         }
 
-        // 🎯 En çok (gerçek) transferli oyuncuyu döndürüyoruz — genelde en tanınan.
-        val best = aggregates.values.maxByOrNull { it.count } ?: return null
-        return PlayerTransferCountResult(best.name, best.count)
+        if (matched.isEmpty()) return null
+
+        var best: PlayerTransferCountResult? = null
+        var bestCount = -1
+        try {
+            // 🚀 GERÇEK PERFORMANS DÜZELTMESİ: eskiden bu döngü, HER aday için AYRI
+            // bağlantı açıp kapatıyordu (30 aday = 30 bağlantı!) — asıl yavaşlığın
+            // sebebi muhtemelen buydu. Artık TEK bağlantı, döngü İÇİNDE tekrar
+            // kullanılıyor — bağlantı açma/kapama yükü ortadan kalkıyor.
+            withConnection { conn ->
+                conn.prepareStatement("SELECT from_club, to_club FROM transfers WHERE transfer_id = ?").use { stmt ->
+                    for (m in matched) {
+                        var count = 0
+                        stmt.setInt(1, m.id)
+                        stmt.executeQuery().use { rs ->
+                            while (rs.next()) {
+                                val fromClub = rs.getString("from_club")
+                                val toClub = rs.getString("to_club")
+                                if (!isYouthClub(fromClub) && !isYouthClub(toClub)) count++
+                            }
+                        }
+                        if (count > bestCount) {
+                            bestCount = count
+                            best = PlayerTransferCountResult(m.name, count)
+                        }
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            println("🔥 fetchPlayerTransferCount (2. adım) HATASI: ${e.message}")
+        }
+        return best
     }
 
 
@@ -1650,11 +1735,13 @@ object DatabaseClient {
         val resolvedContextClubs = contextClubs.map { resolveClubSearchTerm(it) }
         val sql = """
             SELECT p.id, p.name, t.from_club, t.to_club, COUNT(t.transfer_id) OVER (PARTITION BY p.id) as transfer_count
-            FROM players p
+            FROM (
+                SELECT id, name FROM players
+                WHERE ${sqlAccentStripExpr("name")} LIKE ?
+                LIMIT 40
+            ) p
             LEFT JOIN transfers t ON p.id = t.transfer_id
-            WHERE ${sqlAccentStripExpr("p.name")} LIKE ?
             ORDER BY transfer_count DESC
-            LIMIT 500
         """.trimIndent()
         // playerId -> (isim, transferSayısı, bağlamKulübündeOynadıMı)
         data class Cand(val name: String, val count: Int, var contextMatch: Boolean)
@@ -1739,9 +1826,12 @@ object DatabaseClient {
             SELECT p.id, p.name, p.position, p.nationality, p.birthdate,
                    t.from_club, t.to_club,
                    (SELECT COUNT(*) FROM transfers t2 WHERE t2.transfer_id = p.id) as transfer_count
-            FROM players p
+            FROM (
+                SELECT id, name, position, nationality, birthdate FROM players
+                WHERE ${sqlAccentStripExpr("name")} LIKE ?
+                LIMIT 30
+            ) p
             LEFT JOIN transfers t ON p.id = t.transfer_id
-            WHERE ${sqlAccentStripExpr("p.name")} LIKE ?
         """.trimIndent()
 
         data class Candidate(val id: Int, val name: String, val position: String?, val nationality: String, val birthDate: String?, val transferCount: Int, var matchesClub: Boolean)

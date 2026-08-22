@@ -552,6 +552,14 @@ fun main() {
 
             // 🔍 Günün Sorusu / Transfer Bağlantısı tahmin kutuları için isim önerisi
             // 🃏 Transfermatik — oyuncunun toplam transfer sayısı
+            // 🃏 Transfermatik YENİ SİSTEM — 3 rastgele seçilebilir oyuncu
+            get("/randomTransferCandidates") {
+                val excludeParam = call.request.queryParameters["exclude"]
+                val excludeNames = excludeParam?.split(",")?.map { it.trim() }?.filter { it.isNotBlank() } ?: emptyList()
+                val results = DatabaseClient.fetchRandomTransferCandidates(excludeNames, 3)
+                call.respond(results)
+            }
+
             get("/playerTransferCount") {
                 val name = call.request.queryParameters["name"]
                 if (name.isNullOrBlank()) {
