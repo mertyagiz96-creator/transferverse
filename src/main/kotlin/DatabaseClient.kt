@@ -1618,21 +1618,26 @@ object DatabaseClient {
     // şekilde normalize edilip karşılaştırılıyor — "gom" ile "Gómez" gibi durumlar
     // artık güvenilir şekilde eşleşiyor.
     private fun sqlAccentStripExpr(column: String): String {
-        // 🚨 KRİTİK DÜZELTME: eskiden 51 katmanlı iç içe REPLACE() vardı — bu,
-        // SQLite'ın ayrıştırıcı yığınını taşırıp "parser stack overflow" hatası
-        // veriyordu (aramanın tamamen ÇÖKMESİNE yol açan ciddi bir hataydı).
-        // Artık: önce Türkçe İ/I'yı AYRI halledip (LOWER'dan bağımsız, Türkçe İ
-        // sorunu için şart), SONRA LOWER() uyguluyoruz — bu, standart Latin
-        // aksanlı büyük harfleri zaten küçüğe çeviriyor, o yüzden SADECE küçük
-        // harf varyantlarını eklememiz yeterli. Toplam derinlik: 14 (güvenli).
-        var expr = "REPLACE(REPLACE($column, 'İ', 'i'), 'I', 'i')"
-        expr = "LOWER($expr)"
-        val lowerReplacements = listOf(
-            "ı" to "i", "ğ" to "g", "ş" to "s", "ç" to "c", "ö" to "o", "ü" to "u",
-            "á" to "a", "é" to "e", "í" to "i", "ó" to "o", "ú" to "u", "ñ" to "n",
-            "ć" to "c", "č" to "c", "š" to "s", "ž" to "z", "đ" to "d"
+        // 🚨 KRİTİK DÜZELTME #2: SQLite'ın LOWER() fonksiyonu, ASCII DIŞI harfleri
+        // (Ç, Ş, Ö, Ü, Ğ gibi BÜYÜK Türkçe harfler) HİÇ küçültmüyor — bu yüzden
+        // "Çalhanoğlu" gibi BÜYÜK harfle başlayan isimler, LOWER()'dan sonra bile
+        // "Ç" olarak kalıyor ve sonraki küçük-harf REPLACE'leri hiç eşleşmiyordu.
+        // Artık HER karakterin hem BÜYÜK hem küçük hâlini AYRI AYRI, doğrudan hedef
+        // harfe çeviriyoruz — LOWER()'ın davranışına bağımlı değiliz.
+        var expr = "LOWER($column)"
+        val replacements = listOf(
+            "İ" to "i", "I" to "i", "ı" to "i",
+            "Ğ" to "g", "ğ" to "g",
+            "Ş" to "s", "ş" to "s",
+            "Ç" to "c", "ç" to "c",
+            "Ö" to "o", "ö" to "o",
+            "Ü" to "u", "ü" to "u",
+            "Á" to "a", "á" to "a", "É" to "e", "é" to "e",
+            "Í" to "i", "í" to "i", "Ó" to "o", "ó" to "o",
+            "Ú" to "u", "ú" to "u", "Ñ" to "n", "ñ" to "n",
+            "Ć" to "c", "ć" to "c"
         )
-        for ((from, to) in lowerReplacements) {
+        for ((from, to) in replacements) {
             expr = "REPLACE($expr, '$from', '$to')"
         }
         return expr

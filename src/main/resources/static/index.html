@@ -1624,14 +1624,19 @@
             /* 💡 Bil Bakalım/Arkadaşla Yarış ve Futbol/Basketbol çiftleri, genel
                "tam genişlik" kuralını ezerek mobilde YAN YANA kalsın — hem daha
                modern görünür hem dikey yerden tasarruf sağlar. */
-            #gameModeButtonGroup, #sportToggleWrapper {
+            #gameModeButtonGroup {
+                width: 100%;
+                gap: 2px !important;
+                flex-wrap: nowrap;
+            }
+            #sportToggleWrapper {
                 width: 100%;
                 gap: 4px !important;
                 flex-wrap: nowrap;
             }
             #gameModeButtonGroup .toolbar-btn {
                 font-size: 0.56rem;
-                padding: 8px 3px;
+                padding: 8px 1px;
                 white-space: nowrap;
                 text-align: center;
                 flex: 1;
@@ -1937,7 +1942,7 @@
                 </div>
                 <div style="position:relative; display:flex; gap:6px;">
                     <input type="text" id="tm1Input" placeholder="Oyuncu ismi yaz..." autocomplete="off" style="flex:1; padding:9px 10px; border-radius:3px; border:1px solid rgba(var(--fg-rgb),0.18); background:rgba(var(--fg-rgb),0.02); color:rgb(var(--fg-rgb)); font-size:16px; outline:none;">
-                    <div id="tm1Dropdown" class="autocomplete-dropdown" style="left:0; right:auto; width:65%;"></div>
+                    <div id="tm1Dropdown" class="autocomplete-dropdown" style="left:0; right:auto; width:88%;"></div>
                     <button id="tm1SubmitBtn" class="toolbar-btn" style="padding:7px 12px; font-size:0.68rem;">Ekle</button>
                     <button id="tm1StandBtn" class="toolbar-btn" style="padding:7px 10px; font-size:0.68rem;">✋ Dur</button>
                 </div>
@@ -1951,7 +1956,7 @@
                 </div>
                 <div style="position:relative; display:flex; gap:6px;">
                     <input type="text" id="tm2Input" placeholder="Oyuncu ismi yaz..." autocomplete="off" disabled style="flex:1; padding:9px 10px; border-radius:3px; border:1px solid rgba(var(--fg-rgb),0.18); background:rgba(var(--fg-rgb),0.02); color:rgb(var(--fg-rgb)); font-size:16px; outline:none;">
-                    <div id="tm2Dropdown" class="autocomplete-dropdown" style="left:0; right:auto; width:65%;"></div>
+                    <div id="tm2Dropdown" class="autocomplete-dropdown" style="left:0; right:auto; width:88%;"></div>
                     <button id="tm2SubmitBtn" class="toolbar-btn" style="padding:7px 12px; font-size:0.68rem;" disabled>Ekle</button>
                     <button id="tm2StandBtn" class="toolbar-btn" style="padding:7px 10px; font-size:0.68rem;" disabled>✋ Dur</button>
                 </div>
