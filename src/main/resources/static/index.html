@@ -1465,11 +1465,11 @@
             }
             #tm1SubmitBtn, #tm2SubmitBtn {
                 padding: 6px 8px !important;
-                font-size: 0.6rem !important;
+                font-size: 0.57rem !important;
             }
             #tm1StandBtn, #tm2StandBtn {
                 padding: 6px 6px !important;
-                font-size: 0.6rem !important;
+                font-size: 0.57rem !important;
             }
 
             /* 💡 BASİT ÇÖZÜM: karmaşık genişlik hesapları yerine, panel ve TÜM iç
@@ -1648,7 +1648,7 @@
                 flex-wrap: nowrap;
             }
             #gameModeButtonGroup .toolbar-btn {
-                font-size: 0.6rem;
+                font-size: 0.57rem;
                 padding: 9px 4px;
                 white-space: nowrap;
                 text-align: center;
@@ -1663,23 +1663,23 @@
                DIŞINDA) — genel (daha büyük) kurala düşüp boyut uyumsuzluğu yaratıyordu.
                Yanındaki butonlarla AYNI kompakt boyutu veriyoruz. */
             #homeMenuBtn {
-                font-size: 0.6rem;
+                font-size: 0.57rem;
                 padding: 9px 4px;
                 flex: 1;
             }
             #playerModeBtn {
                 flex: 1;
-                font-size: 0.6rem !important;
+                font-size: 0.57rem !important;
                 padding-left: 4px !important;
                 padding-right: 4px !important;
             }
             #transfermatikModeBtn {
                 flex: 1;
-                font-size: 0.6rem !important;
+                font-size: 0.57rem !important;
             }
             #duelModeBtn {
                 flex: 1.3;
-                font-size: 0.56rem !important;
+                font-size: 0.53rem !important;
             }
             #sportToggleWrapper .toolbar-btn {
                 width: 50%;
@@ -1736,6 +1736,23 @@
                 font-size: 0.85rem;
             }
         }
+
+        /* 🛡️ EK GÜVENLİK: çok dar telefonlar (örn. eski iPhone SE, ~320-375px)
+           için mod butonlarını biraz daha küçültüyoruz — normal telefonlarda
+           bu kural hiç devreye girmez, sadece en küçük ekranlarda ek koruma. */
+        @media (max-width: 380px) {
+            #gameModeButtonGroup .toolbar-btn, #homeMenuBtn {
+                font-size: 0.5rem !important;
+                padding: 8px 2px !important;
+            }
+            #playerModeBtn, #transfermatikModeBtn {
+                font-size: 0.5rem !important;
+            }
+            #duelModeBtn {
+                font-size: 0.46rem !important;
+            }
+        }
+
         /* 📢 GÜVENLİ VARSAYILAN: reklam kutuları varsayılan olarak GİZLİ —
            sadece Google'ın script'i "filled" (gerçekten dolu) olarak
            işaretlerse görünür oluyor. Onaysız hesapta, script hiç
