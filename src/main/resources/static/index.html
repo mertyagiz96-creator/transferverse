@@ -1624,17 +1624,23 @@
                 min-width: 0;
                 overflow: hidden;
             }
+            #gameModeButtonGroup .toolbar-btn span {
+                font-size: inherit;
+            }
             /* 💡 Ana Menü butonu, mod butonlarının YANINDA duruyor (#gameModeButtonGroup
                DIŞINDA) — genel (daha büyük) kurala düşüp boyut uyumsuzluğu yaratıyordu.
                Yanındaki butonlarla AYNI kompakt boyutu veriyoruz. */
             #homeMenuBtn {
                 font-size: 0.56rem;
-                padding: 8px 6px;
+                padding: 8px 3px;
                 width: auto;
                 flex-shrink: 0;
             }
-            #playerModeBtn, #duelModeBtn, #transfermatikModeBtn {
+            #playerModeBtn, #transfermatikModeBtn {
                 flex: 1;
+            }
+            #duelModeBtn {
+                flex: 1.3;
             }
             #sportToggleWrapper .toolbar-btn {
                 width: 50%;
@@ -5637,10 +5643,6 @@
             const standBtn = document.getElementById(`tm${n}StandBtn`);
             if (standBtn) standBtn.disabled = !active;
         });
-        if (!( (playerNum === 1 && tmDone1) || (playerNum === 2 && tmDone2) )) {
-            const inp = document.getElementById(`tm${playerNum}Input`);
-            if (inp) inp.focus();
-        }
     }
 
     function tmNextTurnOrEnd() {
