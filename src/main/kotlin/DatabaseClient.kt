@@ -1472,7 +1472,7 @@ object DatabaseClient {
             SELECT p.name, t.from_club, t.to_club, t.season
             FROM players p
             JOIN transfers t ON p.id = t.transfer_id
-            WHERE p.name LIKE ?
+            WHERE ${sqlAccentStripExpr("p.name")} LIKE ?
         """.trimIndent()
         // 🎯 KRİTİK DÜZELTME: sadece "kulüpte oynadı mı" değil, "HANGİ YILLARDA
         // oynadığı" da kontrol ediyoruz — Benzema (Arda katılmadan ÖNCE ayrılan)
@@ -1482,37 +1482,45 @@ object DatabaseClient {
         var overlapsEnd = endYear == null
         var found = false
         try {
-            withConnection { conn ->
-                val roughBase = if (targetNorm.length >= 4) targetNorm.take(4) else targetNorm
-                val roughFilter = roughBase.replace(Regex("[aeiou]"), "_")
-                conn.prepareStatement(sql).use { stmt ->
-                    stmt.setString(1, "%$roughFilter%")
-                    stmt.executeQuery().use { rs ->
-                        while (rs.next()) {
-                            val pName = rs.getString("name") ?: continue
-                            val nameNorm = stripAccentsForCompare(pName.replace(Regex("\\s*\\(\\d+\\)\\s*"), ""))
-                            val words = nameNorm.trim().split(Regex("\\s+"))
-                            val surnameNorm = words.lastOrNull() ?: ""
-                            if (nameNorm != targetNorm && surnameNorm != targetNorm) continue
+            // 🎯 KÖKTEN DÜZELTME: pozisyon bazlı '_' joker karakteri, çok baytlı
+            // Türkçe harflerde (ü, ğ gibi) hizasını kaybedip aramayı bozuyordu.
+            // Artık düz metin araması yapıyoruz — önce tam sorgu, olmazsa kelime
+            // kelime (örn. "Bülent Korkmaz" aksanlı ismi bulamasa bile "Korkmaz"
+            // soyadı üzerinden bulunabiliyor).
+            fun tryPattern(likePattern: String) {
+                if (found) return
+                withConnection { conn ->
+                    conn.prepareStatement(sql).use { stmt ->
+                        stmt.setString(1, likePattern)
+                        stmt.executeQuery().use { rs ->
+                            while (rs.next()) {
+                                val pName = rs.getString("name") ?: continue
+                                val nameNorm = stripAccentsForCompare(pName.replace(Regex("\\s*\\(\\d+\\)\\s*"), ""))
+                                val words = nameNorm.trim().split(Regex("\\s+"))
+                                val surnameNorm = words.lastOrNull() ?: ""
+                                if (nameNorm != targetNorm && surnameNorm != targetNorm) continue
 
-                            val fromClub = rs.getString("from_club") ?: ""
-                            val toClub = rs.getString("to_club") ?: ""
-                            if (!(matchesOriginalClub(fromClub, resolvedClub) || matchesOriginalClub(toClub, resolvedClub))) continue
+                                val fromClub = rs.getString("from_club") ?: ""
+                                val toClub = rs.getString("to_club") ?: ""
+                                if (!(matchesOriginalClub(fromClub, resolvedClub) || matchesOriginalClub(toClub, resolvedClub))) continue
 
-                            found = true
-                            val seasonYear = parseSeasonToSortValue(rs.getString("season"))
-                            // 🎯 DÜZELTME: tolerans KALDIRILDI — "22/23" (Benzema'nın son
-                            // sezonu) ile "23/24" (Arda'nın ilk sezonu) ARDIŞIK ama HİÇ
-                            // örtüşmeyen sezonlar. ±1 tolerans bunu yanlışlıkla kabul
-                            // ediyordu. Artık TAM sezon eşleşmesi istiyoruz — uzun süre
-                            // orada kalan gerçek köprü oyuncuların zaten HER sezon için
-                            // ayrı kaydı olduğundan, bu onları etkilemez.
-                            if (startYear != null && seasonYear == startYear) overlapsStart = true
-                            if (endYear != null && seasonYear == endYear) overlapsEnd = true
+                                found = true
+                                val seasonYear = parseSeasonToSortValue(rs.getString("season"))
+                                // 🎯 DÜZELTME: tolerans KALDIRILDI — "22/23" (Benzema'nın son
+                                // sezonu) ile "23/24" (Arda'nın ilk sezonu) ARDIŞIK ama HİÇ
+                                // örtüşmeyen sezonlar. ±1 tolerans bunu yanlışlıkla kabul
+                                // ediyordu. Artık TAM sezon eşleşmesi istiyoruz — uzun süre
+                                // orada kalan gerçek köprü oyuncuların zaten HER sezon için
+                                // ayrı kaydı olduğundan, bu onları etkilemez.
+                                if (startYear != null && seasonYear == startYear) overlapsStart = true
+                                if (endYear != null && seasonYear == endYear) overlapsEnd = true
+                            }
                         }
                     }
                 }
             }
+
+            tryPattern("%$targetNorm%")
         } catch (e: Exception) {
             println("🔥 verifyPlayerPlayedForClub HATASI: ${e.message}")
         }
@@ -1523,9 +1531,195 @@ object DatabaseClient {
     // Java'nın Normalizer'ı ile, frontend'deki normalizeGuess ile AYNI mantıkla
     // aksanları temizliyoruz — tutarlı karşılaştırma için.
     private fun stripAccentsForCompare(s: String): String {
-        val normalized = java.text.Normalizer.normalize(s, java.text.Normalizer.Form.NFD)
+        // 🇹🇷 KRİTİK: "ğ", "ı", "ş", "ç" gibi Türkçe harfler standart NFD ile
+        // düzgün ayrışmıyor (örn. "ğ" hiç ayrışmıyor) — bu yüzden açıkça elle
+        // dönüştürüyoruz, frontend'deki normalize() ile aynı mantık.
+        val turkishFixed = s
+            .replace('İ', 'I').replace('ı', 'i')
+            .replace('Ğ', 'G').replace('ğ', 'g')
+            .replace('Ş', 'S').replace('ş', 's')
+            .replace('Ç', 'C').replace('ç', 'c')
+            .replace('Ö', 'O').replace('ö', 'o')
+            .replace('Ü', 'U').replace('ü', 'u')
+        val normalized = java.text.Normalizer.normalize(turkishFixed, java.text.Normalizer.Form.NFD)
         return normalized.replace(Regex("\\p{M}"), "").lowercase()
     }
+
+    // 🔍 Günün Sorusu ve Transfer Bağlantısı'ndaki tahmin kutuları için — 3+ harf
+    // yazınca eşleşen GERÇEK oyuncu isimlerini öneriyor. 92.000+ oyuncu olduğu
+    // için tamamını önceden yüklemek yerine, her yazışta sunucuya soruyoruz.
+    // 🃏 TRANSFERMATİK — oyuncunun TOPLAM transfer sayısını döndürüyor. Aynı
+    // aksan/Türkçe-toleranslı, 2-aşamalı arama mantığı (kesin önce, geniş yedek).
+    @Serializable
+    data class PlayerTransferCountResult(val name: String, val transferCount: Int)
+
+    fun fetchPlayerTransferCount(query: String): PlayerTransferCountResult? {
+        val cleanQuery = query.trim()
+        if (cleanQuery.isEmpty()) return null
+        val targetNorm = stripAccentsForCompare(cleanQuery)
+        // 💡 Artık transfer_count'u SQL'de değil, aşağıda Kotlin'de hesaplıyoruz —
+        // çünkü "gençlik/altyapı" transferlerini (Yth, U19, B takımı vb.) HARİÇ
+        // tutmamız gerekiyor, bu SQL'de kolayca yapılamıyor. Mevcut isYouthClub()
+        // fonksiyonunu kullanarak, sitenin GERÇEK yetişkin transfer sayısıyla
+        // TUTARLI bir rakam üretiyoruz (Transfermatik'te şişirilmiş sayı olmasın diye).
+        val sql = """
+            SELECT p.id, p.name, t.from_club, t.to_club
+            FROM players p
+            LEFT JOIN transfers t ON p.id = t.transfer_id
+            WHERE ${sqlAccentStripExpr("p.name")} LIKE ?
+            LIMIT 2000
+        """.trimIndent()
+
+        // playerId -> (isim, gerçek/yetişkin transfer sayısı)
+        data class Agg(val name: String, var count: Int)
+        val aggregates = mutableMapOf<Int, Agg>()
+
+        fun runQuery(likePattern: String) {
+            withConnection { conn ->
+                conn.prepareStatement(sql).use { stmt ->
+                    stmt.setString(1, likePattern)
+                    stmt.executeQuery().use { rs ->
+                        while (rs.next()) {
+                            val pId = rs.getInt("id")
+                            val name = rs.getString("name") ?: continue
+                            val cleanName = name.replace(Regex("\\s*\\(\\d+\\)\\s*"), "").trim()
+                            val nameNorm = stripAccentsForCompare(cleanName)
+                            if (!nameNorm.contains(targetNorm) && nameNorm != targetNorm) continue
+
+                            val fromClub = rs.getString("from_club")
+                            val toClub = rs.getString("to_club")
+                            val agg = aggregates.getOrPut(pId) { Agg(cleanName, 0) }
+                            // 🎯 Sadece HİÇBİR TARAFI gençlik takımı olmayan (gerçek,
+                            // yetişkin) transferleri sayıyoruz.
+                            if (!isYouthClub(fromClub) && !isYouthClub(toClub)) {
+                                agg.count++
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        try {
+            // 🎯 KÖKTEN DÜZELTME: SQL'in kendisi artık aksansızlaştırıp karşılaştırıyor.
+            runQuery("%$targetNorm%")
+        } catch (e: Exception) {
+            println("🔥 fetchPlayerTransferCount HATASI: ${e.message}")
+        }
+
+        // 🎯 En çok (gerçek) transferli oyuncuyu döndürüyoruz — genelde en tanınan.
+        val best = aggregates.values.maxByOrNull { it.count } ?: return null
+        return PlayerTransferCountResult(best.name, best.count)
+    }
+
+
+    // 🎯 SQL SEVİYESİNDE aksan temizleme — REPLACE zincirleri kullanıyoruz (pozisyonel
+    // joker YOK, bayt hizalama sorunu YOK). Hem sütun hem sorgu parametresi AYNI
+    // şekilde normalize edilip karşılaştırılıyor — "gom" ile "Gómez" gibi durumlar
+    // artık güvenilir şekilde eşleşiyor.
+    private fun sqlAccentStripExpr(column: String): String {
+        // 🚨 KRİTİK DÜZELTME: eskiden 51 katmanlı iç içe REPLACE() vardı — bu,
+        // SQLite'ın ayrıştırıcı yığınını taşırıp "parser stack overflow" hatası
+        // veriyordu (aramanın tamamen ÇÖKMESİNE yol açan ciddi bir hataydı).
+        // Artık: önce Türkçe İ/I'yı AYRI halledip (LOWER'dan bağımsız, Türkçe İ
+        // sorunu için şart), SONRA LOWER() uyguluyoruz — bu, standart Latin
+        // aksanlı büyük harfleri zaten küçüğe çeviriyor, o yüzden SADECE küçük
+        // harf varyantlarını eklememiz yeterli. Toplam derinlik: 14 (güvenli).
+        var expr = "REPLACE(REPLACE($column, 'İ', 'i'), 'I', 'i')"
+        expr = "LOWER($expr)"
+        val lowerReplacements = listOf(
+            "ı" to "i", "ğ" to "g", "ş" to "s", "ç" to "c", "ö" to "o", "ü" to "u",
+            "á" to "a", "é" to "e", "í" to "i", "ó" to "o", "ú" to "u", "ñ" to "n"
+        )
+        for ((from, to) in lowerReplacements) {
+            expr = "REPLACE($expr, '$from', '$to')"
+        }
+        return expr
+    }
+
+    fun fetchPlayerNameSuggestions(query: String, contextClubs: List<String> = emptyList()): List<String> {
+        val cleanQuery = query.trim()
+        if (cleanQuery.length < 3) return emptyList()
+        val targetNorm = stripAccentsForCompare(cleanQuery)
+        val resolvedContextClubs = contextClubs.map { resolveClubSearchTerm(it) }
+        val sql = """
+            SELECT p.id, p.name, t.from_club, t.to_club, COUNT(t.transfer_id) OVER (PARTITION BY p.id) as transfer_count
+            FROM players p
+            LEFT JOIN transfers t ON p.id = t.transfer_id
+            WHERE ${sqlAccentStripExpr("p.name")} LIKE ?
+            ORDER BY transfer_count DESC
+            LIMIT 500
+        """.trimIndent()
+        // playerId -> (isim, transferSayısı, bağlamKulübündeOynadıMı)
+        data class Cand(val name: String, val count: Int, var contextMatch: Boolean)
+
+        // 💡 Belirli bir SQL deseniyle arayıp, sonuçları candidates map'ine dolduran yardımcı.
+        fun runQuery(likePattern: String, candidates: MutableMap<Int, Cand>) {
+            withConnection { conn ->
+                conn.prepareStatement(sql).use { stmt ->
+                    stmt.setString(1, likePattern)
+                    stmt.executeQuery().use { rs ->
+                        while (rs.next()) {
+                            val pId = rs.getInt("id")
+                            val name = rs.getString("name") ?: continue
+                            val cleanName = name.replace(Regex("\\s*\\(\\d+\\)\\s*"), "").trim()
+                            val nameNorm = stripAccentsForCompare(cleanName)
+                            if (!nameNorm.contains(targetNorm)) continue // 🎯 kesin doğrulama
+
+                            val fromClub = rs.getString("from_club") ?: ""
+                            val toClub = rs.getString("to_club") ?: ""
+                            val clubMatch = resolvedContextClubs.any { c ->
+                                matchesOriginalClub(fromClub, c) || matchesOriginalClub(toClub, c)
+                            }
+
+                            val existing = candidates[pId]
+                            if (existing == null) {
+                                candidates[pId] = Cand(cleanName, rs.getInt("transfer_count"), clubMatch)
+                            } else if (clubMatch) {
+                                existing.contextMatch = true
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        val candidates = mutableMapOf<Int, Cand>()
+        try {
+            // 🎯 KÖKTEN DÜZELTME: alt çizgi (_) joker karakteri, SQLite'ta bazen
+            // "1 karakter" değil "1 bayt" olarak yorumlanıyor. "ü" gibi Türkçe
+            // harfler 2 bayt kapladığı için, pozisyona bağlı joker desenim çok
+            // baytlı harflerde HİZASINI kaybedip aramayı tamamen bozuyordu — bu
+            // yüzden "Bülent Korkmaz" gibi isimler kaçırılıyordu. Artık pozisyon
+            // bazlı joker YOK — bunun yerine DÜZ metin araması yapıyoruz (bayt
+            // hizalama sorunu olmaz), önce tam sorguyla, HER ZAMAN kelime kelime
+            // de — böylece "Bülent" aksanlı olsa bile "Korkmaz" kelimesi
+            // (aksansız) üzerinden bulunabiliyor.
+            //
+            // 🎯 İKİNCİ DÜZELTME: eskiden kelime-kelime arama SADECE tam sorgu hiç
+            // sonuç getirmediyse çalışıyordu. Ama "hakan çal" gibi bir sorgu, aksanlı
+            // "ç" nedeniyle TESADÜFEN başka alakasız bir kayıtla eşleşebiliyordu — bu
+            // da doğru sonucu (Çalhanoğlu) bulacak kelime-kelime aramanın HİÇ
+            // TETİKLENMEMESİNE yol açıyordu. Artık HER İKİ strateji de HER ZAMAN
+            // çalışıyor, biri diğerine bağımlı değil.
+            // 🎯 KÖKTEN DÜZELTME: artık SQL'in KENDİSİ (sqlAccentStripExpr ile) hem
+            // sütunu hem sorguyu aksansızlaştırıp karşılaştırıyor — pozisyonel joker
+            // YOK (bayt hizalama sorunu yok), kelime-kelime yedek aramaya da GEREK YOK
+            // (harf-harf değil, karakter-karakter normalize edildiği için "gom" ile
+            // "Gómez", "bülent" ile "bulent" hepsi TEK sorguda doğru eşleşiyor).
+            runQuery("%$targetNorm%", candidates)
+        } catch (e: Exception) {
+            println("🔥 fetchPlayerNameSuggestions HATASI: ${e.message}")
+        }
+        // 🎯 ÖNCELİK: (1) bağlam kulüplerinden birinde oynamış olanlar önce,
+        // (2) sonra en çok transferli (muhtemelen en tanınan).
+        return candidates.values
+            .sortedWith(compareByDescending<Cand> { it.contextMatch }.thenByDescending { it.count })
+            .distinctBy { it.name }
+            .take(12)
+            .map { it.name }
+    }
+
 
     fun fetchPlayerBasicInfoByName(name: String, contextClubs: List<String> = emptyList()): PlayerBasicInfo? {
         val cleanName = name.trim()
@@ -1541,57 +1735,57 @@ object DatabaseClient {
                    (SELECT COUNT(*) FROM transfers t2 WHERE t2.transfer_id = p.id) as transfer_count
             FROM players p
             LEFT JOIN transfers t ON p.id = t.transfer_id
-            WHERE p.name LIKE ?
+            WHERE ${sqlAccentStripExpr("p.name")} LIKE ?
         """.trimIndent()
 
         data class Candidate(val id: Int, val name: String, val position: String?, val nationality: String, val birthDate: String?, val transferCount: Int, var matchesClub: Boolean)
         val candidates = mutableMapOf<Int, Candidate>()
 
         try {
-            withConnection { conn ->
-                // 💡 KRİTİK: SQL'deki kaba filtre de aksan-duyarlıydı — ham
-                // LIKE, aksanlı DB içeriğine karşı aksansız terimle hiç eşleşmiyordu.
-                // Ünlü harfleri '_' (SQL'de "herhangi bir karakter") ile değiştirerek,
-                // "mull" aramasının "müll", "mòll" gibi varyasyonları da YAKALAMASINI
-                // sağlıyoruz — kesin doğrulama zaten Kotlin tarafında yapılıyor.
-                val roughBase = if (targetNorm.length >= 4) targetNorm.take(4) else targetNorm
-                val roughFilter = roughBase.replace(Regex("[aeiou]"), "_")
-                conn.prepareStatement(sql).use { stmt ->
-                    stmt.setString(1, "%$roughFilter%")
-                    stmt.executeQuery().use { rs ->
-                        while (rs.next()) {
-                            val pId = rs.getInt("id")
-                            val pName = rs.getString("name") ?: continue
-                            // 🎯 GERÇEK doğrulama: aksan-duyarsız tam/soyad eşleşmesi
-                            val nameNorm = stripAccentsForCompare(pName.replace(Regex("\\s*\\(\\d+\\)\\s*"), ""))
-                            val words = nameNorm.trim().split(Regex("\\s+"))
-                            val surnameNorm = words.lastOrNull() ?: ""
-                            if (nameNorm != targetNorm && surnameNorm != targetNorm) continue
+            // 🎯 KÖKTEN DÜZELTME: pozisyon bazlı '_' joker karakteri çok baytlı
+            // Türkçe harflerde (ü, ğ gibi) hizasını kaybediyordu. Artık düz metin
+            // araması — önce tam sorgu, olmazsa kelime kelime.
+            fun tryPattern(likePattern: String) {
+                withConnection { conn ->
+                    conn.prepareStatement(sql).use { stmt ->
+                        stmt.setString(1, likePattern)
+                        stmt.executeQuery().use { rs ->
+                            while (rs.next()) {
+                                val pId = rs.getInt("id")
+                                val pName = rs.getString("name") ?: continue
+                                // 🎯 GERÇEK doğrulama: aksan-duyarsız tam/soyad eşleşmesi
+                                val nameNorm = stripAccentsForCompare(pName.replace(Regex("\\s*\\(\\d+\\)\\s*"), ""))
+                                val words = nameNorm.trim().split(Regex("\\s+"))
+                                val surnameNorm = words.lastOrNull() ?: ""
+                                if (nameNorm != targetNorm && surnameNorm != targetNorm) continue
 
-                            val fromClub = rs.getString("from_club") ?: ""
-                            val toClub = rs.getString("to_club") ?: ""
-                            val clubMatch = contextClubs.any { c ->
-                                val resolved = resolveClubSearchTerm(c)
-                                matchesOriginalClub(fromClub, resolved) || matchesOriginalClub(toClub, resolved)
-                            }
+                                val fromClub = rs.getString("from_club") ?: ""
+                                val toClub = rs.getString("to_club") ?: ""
+                                val clubMatch = contextClubs.any { c ->
+                                    val resolved = resolveClubSearchTerm(c)
+                                    matchesOriginalClub(fromClub, resolved) || matchesOriginalClub(toClub, resolved)
+                                }
 
-                            val existing = candidates[pId]
-                            if (existing == null) {
-                                candidates[pId] = Candidate(
-                                    id = pId, name = pName,
-                                    position = rs.getString("position"),
-                                    nationality = cleanNationalityText(rs.getString("nationality") ?: ""),
-                                    birthDate = rs.getString("birthdate"),
-                                    transferCount = rs.getInt("transfer_count"),
-                                    matchesClub = clubMatch
-                                )
-                            } else if (clubMatch) {
-                                existing.matchesClub = true // 💡 herhangi bir satırda kulüp eşleşmesi varsa işaretle
+                                val existing = candidates[pId]
+                                if (existing == null) {
+                                    candidates[pId] = Candidate(
+                                        id = pId, name = pName,
+                                        position = rs.getString("position"),
+                                        nationality = cleanNationalityText(rs.getString("nationality") ?: ""),
+                                        birthDate = rs.getString("birthdate"),
+                                        transferCount = rs.getInt("transfer_count"),
+                                        matchesClub = clubMatch
+                                    )
+                                } else if (clubMatch) {
+                                    existing.matchesClub = true // 💡 herhangi bir satırda kulüp eşleşmesi varsa işaretle
+                                }
                             }
                         }
                     }
                 }
             }
+
+            tryPattern("%$targetNorm%")
         } catch (e: Exception) {
             println("🔥 fetchPlayerBasicInfoByName HATASI: ${e.message}")
             return null

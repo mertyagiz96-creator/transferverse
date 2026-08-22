@@ -550,6 +550,33 @@ fun main() {
                 call.respond(mapOf("valid" to valid))
             }
 
+            // 🔍 Günün Sorusu / Transfer Bağlantısı tahmin kutuları için isim önerisi
+            // 🃏 Transfermatik — oyuncunun toplam transfer sayısı
+            get("/playerTransferCount") {
+                val name = call.request.queryParameters["name"]
+                if (name.isNullOrBlank()) {
+                    call.respond(HttpStatusCode.BadRequest)
+                    return@get
+                }
+                val result = DatabaseClient.fetchPlayerTransferCount(name)
+                if (result == null) {
+                    call.respond(HttpStatusCode.NotFound)
+                } else {
+                    call.respond(result)
+                }
+            }
+
+            get("/playerNameSuggestions") {
+                val q = call.request.queryParameters["q"]
+                if (q.isNullOrBlank()) {
+                    call.respond(emptyList<String>())
+                    return@get
+                }
+                val clubsParam = call.request.queryParameters["clubs"]
+                val contextClubs = clubsParam?.split(",")?.map { it.trim() }?.filter { it.isNotBlank() } ?: emptyList()
+                call.respond(DatabaseClient.fetchPlayerNameSuggestions(q, contextClubs))
+            }
+
             get("/playerInfo") {
                 val name = call.request.queryParameters["name"]
                 if (name.isNullOrBlank()) {

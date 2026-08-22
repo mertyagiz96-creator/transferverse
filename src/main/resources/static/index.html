@@ -1084,32 +1084,37 @@
             top: 100%;
             left: 0;
             right: 0;
-            margin-top: 4px;
+            margin-top: 6px;
             background: rgb(var(--surface-strong-rgb));
-            border: 1px solid rgba(var(--light-green-rgb), 0.35);
-            border-radius: 4px;
-            max-height: 240px;
+            border: 1px solid rgba(var(--light-green-rgb), 0.25);
+            border-radius: 10px;
+            max-height: 260px;
             overflow-y: auto;
             z-index: 100;
-            box-shadow: 0 16px 32px rgba(0, 0, 0, 0.5);
+            box-shadow: 0 12px 28px rgba(0, 0, 0, 0.45), 0 2px 8px rgba(0, 0, 0, 0.25);
+            padding: 6px;
         }
 
         .autocomplete-item {
-            padding: 11px 16px;
-            color: rgba(var(--fg-rgb), 0.8);
+            padding: 10px 14px;
+            margin-bottom: 2px;
+            border-radius: 6px;
+            color: rgba(var(--fg-rgb), 0.82);
             cursor: pointer;
-            font-size: 0.9rem;
-            border-bottom: 1px solid rgba(var(--fg-rgb), 0.05);
+            font-size: 0.88rem;
+            font-weight: 500;
+            transition: background 0.15s ease, color 0.15s ease, transform 0.1s ease;
         }
 
         .autocomplete-item:last-child {
-            border-bottom: none;
+            margin-bottom: 0;
         }
 
         .autocomplete-item:hover,
         .autocomplete-item.active {
-            background: rgba(var(--light-green-rgb), 0.12);
+            background: rgba(var(--light-green-rgb), 0.14);
             color: rgb(var(--fg-rgb));
+            transform: translateX(2px);
         }
 
         .btn-search {
@@ -1607,12 +1612,15 @@
                modern görünür hem dikey yerden tasarruf sağlar. */
             #gameModeButtonGroup, #sportToggleWrapper {
                 width: 100%;
-                gap: 8px !important;
+                gap: 6px !important;
+                flex-wrap: wrap;
             }
             #gameModeButtonGroup .toolbar-btn {
-                font-size: 0.62rem;
-                padding: 10px 10px;
+                font-size: 0.58rem;
+                padding: 9px 6px;
                 white-space: nowrap;
+                flex: 1;
+                min-width: 0;
             }
             #sportToggleWrapper .toolbar-btn {
                 width: 50%;
@@ -1811,6 +1819,10 @@
             <button id="duelModeBtn" class="toolbar-btn" title="Bir arkadaşınla aynı soruyu aynı anda çöz, kim önce bilirse kazanır" disabled>
                 <span id="i18n-duelModeBtn">🏆 Arkadaşla Yarış</span>
             </button>
+
+            <button id="transfermatikModeBtn" class="toolbar-btn" title="En çok transfer yapan gezgin oyuncuları toplayıp 40'a en yakın (ama geçmeden) durmaya çalışın">
+                🃏 Transfermatik
+            </button>
         </div>
     </div>
 
@@ -1866,6 +1878,51 @@
             </thead>
             <tbody id="resultsTable"></tbody>
         </table>
+    </div>
+
+    <div id="transfermatikSection" style="display:none; width: 100%; max-width: 1150px; margin-bottom: 20px; margin-top: 20px; text-align:center;">
+        <h2 style="font-size: 1.15rem; font-weight: 800; color: var(--accent-gold); margin-bottom: 6px;">🃏 Transfermatik</h2>
+        <p style="font-size:0.8rem; opacity:0.7; margin-bottom:10px;">Hedef: TAM 40 transfer! Sırayla gezgin oyuncular yazın — 40'ı geçerseniz PATLARSINIZ.</p>
+        <div id="tmTurnBadge" style="display:inline-block; padding:5px 14px; border-radius:20px; background:rgba(var(--light-green-rgb),0.18); border:1px solid rgba(var(--light-green-rgb),0.5); color:var(--light-green); font-weight:800; font-size:0.75rem; margin-bottom:14px;">
+            🔵 SIRA: 1. OYUNCU
+        </div>
+
+        <div style="display:flex; gap:16px; flex-wrap:wrap; justify-content:center;">
+            <div id="tmBox1" class="tm-player-box" style="flex:1; min-width:260px; max-width:420px; padding:16px; border-radius:10px; border:2px solid rgba(var(--light-green-rgb),0.5); background:rgba(var(--fg-rgb),0.03); transition: opacity 0.2s ease, border-color 0.2s ease;">
+                <div style="font-weight:800; margin-bottom:8px;">1. Oyuncu <span id="tm1ScoreLabel">0</span>/40</div>
+                <div style="width:100%; height:14px; border-radius:7px; background:rgba(var(--fg-rgb),0.1); overflow:hidden; margin-bottom:12px;">
+                    <div id="tm1ProgressFill" style="height:100%; width:0%; background:var(--light-green); transition: width 0.3s ease, background 0.3s ease;"></div>
+                </div>
+                <div style="position:relative; display:flex; gap:6px;">
+                    <input type="text" id="tm1Input" placeholder="Oyuncu ismi yaz..." autocomplete="off" style="flex:1; padding:9px 10px; border-radius:3px; border:1px solid rgba(var(--fg-rgb),0.18); background:rgba(var(--fg-rgb),0.02); color:rgb(var(--fg-rgb)); font-size:0.85rem; outline:none;">
+                    <div id="tm1Dropdown" class="autocomplete-dropdown"></div>
+                    <button id="tm1SubmitBtn" class="toolbar-btn" style="padding:7px 12px; font-size:0.68rem;">Ekle</button>
+                    <button id="tm1StandBtn" class="toolbar-btn" style="padding:7px 10px; font-size:0.68rem;">✋ Dur</button>
+                </div>
+                <div id="tm1UsedList" style="margin-top:10px; font-size:0.68rem; opacity:0.6; text-align:left;"></div>
+            </div>
+
+            <div id="tmBox2" class="tm-player-box" style="flex:1; min-width:260px; max-width:420px; padding:16px; border-radius:10px; border:2px solid rgba(var(--fg-rgb),0.15); background:rgba(var(--fg-rgb),0.03); opacity:0.55; transition: opacity 0.2s ease, border-color 0.2s ease;">
+                <div style="font-weight:800; margin-bottom:8px;">2. Oyuncu <span id="tm2ScoreLabel">0</span>/40</div>
+                <div style="width:100%; height:14px; border-radius:7px; background:rgba(var(--fg-rgb),0.1); overflow:hidden; margin-bottom:12px;">
+                    <div id="tm2ProgressFill" style="height:100%; width:0%; background:var(--light-green); transition: width 0.3s ease, background 0.3s ease;"></div>
+                </div>
+                <div style="position:relative; display:flex; gap:6px;">
+                    <input type="text" id="tm2Input" placeholder="Oyuncu ismi yaz..." autocomplete="off" disabled style="flex:1; padding:9px 10px; border-radius:3px; border:1px solid rgba(var(--fg-rgb),0.18); background:rgba(var(--fg-rgb),0.02); color:rgb(var(--fg-rgb)); font-size:0.85rem; outline:none;">
+                    <div id="tm2Dropdown" class="autocomplete-dropdown"></div>
+                    <button id="tm2SubmitBtn" class="toolbar-btn" style="padding:7px 12px; font-size:0.68rem;" disabled>Ekle</button>
+                    <button id="tm2StandBtn" class="toolbar-btn" style="padding:7px 10px; font-size:0.68rem;" disabled>✋ Dur</button>
+                </div>
+                <div id="tm2UsedList" style="margin-top:10px; font-size:0.68rem; opacity:0.6; text-align:left;"></div>
+            </div>
+        </div>
+
+        <div id="tmStatus" style="margin-top:16px; font-size:0.9rem; font-weight:700; min-height:24px;"></div>
+
+        <div style="margin-top:14px; display:flex; gap:10px; justify-content:center;">
+            <button id="tmResetBtn" class="toolbar-btn" style="font-size:0.72rem;">🔄 Yeniden Başla</button>
+            <button id="tmExitBtn" class="toolbar-btn" style="font-size:0.72rem;">🏠 Ana Menü</button>
+        </div>
     </div>
 
     <div id="dailyQuestionCard" style="display: block; width: 100%; max-width: 1150px; margin-bottom: 20px; margin-top: 30px;">
@@ -2884,6 +2941,32 @@
             sharedAudioCtx.resume();
         }
         return sharedAudioCtx;
+    }
+
+    // 🃏 Transfermatik "patladın" sesi — düşen, olumsuz bir ton (kazanma sesinin tersi mantığı)
+    function playBustSound() {
+        if (!soundOn) return;
+        try {
+            const ctx = getAudioContext();
+            const now = ctx.currentTime;
+            const notes = [392.00, 329.63, 261.63]; // G4, E4, C4 — düşen, hafif kasvetli
+            notes.forEach((freq, i) => {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                const startTime = now + i * 0.09;
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(freq, startTime);
+                gain.gain.setValueAtTime(0, startTime);
+                gain.gain.linearRampToValueAtTime(0.15, startTime + 0.02);
+                gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.25);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start(startTime);
+                osc.stop(startTime + 0.27);
+            });
+        } catch (e) {
+            console.log("Ses çalınamadı:", e);
+        }
     }
 
     function playCorrectSound() {
@@ -4338,18 +4421,50 @@
         document.getElementById('yearFilterWrapper').style.display = '';
         document.getElementById('resultsTableHead').style.display = '';
         document.getElementById('duelModeBtn').style.display = '';
+        document.getElementById('transfermatikModeBtn').style.display = '';
         document.getElementById('resultsTable').innerHTML = ''; // 💡 quiz kartı anında kaybolsun
         showIdleSearchState();
     }
 
     function setupHomeMenuButton() {
         document.getElementById('homeMenuBtn').addEventListener('click', () => {
-            if (duelActive) {
+            if (transfermatikActive) {
+                exitTransfermatikMode();
+            } else if (duelActive) {
                 exitDuelMode();
             } else {
                 exitPlayerMode();
             }
         });
+    }
+
+    // 🃏 Transfermatik modundan çıkış — ana ekranı normal hâline döndürür.
+    let transfermatikActive = false;
+    function exitTransfermatikMode() {
+        transfermatikActive = false;
+        document.getElementById('transfermatikSection').style.display = 'none';
+        document.getElementById('homeMenuBtn').style.display = 'none';
+        document.getElementById('playerModeBtn').style.display = '';
+        document.getElementById('duelModeBtn').style.display = '';
+        document.getElementById('transfermatikModeBtn').classList.remove('active');
+        const searchCard = document.querySelector('.search-card');
+        const tableWrapper = document.querySelector('.table-wrapper');
+        if (searchCard) searchCard.style.display = '';
+        if (tableWrapper) tableWrapper.style.display = '';
+        const sportToggle = document.getElementById('sportToggleWrapper');
+        if (sportToggle) sportToggle.style.display = 'flex';
+        const dq = document.getElementById('dailyQuestionCard');
+        if (dq) dq.style.display = 'block';
+        const conn = document.getElementById('connectionGameSection');
+        if (conn) conn.style.display = 'block';
+        const blog = document.getElementById('blogLinkSection');
+        if (blog) blog.style.display = '';
+        const about = document.getElementById('aboutContentSection');
+        if (about) about.style.display = '';
+        loadChampionshipPoll();
+        loadBasketballPoll();
+        loadTransferFeeQuiz();
+        loadDailyPlayerBio();
     }
 
     // 🏆 Arkadaşla Yarış (Duel) Modu — polling tabanlı, tamamen ayrı bir mod.
@@ -4676,8 +4791,9 @@
             </div>
             <div id="connectionAttemptsBox" style="max-width:380px; margin:0 auto 10px;"></div>
             <div id="connectionCounter" style="font-size:0.7rem; opacity:0.6; text-align:center;">Deneme: 0</div>
-            <div style="width:100%; max-width:320px; display:flex; gap:8px; margin: 8px auto 0;">
+            <div style="width:100%; max-width:320px; display:flex; gap:8px; margin: 8px auto 0; position:relative;">
                 <input type="text" id="connectionGuessInput" placeholder="Köprü oyuncuyu yaz..." autocomplete="off" style="flex:1; padding:10px 12px; border-radius:3px; border:1px solid rgba(var(--fg-rgb),0.18); background:rgba(var(--fg-rgb),0.02); color:rgb(var(--fg-rgb)); font-size: 0.9rem; outline: none;">
+                <div id="connectionGuessDropdown" class="autocomplete-dropdown"></div>
                 <button id="connectionSubmitBtn" class="toolbar-btn" style="padding:8px 14px; font-size:0.72rem;">Dene</button>
             </div>
             <div id="connectionStatus" style="font-size:0.78rem; font-weight:600; color: rgb(var(--fg-rgb)); text-align:center; margin-top:8px;"></div>
@@ -4688,6 +4804,7 @@
         const statusEl = document.getElementById('connectionStatus');
         const guessInput = document.getElementById('connectionGuessInput');
         const submitBtn = document.getElementById('connectionSubmitBtn');
+        setupPlayerNameAutocomplete('connectionGuessInput', 'connectionGuessDropdown', () => [pair.club]); // 🔍 isim önerisi
 
         let attempts = 0;
         let solved = false;
@@ -5457,6 +5574,340 @@
         return '🏁 Bugün henüz çözmedin, ilk seferini dene!';
     }
 
+    // 🔍 Günün Sorusu ve Transfer Bağlantısı için — 3+ harf yazınca GERÇEK
+    // oyuncu isimlerini önerir. 92.000+ oyuncu olduğu için (kulüplerin aksine)
+    // önceden yüklenmiyor, her seferinde sunucuya soruluyor — ama YAVAŞLIK
+    // HİSSETTİRMEMEK için 250ms debounce ile, sadece yazmayı bıraktığınızda.
+    // 🃏 TRANSFERMATİK — "Transfer Sayısı Toplama" oyunu. Blackjack mantığı:
+    // hedef TAM 40, geçerseniz PATLARSINIZ. İstediğiniz an "Dur" diyebilirsiniz.
+    const TM_TARGET = 40;
+    let tmScore1 = 0, tmScore2 = 0;
+    let tmDone1 = false, tmDone2 = false; // patladı / durdu / tam bulundu
+    let tmCurrentTurn = 1;
+    let tmUsedNames = new Set();
+
+    function tmUpdateProgressBar(playerNum, score) {
+        const fill = document.getElementById(`tm${playerNum}ProgressFill`);
+        const label = document.getElementById(`tm${playerNum}ScoreLabel`);
+        if (label) label.textContent = score;
+        if (fill) {
+            const pct = Math.min(100, (score / TM_TARGET) * 100);
+            fill.style.width = pct + '%';
+            if (score > TM_TARGET) fill.style.background = '#e74c3c';
+            else if (score === TM_TARGET) fill.style.background = 'var(--accent-gold)';
+            else fill.style.background = 'var(--light-green)';
+        }
+    }
+
+    function tmLockPlayer(playerNum) {
+        document.getElementById(`tm${playerNum}Input`).disabled = true;
+        document.getElementById(`tm${playerNum}SubmitBtn`).disabled = true;
+        const standBtn = document.getElementById(`tm${playerNum}StandBtn`);
+        if (standBtn) standBtn.disabled = true;
+        const box = document.getElementById(`tmBox${playerNum}`);
+        box.style.opacity = '0.4';
+    }
+
+    function tmSetActiveBox(playerNum) {
+        const badge = document.getElementById('tmTurnBadge');
+        if (badge) badge.textContent = `🔵 SIRA: ${playerNum}. OYUNCU`;
+        [1, 2].forEach(n => {
+            const box = document.getElementById(`tmBox${n}`);
+            const isDone = n === 1 ? tmDone1 : tmDone2;
+            if (isDone) return; // bitmiş oyuncunun görünümüne dokunma
+            const active = (n === playerNum);
+            box.style.opacity = active ? '1' : '0.55';
+            box.style.borderColor = active ? 'rgba(var(--light-green-rgb),0.5)' : 'rgba(var(--fg-rgb),0.15)';
+            document.getElementById(`tm${n}Input`).disabled = !active;
+            document.getElementById(`tm${n}SubmitBtn`).disabled = !active;
+            const standBtn = document.getElementById(`tm${n}StandBtn`);
+            if (standBtn) standBtn.disabled = !active;
+        });
+        if (!( (playerNum === 1 && tmDone1) || (playerNum === 2 && tmDone2) )) {
+            const inp = document.getElementById(`tm${playerNum}Input`);
+            if (inp) inp.focus();
+        }
+    }
+
+    function tmNextTurnOrEnd() {
+        if (tmDone1 && tmDone2) {
+            tmFinishGame();
+            return;
+        }
+        // 💡 Sırayı, BİTMEMİŞ olan oyuncuya geçir — biri erken bitirdiyse
+        // (durdu/patladı), diğeri tek başına devam edebilir.
+        const other = tmCurrentTurn === 1 ? 2 : 1;
+        const otherDone = other === 1 ? tmDone1 : tmDone2;
+        tmCurrentTurn = otherDone ? tmCurrentTurn : other;
+        tmSetActiveBox(tmCurrentTurn);
+    }
+
+    function tmFinishGame() {
+        const statusEl = document.getElementById('tmStatus');
+        const badge = document.getElementById('tmTurnBadge');
+        if (badge) badge.style.display = 'none';
+        const s1 = tmScore1, s2 = tmScore2;
+        const bust1 = s1 > TM_TARGET, bust2 = s2 > TM_TARGET;
+
+        let resultText;
+        if (bust1 && bust2) {
+            resultText = `💥 İkisi de patladı! (${s1} - ${s2}) Berabere sayılır.`;
+        } else if (bust1) {
+            resultText = `🏆 2. Oyuncu kazandı! (1. Oyuncu ${s1} ile patladı, 2. Oyuncu ${s2}'de kaldı)`;
+            playCorrectSound();
+        } else if (bust2) {
+            resultText = `🏆 1. Oyuncu kazandı! (2. Oyuncu ${s2} ile patladı, 1. Oyuncu ${s1}'de kaldı)`;
+            playCorrectSound();
+        } else {
+            const diff1 = TM_TARGET - s1, diff2 = TM_TARGET - s2;
+            if (diff1 < diff2) { resultText = `🏆 1. Oyuncu kazandı! (${s1}, hedefe ${diff1} kaldı — 2. Oyuncu ${s2}, ${diff2} kaldı)`; playCorrectSound(); }
+            else if (diff2 < diff1) { resultText = `🏆 2. Oyuncu kazandı! (${s2}, hedefe ${diff2} kaldı — 1. Oyuncu ${s1}, ${diff1} kaldı)`; playCorrectSound(); }
+            else resultText = `🤝 Berabere! İkisi de ${s1} ile bitirdi.`;
+        }
+        statusEl.textContent = resultText;
+        statusEl.style.color = 'var(--accent-gold)';
+    }
+
+    async function tmSubmitPlayer(playerNum) {
+        const isDone = playerNum === 1 ? tmDone1 : tmDone2;
+        if (isDone || playerNum !== tmCurrentTurn) return;
+
+        const input = document.getElementById(`tm${playerNum}Input`);
+        const statusEl = document.getElementById('tmStatus');
+        const rawName = input.value.trim();
+        if (!rawName) return;
+
+        const normalized = normalizeGuess(rawName);
+        if (tmUsedNames.has(normalized)) {
+            statusEl.textContent = `⚠️ "${rawName}" zaten kullanıldı, başka bir oyuncu yaz.`;
+            statusEl.style.color = '#e74c3c';
+            return;
+        }
+
+        input.disabled = true;
+        try {
+            const res = await fetch(`/playerTransferCount?name=${encodeURIComponent(rawName)}`);
+            if (!res.ok) {
+                statusEl.textContent = `❓ "${rawName}" bulunamadı, tekrar dene.`;
+                statusEl.style.color = '#e74c3c';
+                input.disabled = false;
+                return;
+            }
+            const data = await res.json();
+            tmUsedNames.add(normalized);
+            input.value = '';
+
+            if (playerNum === 1) {
+                tmScore1 += data.transferCount;
+                tmUpdateProgressBar(1, tmScore1);
+                document.getElementById('tm1UsedList').innerHTML += `<div>${escapeHtml(data.name)} (+${data.transferCount})</div>`;
+            } else {
+                tmScore2 += data.transferCount;
+                tmUpdateProgressBar(2, tmScore2);
+                document.getElementById('tm2UsedList').innerHTML += `<div>${escapeHtml(data.name)} (+${data.transferCount})</div>`;
+            }
+
+            const myScore = playerNum === 1 ? tmScore1 : tmScore2;
+            statusEl.style.color = 'rgb(var(--fg-rgb))';
+            if (myScore >= TM_TARGET) {
+                if (playerNum === 1) tmDone1 = true; else tmDone2 = true;
+                tmLockPlayer(playerNum);
+                if (myScore === TM_TARGET) {
+                    statusEl.textContent = `🎯 ${playerNum}. Oyuncu TAM 40'I buldu!`;
+                    playCorrectSound();
+                } else {
+                    statusEl.textContent = `💥 ${playerNum}. Oyuncu patladı! (${myScore})`;
+                    playBustSound();
+                }
+                tmNextTurnOrEnd();
+            } else {
+                input.disabled = false;
+                statusEl.textContent = '';
+                tmNextTurnOrEnd();
+            }
+        } catch (e) {
+            statusEl.textContent = 'Bir hata oluştu, tekrar deneyin.';
+            input.disabled = false;
+        }
+    }
+
+    function tmStandPlayer(playerNum) {
+        const isDone = playerNum === 1 ? tmDone1 : tmDone2;
+        if (isDone || playerNum !== tmCurrentTurn) return;
+        if (playerNum === 1) tmDone1 = true; else tmDone2 = true;
+        tmLockPlayer(playerNum);
+        document.getElementById('tmStatus').textContent = `✋ ${playerNum}. Oyuncu durdu (${playerNum === 1 ? tmScore1 : tmScore2}).`;
+        tmNextTurnOrEnd();
+    }
+
+    function tmResetGame() {
+        tmScore1 = 0; tmScore2 = 0;
+        tmDone1 = false; tmDone2 = false;
+        tmCurrentTurn = 1;
+        tmUsedNames = new Set();
+        [1, 2].forEach(n => {
+            tmUpdateProgressBar(n, 0);
+            document.getElementById(`tm${n}UsedList`).innerHTML = '';
+            document.getElementById(`tm${n}Input`).value = '';
+            document.getElementById(`tmBox${n}`).style.opacity = n === 1 ? '1' : '0.55';
+            document.getElementById(`tmBox${n}`).style.borderColor = n === 1 ? 'rgba(var(--light-green-rgb),0.5)' : 'rgba(var(--fg-rgb),0.15)';
+        });
+        document.getElementById('tmStatus').textContent = '';
+        const badge = document.getElementById('tmTurnBadge');
+        if (badge) badge.style.display = 'inline-block';
+        tmSetActiveBox(1);
+    }
+
+    function setupTransfermatikMode() {
+        const btn = document.getElementById('transfermatikModeBtn');
+        if (!btn) return;
+
+        setupPlayerNameAutocomplete('tm1Input', 'tm1Dropdown');
+        setupPlayerNameAutocomplete('tm2Input', 'tm2Dropdown');
+
+        document.getElementById('tm1SubmitBtn').addEventListener('click', () => tmSubmitPlayer(1));
+        document.getElementById('tm2SubmitBtn').addEventListener('click', () => tmSubmitPlayer(2));
+        document.getElementById('tm1StandBtn').addEventListener('click', () => tmStandPlayer(1));
+        document.getElementById('tm2StandBtn').addEventListener('click', () => tmStandPlayer(2));
+        document.getElementById('tm1Input').addEventListener('keydown', (e) => { if (e.key === 'Enter') tmSubmitPlayer(1); });
+        document.getElementById('tm2Input').addEventListener('keydown', (e) => { if (e.key === 'Enter') tmSubmitPlayer(2); });
+        document.getElementById('tmResetBtn').addEventListener('click', tmResetGame);
+
+        btn.addEventListener('click', () => {
+            // 🛡️ DÜZELTME: önceden "buton zaten gizli olur" diye YANLIŞ varsayılmıştı —
+            // aslında hiç gizlenmiyordu. Şimdi diğer modlar gerçekten aktifse önce
+            // onlardan ÇIKIYORUZ, sadece varsaymıyoruz.
+            if (playerModeActive) exitPlayerMode();
+            if (duelActive) exitDuelMode();
+
+            const searchCard = document.querySelector('.search-card');
+            const tableWrapper = document.querySelector('.table-wrapper');
+            const sections = ['dailyQuestionCard', 'connectionGameSection', 'championshipPollSection',
+                'basketballPollSection', 'transferFeeQuizSection', 'dailyPlayerBioSection',
+                'blogLinkSection', 'aboutContentSection', 'basketballCoverageNote'];
+            sections.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.style.display = 'none';
+            });
+            if (searchCard) searchCard.style.display = 'none';
+            if (tableWrapper) tableWrapper.style.display = 'none';
+            const mainGuessRow = document.getElementById('mainGuessRow');
+            if (mainGuessRow) mainGuessRow.style.display = 'none';
+            const sportToggle = document.getElementById('sportToggleWrapper');
+            if (sportToggle) sportToggle.style.display = 'none';
+
+            document.getElementById('transfermatikSection').style.display = 'block';
+            document.getElementById('homeMenuBtn').style.display = '';
+            document.getElementById('playerModeBtn').style.display = 'none';
+            document.getElementById('duelModeBtn').style.display = 'none';
+            btn.classList.add('active');
+            transfermatikActive = true;
+            tmResetGame();
+        });
+
+        // 🏠 Ana Menü'ye dönünce Transfermatik'ten de çıkılabilsin
+        document.getElementById('tmExitBtn').addEventListener('click', () => {
+            document.getElementById('homeMenuBtn').click();
+        });
+    }
+
+    function setupPlayerNameAutocomplete(inputId, dropdownId, getContextClubs) {
+        const input = document.getElementById(inputId);
+        const dropdown = document.getElementById(dropdownId);
+        if (!input || !dropdown) return;
+
+        let debounceTimer = null;
+        let activeIndex = -1;
+
+        function closeDropdown() {
+            dropdown.style.display = 'none';
+            dropdown.innerHTML = '';
+            activeIndex = -1;
+        }
+
+        function updateActiveHighlight() {
+            const items = dropdown.querySelectorAll('.autocomplete-item');
+            items.forEach((el, i) => {
+                if (i === activeIndex) {
+                    el.classList.add('active');
+                    el.scrollIntoView({ block: 'nearest' });
+                } else {
+                    el.classList.remove('active');
+                }
+            });
+        }
+
+        function selectItem(index) {
+            const items = dropdown.querySelectorAll('.autocomplete-item');
+            if (index < 0 || index >= items.length) return;
+            input.value = items[index].textContent;
+            closeDropdown();
+        }
+
+        async function fetchAndRender() {
+            const query = input.value.trim();
+            if (query.length < 3) { closeDropdown(); return; }
+            try {
+                const clubs = (typeof getContextClubs === 'function') ? getContextClubs() : [];
+                const clubsParam = clubs && clubs.length ? `&clubs=${encodeURIComponent(clubs.join(','))}` : '';
+                const res = await fetch(`/playerNameSuggestions?q=${encodeURIComponent(query)}${clubsParam}`);
+                if (!res.ok) { closeDropdown(); return; }
+                const names = await res.json();
+                if (!names || names.length === 0) { closeDropdown(); return; }
+
+                activeIndex = -1;
+                dropdown.innerHTML = '';
+                names.forEach(name => {
+                    const item = document.createElement('div');
+                    item.className = 'autocomplete-item';
+                    item.textContent = name;
+                    item.addEventListener('mousedown', (e) => {
+                        e.preventDefault();
+                        input.value = name;
+                        closeDropdown();
+                    });
+                    dropdown.appendChild(item);
+                });
+                dropdown.style.display = 'block';
+            } catch (e) { closeDropdown(); }
+        }
+
+        input.addEventListener('input', () => {
+            if (debounceTimer) clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(fetchAndRender, 250);
+        });
+
+        // ⌨️ Klavye navigasyonu — bu listener'ı OYUNUN kendi "Enter'a bas, tahmin
+        // gönder" listener'ından ÖNCE ekliyoruz (fonksiyon çağrı sırası buna göre
+        // ayarlı), böylece bir öneri seçiliyken Enter'a basınca ÖNCE o öneri
+        // seçiliyor, tahmin YANLIŞLIKLA yarım yazılmış hâliyle gönderilmiyor.
+        input.addEventListener('keydown', (e) => {
+            const itemCount = dropdown.querySelectorAll('.autocomplete-item').length;
+            if (dropdown.style.display !== 'block' || itemCount === 0) return;
+
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                activeIndex = (activeIndex + 1) % itemCount;
+                updateActiveHighlight();
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                activeIndex = (activeIndex - 1 + itemCount) % itemCount;
+                updateActiveHighlight();
+            } else if (e.key === 'Enter' && activeIndex >= 0) {
+                e.preventDefault();
+                e.stopImmediatePropagation(); // 🛡️ oyunun submit listener'ının AYNI tuşla tetiklenmesini engeller
+                selectItem(activeIndex);
+            } else if (e.key === 'Escape') {
+                closeDropdown();
+            }
+        });
+
+        input.addEventListener('blur', () => setTimeout(closeDropdown, 150));
+        document.addEventListener('click', (e) => {
+            if (!input.contains(e.target) && !dropdown.contains(e.target)) closeDropdown();
+        });
+    }
+
     function computeAgeFromBirthDate(birthDateStr) {
         if (!birthDateStr) return null;
         const match = birthDateStr.match(/(\d{4})/);
@@ -5621,8 +6072,9 @@
                     <tbody></tbody>
                 </table>
                 <div id="dailyGuessCounter" style="font-size:0.7rem; opacity:0.6;">Tahmin: 0/5</div>
-                <div style="width:100%; max-width:320px; display:flex; gap:8px;">
+                <div style="width:100%; max-width:320px; display:flex; gap:8px; position:relative;">
                     <input type="text" id="dailyGuessInput" placeholder="Tahminini yaz..." autocomplete="off" style="flex:1; padding:10px 12px; border-radius:3px; border:1px solid rgba(var(--fg-rgb),0.18); background:rgba(var(--fg-rgb),0.02); color:rgb(var(--fg-rgb)); font-size: 0.9rem; outline: none;">
+                    <div id="dailyGuessDropdown" class="autocomplete-dropdown"></div>
                     <button id="dailyGuessSubmitBtn" class="toolbar-btn" style="padding:8px 14px; font-size:0.72rem;">Tahmin Et</button>
                 </div>
                 <div id="dailyQuestionStatus" style="font-size:0.78rem; font-weight: 600; color: rgb(var(--fg-rgb));"></div>
@@ -5637,6 +6089,7 @@
         const submitBtn = document.getElementById('dailyGuessSubmitBtn');
         const howToBtn = document.getElementById('dailyHowToPlayBtn');
         const howToBox = document.getElementById('dailyHowToPlayBox');
+        setupPlayerNameAutocomplete('dailyGuessInput', 'dailyGuessDropdown', () => [clubA.club, clubB.club]); // 🔍 isim önerisi
 
         if (howToBtn && howToBox) {
             howToBtn.addEventListener('click', () => {
@@ -5806,6 +6259,12 @@
 
     function enterDuelMode() {
         duelActive = true;
+        // 🛡️ Transfermatik açıksa önce onu kapat.
+        if (transfermatikActive) {
+            transfermatikActive = false;
+            document.getElementById('transfermatikSection').style.display = 'none';
+            document.getElementById('transfermatikModeBtn').classList.remove('active');
+        }
         document.getElementById('duelModeBtn').classList.add('active');
         document.querySelector('.search-card').style.display = 'none';
         const dqcEnter = document.getElementById('dailyQuestionCard');
@@ -5832,6 +6291,7 @@
         document.getElementById('mainGuessRow').style.display = 'none';
         document.getElementById('resultsTableHead').style.display = 'none';
         document.getElementById('playerModeBtn').style.display = 'none';
+        document.getElementById('transfermatikModeBtn').style.display = 'none';
         document.getElementById('homeMenuBtn').style.display = '';
 
         renderDuelSetupScreen();
@@ -5866,6 +6326,7 @@
         document.getElementById('yearFilterWrapper').style.display = '';
         document.getElementById('resultsTableHead').style.display = '';
         document.getElementById('playerModeBtn').style.display = '';
+        document.getElementById('transfermatikModeBtn').style.display = '';
         document.getElementById('homeMenuBtn').style.display = 'none';
 
         showIdleSearchState();
@@ -6421,6 +6882,13 @@
                 return;
             }
 
+            // 🛡️ Transfermatik açıksa önce onu kapat — yoksa iki mod üst üste kalıyordu.
+            if (transfermatikActive) {
+                transfermatikActive = false;
+                document.getElementById('transfermatikSection').style.display = 'none';
+                document.getElementById('transfermatikModeBtn').classList.remove('active');
+            }
+
             playerModeActive = true;
             btn.classList.add('active');
             document.getElementById('homeMenuBtn').style.display = '';
@@ -6450,6 +6918,7 @@
             document.getElementById('mainGuessInput').value = '';
             tableHead.style.display = 'none';
             document.getElementById('duelModeBtn').style.display = 'none';
+            document.getElementById('transfermatikModeBtn').style.display = 'none';
             document.getElementById('resultsTable').innerHTML = ''; // 💡 eski "İki kulüp seçip Ara'ya basın" mesajı anında kaybolsun
             renderQuizModeSelectScreen(); // 🇹🇷 Genel Mod / Türkiye Ligi Modu seçimi
         });
@@ -7498,6 +7967,7 @@
     window.onload = () => {
         window.scrollTo(0, 0);
         initLanguage();
+        setupTransfermatikMode();
         applyQueryParamsToInputs();
         setupClubLogoIcons();
         setupInstallBanner();
