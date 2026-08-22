@@ -1616,11 +1616,13 @@
                 flex-wrap: wrap;
             }
             #gameModeButtonGroup .toolbar-btn {
-                font-size: 0.58rem;
-                padding: 9px 6px;
+                font-size: 0.48rem;
+                padding: 8px 2px;
                 white-space: nowrap;
                 flex: 1;
-                min-width: 0;
+                text-align: center;
+                overflow: hidden;
+                text-overflow: ellipsis;
             }
             #sportToggleWrapper .toolbar-btn {
                 width: 50%;
@@ -1820,7 +1822,7 @@
                 <span id="i18n-duelModeBtn">🏆 Arkadaşla Yarış</span>
             </button>
 
-            <button id="transfermatikModeBtn" class="toolbar-btn" title="En çok transfer yapan gezgin oyuncuları toplayıp 40'a en yakın (ama geçmeden) durmaya çalışın">
+            <button id="transfermatikModeBtn" class="toolbar-btn" title="En çok transfer yapan gezgin oyuncuları toplayıp 40'a en yakın (ama geçmeden) durmaya çalışın" disabled>
                 🃏 Transfermatik
             </button>
         </div>
@@ -8013,6 +8015,7 @@
         showIdleSearchState();
         document.getElementById('playerModeBtn').disabled = false;
         document.getElementById('duelModeBtn').disabled = false;
+        document.getElementById('transfermatikModeBtn').disabled = false;
 
         // 🎯 Meydan okuma linkiyle gelindiyse (arkadaş paylaştıysa), davetkar
         // bir bildirim gösteriyoruz — link ile hiçbir otomatik yönlendirme
