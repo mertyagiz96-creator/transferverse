@@ -5171,6 +5171,9 @@
                 });
             });
 
+            // 🛡️ YARIŞ DURUMU KORUMASI: ağ isteği sürerken kullanıcı başka bir
+            // moda geçmiş olabilir — göstermeden HEMEN önce tekrar kontrol ediyoruz.
+            if (playerModeActive || duelActive || transfermatikActive || currentSport !== 'basketball') return;
             section.style.display = 'block';
         } catch (e) {
             // sessizce geç, bölüm gizli kalır
@@ -5273,6 +5276,9 @@
                 });
             });
 
+            // 🛡️ YARIŞ DURUMU KORUMASI: ağ isteği sürerken kullanıcı başka bir
+            // moda geçmiş olabilir — göstermeden HEMEN önce tekrar kontrol ediyoruz.
+            if (playerModeActive || duelActive || transfermatikActive || currentSport !== 'football') return;
             section.style.display = 'block';
         } catch (e) {
             // sessizce geç, bölüm gizli kalır
@@ -5332,6 +5338,9 @@
         const section = document.getElementById('dailyPlayerBioSection');
         const content = document.getElementById('dailyPlayerBioContent');
         if (!section || !content) return;
+        // 🛡️ ÖNCE gizle — basketboldan kalan ESKİ içerik, futbol tarafı bir hata
+        // alırsa (ağ vb.) ekranda TAKILI kalmasın diye.
+        section.style.display = 'none';
 
         const today = getTodayDateString();
         const seed = seededHash(today + '-player-bio');
@@ -5384,6 +5393,9 @@
             content.innerHTML = `<p style="margin-bottom: 14px;">${paragraph1}</p>` +
                 (paragraph2 ? `<p style="margin-bottom: 14px;">${paragraph2}</p>` : '') +
                 `<p>${paragraph3}</p>`;
+            // 🛡️ YARIŞ DURUMU KORUMASI: ağ isteği sürerken spor değişmiş olabilir
+            // (örn. basketbola geçilmiş) — göstermeden HEMEN önce tekrar kontrol.
+            if (currentSport !== 'football') return;
             section.style.display = 'block';
             section.dataset.hasContent = 'true';
         } catch (e) {
