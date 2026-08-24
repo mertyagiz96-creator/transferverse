@@ -15,25 +15,27 @@
     <meta name="apple-mobile-web-app-title" content="TransferKolik">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Oswald:wght@500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            /* 💡 DAHA BASTIRILMIŞ/SOYLU RENK PALETİ + AÇIK/KOYU TEMA ALTYAPISI.
-               --fg-rgb: metin/kenarlık rengi (koyu temalarda açık, açık temada koyu).
-               --surface-strong-rgb: dropdown/panel gibi dolu yüzeylerin rengi (tersi yönde).
-               Bu iki değişken sayesinde onlarca rgba(...) kuralı otomatik olarak
-               doğru kontrastta kalıyor, tema başına ayrı ayrı tanımlamaya gerek kalmıyor. */
-            --primary-green: #3e5f47;
-            --dark-green: #141d16;
-            --light-green: #8fae98;
-            --accent-gold: #c9a961;
-            --bg-gradient: linear-gradient(180deg, #14190f 0%, #1c2318 100%);
-            --light-green-rgb: 143, 174, 152;
-            --dark-green-rgb: 20, 29, 22;
-            --primary-green-rgb: 62, 95, 71;
-            --accent-gold-rgb: 201, 169, 97;
-            --fg-rgb: 242, 240, 236;
-            --surface-strong-rgb: 20, 23, 15;
+            /* 🎨 YENİ PALET — "Piyasa Terminali" konsepti: Bloomberg Terminal'in
+               siyah + amber estetiğinden ilham alıyor. Yeşil+altın yerine, bu site
+               için ANLAMLI bir gerekçesi var — "biz sadece bir spor sitesi değil,
+               bir TRANSFER PİYASASI takip aracıyız" mesajı veriyor. Değişken
+               İSİMLERİ (--primary-green vb.) korundu, sadece DEĞERLERİ değişti —
+               böylece 124+ kullanım yeri otomatik güncellendi, tek tek dokunmadık.
+            */
+            --primary-green: #8a5a2e;
+            --dark-green: #0a0a0a;
+            --light-green: #d4a76a;
+            --accent-gold: #ffb020;
+            --bg-gradient: linear-gradient(180deg, #050505 0%, #0f0d0a 100%);
+            --light-green-rgb: 212, 167, 106;
+            --dark-green-rgb: 10, 10, 10;
+            --primary-green-rgb: 138, 90, 46;
+            --accent-gold-rgb: 255, 176, 32;
+            --fg-rgb: 235, 232, 224;
+            --surface-strong-rgb: 12, 11, 9;
         }
 
         /* 💡 TEMALAR — aynı mekanizma, sadece renk tonları daha bastırılmış */
@@ -49,6 +51,22 @@
             --accent-gold-rgb: 220, 179, 115;
             --fg-rgb: 242, 240, 236;
             --surface-strong-rgb: 32, 16, 9;
+        }
+
+        /* 🎨 "ÇİM + AMBER" temASI — gerçek saha çim yeşili (kendinden emin, canlı,
+           muğlak koyu yeşil DEĞİL) + transfer haberciliği enerjisi veren keskin amber. */
+        body.theme-grass {
+            --primary-green: #2d6b3f;
+            --dark-green: #0f2e1a;
+            --light-green: #6fae7f;
+            --accent-gold: #f0a020;
+            --bg-gradient: linear-gradient(180deg, #0d2415 0%, #123420 100%);
+            --light-green-rgb: 111, 174, 127;
+            --dark-green-rgb: 15, 46, 26;
+            --primary-green-rgb: 45, 107, 63;
+            --accent-gold-rgb: 240, 160, 32;
+            --fg-rgb: 240, 240, 232;
+            --surface-strong-rgb: 13, 28, 18;
         }
 
         body.theme-night {
@@ -88,6 +106,11 @@
             margin: 0;
             padding: 0;
             font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        h1, h2, h3 {
+            font-family: 'Oswald', sans-serif;
+            letter-spacing: 0.5px;
         }
 
         body {
@@ -133,6 +156,36 @@
             position: relative;
             z-index: 1;
             transition: box-shadow 0.6s ease;
+            overflow: hidden;
+        }
+
+        /* 🎨 Arka plan dokusu — çok soluk, büyük bir saha çizgisi deseni.
+           Belirli bir kulübe ait olmadığı için tarafsız, sadece görsel zenginlik katıyor. */
+        .container::before {
+            content: '';
+            position: absolute;
+            top: -15%;
+            right: -10%;
+            width: 480px;
+            height: 480px;
+            border: 2px solid rgba(var(--accent-gold-rgb), 0.05);
+            border-radius: 50%;
+            z-index: 0;
+            pointer-events: none;
+        }
+        .container::after {
+            content: '';
+            position: absolute;
+            top: -15%;
+            right: -10%;
+            width: 480px;
+            height: 480px;
+            border-top: 2px solid rgba(var(--accent-gold-rgb), 0.05);
+            border-radius: 50% 50% 0 0 / 100% 100% 0 0;
+            transform: scale(0.55);
+            transform-origin: top;
+            z-index: 0;
+            pointer-events: none;
         }
 
         .top-toolbar {
@@ -217,11 +270,15 @@
         }
 
         .theme-btn[data-theme="green"] {
-            background: linear-gradient(135deg, #8fae98, #141d16);
+            background: linear-gradient(135deg, #ffb020, #000000);
         }
 
         .theme-btn[data-theme="sunset"] {
             background: linear-gradient(135deg, #cf9a76, #201009);
+        }
+
+        .theme-btn[data-theme="grass"] {
+            background: linear-gradient(135deg, #3a9450, #0a1f10);
         }
 
         .theme-btn[data-theme="night"] {
@@ -254,6 +311,75 @@
         .toolbar-btn:hover {
             border-color: rgba(var(--fg-rgb), 0.4);
             color: rgb(var(--fg-rgb));
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+        }
+        .toolbar-btn:active {
+            transform: translateY(0);
+        }
+
+        /* 🎨 ZARA TARZI HAMBURGER MENÜ ÖĞELERİ — büyük, kendinden emin, her biri
+           kademeli bir gecikmeyle içeri kayarak beliriyor. */
+        .hamburger-menu-item {
+            display: flex;
+            align-items: center;
+            width: 100%;
+            text-align: left;
+            background: transparent;
+            border: none;
+            border-bottom: 1px solid rgba(var(--fg-rgb), 0.1);
+            color: rgba(var(--fg-rgb), 0.5);
+            font-family: 'Oswald', sans-serif;
+            font-size: 1.7rem;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            padding: 20px 4px;
+            cursor: pointer;
+            opacity: 0;
+            transform: translateX(-24px);
+            transition: opacity 0.4s ease, transform 0.4s ease, color 0.2s ease, border-color 0.2s ease;
+        }
+        .hamburger-menu-item:hover:not(:disabled) {
+            color: var(--accent-gold);
+            border-color: rgba(var(--accent-gold-rgb), 0.4);
+        }
+        .hamburger-menu-item:disabled {
+            cursor: default;
+            opacity: 0.25 !important;
+        }
+        #hamburgerOverlay.open .hamburger-menu-item {
+            opacity: 1;
+            transform: translateX(0);
+        }
+        #hamburgerOverlay.open #playerModeBtn { transition-delay: 0.08s; }
+        #hamburgerOverlay.open #duelModeBtn { transition-delay: 0.16s; }
+        #hamburgerOverlay.open #transfermatikModeBtn { transition-delay: 0.24s; }
+
+        /* 🛡️ Eski mobil kurallarla (gameModeButtonGroup için) çakışmayı önlemek
+           için, daha spesifik bir seçiciyle dikey menü yapısını garanti ediyoruz. */
+        #hamburgerPanel #gameModeButtonGroup {
+            flex-direction: column !important;
+            flex-wrap: nowrap !important;
+            gap: 4px !important;
+        }
+
+        #hamburgerMenuBtn.open span:first-child {
+            transform: translateY(4px) rotate(45deg);
+            background: #ffffff !important;
+            box-shadow: 0 0 6px rgba(255,255,255,0.6);
+        }
+        #hamburgerMenuBtn.open span:last-child {
+            transform: translateY(-4px) rotate(-45deg);
+            background: #ffffff !important;
+            box-shadow: 0 0 6px rgba(255,255,255,0.6);
+        }
+        #hamburgerMenuBtn.open {
+            border-color: rgba(255,255,255,0.5);
+            background: rgba(255,255,255,0.06) !important;
+        }
+        #hamburgerMenuBtn:hover {
+            border-color: rgba(var(--fg-rgb), 0.4);
         }
 
         .toolbar-btn:disabled {
@@ -929,7 +1055,8 @@
         }
 
         .logo-text {
-            font-size: 1.05rem;
+            font-family: 'Oswald', sans-serif;
+            font-size: 1.15rem;
             font-weight: 600;
             letter-spacing: 3px;
             text-transform: uppercase;
@@ -937,7 +1064,7 @@
         }
 
         .logo-text-accent {
-            color: #c9a961;
+            color: #ffb020;
             font-weight: 700;
         }
 
@@ -1012,13 +1139,17 @@
             display: grid;
             grid-template-columns: 1fr 1fr auto;
             gap: 16px;
-            background: rgba(var(--fg-rgb), 0.02);
+            background: rgba(var(--fg-rgb), 0.025);
             padding: 26px;
-            border-radius: 4px;
-            border: 1px solid rgba(var(--fg-rgb), 0.1);
+            border-radius: 6px;
+            border: 1px solid rgba(var(--accent-gold-rgb), 0.22);
+            box-shadow: 0 8px 28px rgba(0, 0, 0, 0.22);
             margin-bottom: 34px;
             overflow: visible;
-            transition: border-color 0.6s ease;
+            transition: border-color 0.6s ease, box-shadow 0.3s ease;
+        }
+        .search-card:hover {
+            box-shadow: 0 12px 36px rgba(0, 0, 0, 0.3);
         }
 
         .daily-question-box {
@@ -1027,10 +1158,10 @@
             align-items: center;
             text-align: center;
             gap: 14px;
-            background: rgba(var(--fg-rgb), 0.02);
+            background: rgba(var(--accent-gold-rgb), 0.035);
             padding: 22px;
-            border-radius: 4px;
-            border: 1px solid rgba(var(--fg-rgb), 0.1);
+            border-radius: 6px;
+            border: 1px solid rgba(var(--accent-gold-rgb), 0.28);
         }
 
         .input-group {
@@ -1815,8 +1946,9 @@
                             🎨 Tema
                         </button>
                         <div id="themeSwitcherPanel" class="year-filter-panel theme-switcher-panel">
-                            <button class="theme-btn active" data-theme="green" title="Yeşil (Varsayılan)"></button>
+                            <button class="theme-btn" data-theme="green" title="Piyasa"></button>
                             <button class="theme-btn" data-theme="sunset" title="Gün Batımı"></button>
+                            <button class="theme-btn active" data-theme="grass" title="Çim + Amber (Varsayılan)"></button>
                             <button class="theme-btn" data-theme="night" title="Gece Mavisi"></button>
                             <button class="theme-btn" data-theme="light" title="Açık"></button>
                         </div>
@@ -1886,23 +2018,33 @@
 <div class="container">
 
     <div class="top-toolbar">
-        <div id="modeButtonsRow" style="display: flex; gap: 8px; width: 100%;">
+        <div id="modeButtonsRow" style="display: flex; align-items: center; gap: 12px; width: 100%;">
+            <button id="hamburgerMenuBtn" aria-label="Menü" style="position: relative; z-index: 1001; background: transparent; border: 1px solid rgba(var(--fg-rgb), 0.16); border-radius: 3px; width: 40px; height: 40px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; cursor: pointer; transition: border-color 0.25s ease, transform 0.25s ease; flex-shrink: 0;">
+                <span class="hamburger-line" style="display:block; width:20px; height:3px; border-radius:2px; background: rgb(var(--fg-rgb)); transition: transform 0.3s ease, opacity 0.3s ease, background 0.3s ease;"></span>
+                <span class="hamburger-line" style="display:block; width:20px; height:3px; border-radius:2px; background: rgb(var(--fg-rgb)); transition: transform 0.3s ease, opacity 0.3s ease, background 0.3s ease;"></span>
+            </button>
             <button id="homeMenuBtn" class="toolbar-btn" title="Quiz'ndan çıkıp normal arama ekranına dön" style="display: none;">
-                🏠 Ana Menü
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; margin-right:5px;"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Ana Menü
             </button>
+        </div>
+    </div>
 
-            <div id="gameModeButtonGroup" style="display: flex; gap: 8px;">
-                <button id="playerModeBtn" class="toolbar-btn" title="İki büyük kulüpte birden oynamış gizemli bir oyuncuyu tahmin etmeye çalışın" disabled>
-                    <span id="i18n-playerModeBtn">🎮 Bil Bakalım</span>
+    <!-- 🎨 ZARA TARZI MENÜ — hamburger ikonuna basınca, kademeli (staggered)
+         animasyonla beliren tam ekran panel. Mevcut buton ID'leri/mantığı HİÇ
+         DEĞİŞMEDİ, sadece görsel konumları değişti — bugünkü tüm mod geçiş
+         mantığı bozulmadan çalışmaya devam ediyor. -->
+    <div id="hamburgerOverlay" style="position: fixed; inset: 0; z-index: 999; display: none; background: rgba(5,5,5,0.85); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);">
+        <div id="hamburgerPanel" style="max-width: 480px; margin: 0 auto; padding: 100px 32px 32px 32px; height: 100%; display: flex; flex-direction: column; gap: 4px; overflow-y: auto;">
+            <div id="gameModeButtonGroup" style="display: flex; flex-direction: column; gap: 4px;">
+                <button id="playerModeBtn" class="hamburger-menu-item" title="İki büyük kulüpte birden oynamış gizemli bir oyuncuyu tahmin etmeye çalışın" disabled>
+                    <span id="i18n-playerModeBtn"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-6px; margin-right:14px;"><line x1="6" y1="12" x2="10" y2="12"/><line x1="8" y1="10" x2="8" y2="14"/><line x1="15" y1="13" x2="15.01" y2="13"/><line x1="18" y1="11" x2="18.01" y2="11"/><rect x="2" y="6" width="20" height="12" rx="2"/></svg>Bil Bakalım</span>
                 </button>
-
-            <button id="duelModeBtn" class="toolbar-btn" title="Bir arkadaşınla aynı soruyu aynı anda çöz, kim önce bilirse kazanır" disabled>
-                <span id="i18n-duelModeBtn">🏆 Arkadaşla Yarış</span>
-            </button>
-
-            <button id="transfermatikModeBtn" class="toolbar-btn" title="En çok transfer yapan gezgin oyuncuları toplayıp 40'a en yakın (ama geçmeden) durmaya çalışın" disabled>
-                🃏 Transfermatik
-            </button>
+                <button id="duelModeBtn" class="hamburger-menu-item" title="Bir arkadaşınla aynı soruyu aynı anda çöz, kim önce bilirse kazanır" disabled>
+                    <span id="i18n-duelModeBtn"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-6px; margin-right:14px;"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>Arkadaşla Yarış</span>
+                </button>
+                <button id="transfermatikModeBtn" class="hamburger-menu-item" title="En çok transfer yapan gezgin oyuncuları toplayıp 40'a en yakın (ama geçmeden) durmaya çalışın" disabled>
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-6px; margin-right:14px;"><path d="m18 14 4 4-4 4"/><path d="m18 2 4 4-4 4"/><path d="M2 18h1.973a4 4 0 0 0 3.3-1.7l5.454-8.6a4 4 0 0 1 3.3-1.7H22"/><path d="M2 6h1.973a4 4 0 0 1 3.3 1.7l5.454 8.6a4 4 0 0 0 3.3 1.7H22"/></svg>Transfermatik
+                </button>
             </div>
         </div>
     </div>
@@ -1914,9 +2056,21 @@
         <span id="i18n-topLoader">Transferler Taranıyor...</span>
     </div>
 
+    <div id="heroSection" style="width: 100%; max-width: 720px; margin: 0 auto 34px auto; text-align: center; opacity: 0; transform: translateY(8px); transition: opacity 0.6s ease, transform 0.6s ease;">
+        <div style="display: flex; align-items: center; justify-content: center; gap: 28px; margin-bottom: 18px;">
+            <img id="heroClubLeft" src="" alt="" style="width: 56px; height: 56px; object-fit: contain; opacity: 0; transition: opacity 0.4s ease;">
+            <div style="flex: 1; max-width: 140px; height: 1px; background: repeating-linear-gradient(90deg, rgba(var(--accent-gold-rgb),0.5) 0 6px, transparent 6px 12px); position: relative;">
+                <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 34px; height: 34px; border-radius: 50%; border: 1.5px solid rgba(var(--accent-gold-rgb),0.6); display: flex; align-items: center; justify-content: center; background: rgb(var(--surface-strong-rgb)); font-family: 'Oswald', sans-serif; font-weight: 600; color: var(--accent-gold); font-size: 1rem;">?</div>
+            </div>
+            <img id="heroClubRight" src="" alt="" style="width: 56px; height: 56px; object-fit: contain; opacity: 0; transition: opacity 0.4s ease;">
+        </div>
+        <h1 id="i18n-heroTitle" style="font-size: 1.7rem; font-weight: 600; letter-spacing: 0.5px; color: rgb(var(--fg-rgb)); margin: 0 0 8px 0;">İki kulüp. Bir gizli bağlantı.</h1>
+        <p id="i18n-heroSubtitle" style="font-size: 0.88rem; color: rgba(var(--fg-rgb), 0.6); margin: 0; max-width: 480px; margin-left: auto; margin-right: auto;">Aralarında hangi oyuncunun oynadığını hatırlıyor musunuz? İki kulüp yazın, TransferKolik gerisini bulsun.</p>
+    </div>
+
     <div id="sportToggleWrapper" style="display: flex; justify-content: flex-end; gap: 8px; margin-bottom: 14px; flex-wrap: wrap;">
-        <button id="sportFootballBtn" class="toolbar-btn active" data-sport="football"><span id="i18n-footballBtn">⚽ Futbol</span></button>
-        <button id="sportBasketballBtn" class="toolbar-btn" data-sport="basketball"><span id="i18n-basketballBtn">🏀 Basketbol</span></button>
+        <button id="sportFootballBtn" class="toolbar-btn active" data-sport="football"><span id="i18n-footballBtn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" style="vertical-align:-2px; margin-right:5px;"><circle cx="12" cy="12" r="10"/><path d="M12 7l3.5 2.5-1.3 4.1H9.8L8.5 9.5z" fill="currentColor" stroke="none"/><path d="M12 2v5M12 17v5M2.5 9.5l4.5 1.5M17 11l4.5-1.5M6 19.5l1.8-4M16.2 15.5L18 19.5"/></svg>Futbol</span></button>
+        <button id="sportBasketballBtn" class="toolbar-btn" data-sport="basketball"><span id="i18n-basketballBtn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" style="vertical-align:-2px; margin-right:5px;"><circle cx="12" cy="12" r="10"/><path d="M12 2v20M2 12h20M4.2 5.5c2.5 2.5 3.8 5.5 3.8 6.5s-1.3 4-3.8 6.5M19.8 5.5c-2.5 2.5-3.8 5.5-3.8 6.5s1.3 4 3.8 6.5"/></svg>Basketbol</span></button>
     </div>
 
     <div class="search-card" style="position: relative;">
@@ -1976,7 +2130,7 @@
                 </div>
                 <div id="tm1Cards" style="display:flex; flex-direction:column; gap:6px;"></div>
                 <div style="margin-top:8px; text-align:center;">
-                    <button id="tm1StandBtn" class="toolbar-btn" style="padding:8px 16px; font-size:0.68rem;">✋ Dur</button>
+                    <button id="tm1StandBtn" class="toolbar-btn" style="padding:8px 16px; font-size:0.68rem;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="vertical-align:-2px; margin-right:4px;"><rect x="6" y="6" width="12" height="12" rx="1"/></svg>Dur</button>
                 </div>
                 <div id="tm1UsedList" style="margin-top:10px; font-size:0.68rem; opacity:0.6; text-align:left;"></div>
             </div>
@@ -1988,7 +2142,7 @@
                 </div>
                 <div id="tm2Cards" style="display:flex; flex-direction:column; gap:6px;"></div>
                 <div style="margin-top:8px; text-align:center;">
-                    <button id="tm2StandBtn" class="toolbar-btn" style="padding:8px 16px; font-size:0.68rem;" disabled>✋ Dur</button>
+                    <button id="tm2StandBtn" class="toolbar-btn" style="padding:8px 16px; font-size:0.68rem;" disabled><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="vertical-align:-2px; margin-right:4px;"><rect x="6" y="6" width="12" height="12" rx="1"/></svg>Dur</button>
                 </div>
                 <div id="tm2UsedList" style="margin-top:10px; font-size:0.68rem; opacity:0.6; text-align:left;"></div>
             </div>
@@ -1998,7 +2152,6 @@
 
         <div style="margin-top:14px; margin-bottom:30px; display:flex; gap:10px; justify-content:center;">
             <button id="tmResetBtn" class="toolbar-btn" style="font-size:0.72rem;">🔄 Yeniden Başla</button>
-            <button id="tmExitBtn" class="toolbar-btn" style="font-size:0.72rem;">🏠 Ana Menü</button>
         </div>
     </div>
 
@@ -2016,7 +2169,7 @@
 
     <div id="connectionGameSection" style="margin-top: 40px; padding-top: 30px; border-top: 1px solid rgba(var(--fg-rgb), 0.09); display: none;">
         <div style="display:flex; align-items:center; justify-content:center; gap:10px; flex-wrap:wrap;">
-            <h2 id="i18n-connectionTitle" style="font-size: 1.15rem; font-weight: 800; color: var(--accent-gold); margin: 0;">🔗 Transfer Bağlantısı</h2>
+            <h2 id="i18n-connectionTitle" style="font-size: 1.05rem; font-weight: 700; color: rgba(var(--fg-rgb), 0.85); margin: 0;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="vertical-align:-3px; margin-right:6px;"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>Transfer Bağlantısı</h2>
             <button id="connectionHowToPlayBtn" style="font-size:0.65rem; padding:3px 8px; background:rgba(var(--fg-rgb),0.06); border:1px solid rgba(var(--fg-rgb),0.15); border-radius:10px; color:rgb(var(--fg-rgb)); cursor:pointer;">❓ Nasıl Oynanır?</button>
         </div>
         <div id="connectionHowToPlayBox" style="display:none; font-size:0.72rem; line-height:1.6; background:rgba(var(--fg-rgb),0.04); border-radius:8px; padding:10px 14px; max-width:420px; margin: 8px auto 0;">
@@ -2029,33 +2182,33 @@
     </div>
 
     <div id="transferFeeQuizSection" style="margin-top: 40px; padding-top: 30px; border-top: 1px solid rgba(var(--fg-rgb), 0.09); display: none;">
-        <h2 id="i18n-feeQuizTitle" style="font-size: 1.15rem; font-weight: 800; color: var(--accent-gold); margin-bottom: 14px;">💰 Hangi Transfer Daha Pahalıydı?</h2>
+        <h2 id="i18n-feeQuizTitle" style="font-size: 1.05rem; font-weight: 700; color: rgba(var(--fg-rgb), 0.85); margin-bottom: 14px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="vertical-align:-3px; margin-right:6px;"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>Hangi Transfer Daha Pahalıydı?</h2>
         <div id="transferFeeQuizContent"></div>
     </div>
 
     <div id="championshipPollSection" style="margin-top: 40px; padding-top: 30px; border-top: 1px solid rgba(var(--fg-rgb), 0.09); display: none;">
-        <h2 id="i18n-pollTitle" style="font-size: 1.15rem; font-weight: 800; color: var(--accent-gold); margin-bottom: 14px;">🗳️ Bu Sezon Kim Şampiyon Olur?</h2>
+        <h2 id="i18n-pollTitle" style="font-size: 1.05rem; font-weight: 700; color: rgba(var(--fg-rgb), 0.85); margin-bottom: 14px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="vertical-align:-3px; margin-right:6px;"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>Bu Sezon Kim Şampiyon Olur?</h2>
         <div id="championshipPollGrid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px;"></div>
     </div>
 
     <div id="basketballPollSection" style="margin-top: 40px; padding-top: 30px; border-top: 1px solid rgba(var(--fg-rgb), 0.09); display: none;">
-        <h2 id="i18n-bbPollTitle" style="font-size: 1.15rem; font-weight: 800; color: var(--accent-gold); margin-bottom: 14px;">🏀 Bu Sezon Kim Şampiyon Olur?</h2>
+        <h2 id="i18n-bbPollTitle" style="font-size: 1.05rem; font-weight: 700; color: rgba(var(--fg-rgb), 0.85); margin-bottom: 14px;">🏀 Bu Sezon Kim Şampiyon Olur?</h2>
         <div id="basketballPollGrid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px;"></div>
     </div>
 
     <div id="dailyPlayerBioSection" style="margin-top: 40px; padding-top: 30px; border-top: 1px solid rgba(var(--fg-rgb), 0.09); font-size: 0.88rem; line-height: 1.75; color: rgba(var(--fg-rgb), 0.75); display: none;">
-        <h2 id="i18n-bioTitle" style="font-size: 1.15rem; font-weight: 800; color: var(--accent-gold); margin-bottom: 14px;">📰 Günün Oyuncusu</h2>
+        <h2 id="i18n-bioTitle" style="font-size: 1.05rem; font-weight: 700; color: rgba(var(--fg-rgb), 0.85); margin-bottom: 14px;">📰 Günün Oyuncusu</h2>
         <div id="dailyPlayerBioContent"></div>
     </div>
 
     <div id="blogLinkSection" style="margin-top: 40px; padding-top: 30px; border-top: 1px solid rgba(var(--fg-rgb), 0.09); text-align: center;">
-        <a href="/blog" style="display: inline-block; padding: 10px 22px; background: rgba(var(--fg-rgb), 0.06); border: 1px solid rgba(var(--fg-rgb), 0.12); border-radius: 8px; color: var(--accent-gold); font-weight: 700; font-size: 0.85rem; text-decoration: none;">
+        <a id="i18n-blogCardLink" href="/blog" style="display: inline-block; padding: 10px 22px; background: rgba(var(--fg-rgb), 0.06); border: 1px solid rgba(var(--fg-rgb), 0.12); border-radius: 8px; color: var(--accent-gold); font-weight: 700; font-size: 0.85rem; text-decoration: none;">
             📰 Transfer Hikayeleri — Blog
         </a>
     </div>
 
     <div id="aboutContentSection" style="margin-top: 40px; padding-top: 30px; border-top: 1px solid rgba(var(--fg-rgb), 0.09); font-size: 0.88rem; line-height: 1.75; color: rgba(var(--fg-rgb), 0.75);">
-        <h2 id="i18n-aboutTitle" style="font-size: 1.15rem; font-weight: 800; color: var(--accent-gold); margin-bottom: 14px;">TransferKolik Nedir?</h2>
+        <h2 id="i18n-aboutTitle" style="font-size: 1.05rem; font-weight: 700; color: rgba(var(--fg-rgb), 0.85); margin-bottom: 14px;">TransferKolik Nedir?</h2>
         <p id="i18n-aboutBody" style="margin-bottom: 22px;">
             TransferKolik, futbolseverlerin bir oyuncunun kariyeri boyunca hangi kulüplerde ve milli takımda forma giydiğini kolayca araştırabildiği, Türkçe ve Türk futboluna odaklanmış ücretsiz bir platformdur. İki kulüp veya ülke ismi girerek, o iki takımda ortak oynamış tüm futbolcuları saniyeler içinde bulabilirsiniz — hem eski günlerin efsanelerini hatırlamak hem de bugünün transferlerini takip etmek için pratik bir araçtır. Aşağıda, sitedeki her modu ve özelliği daha ayrıntılı anlatıyoruz.
         </p>
@@ -2083,12 +2236,12 @@
             Kendini gerçek bir Türk futbolu uzmanı olarak görenler için hazırladığımız bu mod, yalnızca Süper Lig kulüplerini ve Bursaspor gibi tarihi öneme sahip takımları kapsar. Isınma turunda, Süper Lig tarihinde şampiyonluk yaşamış yalnızca 5 kulüp (Galatasaray, Fenerbahçe, Beşiktaş, Trabzonspor, Bursaspor) arasından sorular gelir; skorunuz yükseldikçe havuz genişleyip zorluk artar. Ülke karışımı olmadan, saf kulüp-kulüp sorularla ilerleyen bu mod, Genel Mod'a kıyasla belirgin şekilde daha zorlayıcıdır.
         </p>
 
-        <h3 id="i18n-h3-duel" style="font-size: 1rem; font-weight: 700; color: rgb(var(--fg-rgb)); margin-bottom: 8px;">🏆 Arkadaşla Yarış</h3>
+        <h3 id="i18n-h3-duel" style="font-size: 1rem; font-weight: 700; color: rgb(var(--fg-rgb)); margin-bottom: 8px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="vertical-align:-2px; margin-right:5px;"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>Arkadaşla Yarış</h3>
         <p id="i18n-p-duel" style="margin-bottom: 20px;">
             Yalnız oynamak istemeyenler için tasarlanan bu mod, bir arkadaşınızla gerçek zamanlı, karşılıklı bir yarışma sunar. Oda kurduğunuzda size 4 haneli bir kod verilir; bu kodu arkadaşınıza gönderirsiniz, o da "Odaya Katıl" ile aynı odaya girer. İkiniz de aynı soruyu aynı anda görür, kim önce doğru bilirse o turu kazanır. İlk 5'e ya da ilk 10'a yarışma seçeneği, isteğe bağlı maskeleme ipucu ve Genel/Türkiye Ligi havuz seçimi mevcuttur. Hesap açmaya, uygulama indirmeye gerek yoktur — link paylaşır paylaşmaz oynamaya başlayabilirsiniz.
         </p>
 
-        <h3 id="i18n-h3-daily" style="font-size: 1rem; font-weight: 700; color: rgb(var(--fg-rgb)); margin-bottom: 8px;">📅 Günün Sorusu</h3>
+        <h3 id="i18n-h3-daily" style="font-size: 1rem; font-weight: 700; color: rgb(var(--fg-rgb)); margin-bottom: 8px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="vertical-align:-2px; margin-right:5px;"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Günün Sorusu</h3>
         <p id="i18n-p-daily" style="margin-bottom: 20px;">
             Her gün değişen, herkese aynı gösterilen özel bir soru. Siteye her girişinizde, o günün iki kulübünü görür ve aralarında oynamış oyuncuyu tahmin etmeye çalışırsınız. Kişisel en iyi sürenizi (gerçek, cihazınızda saklanan bir veri — asla uydurma bir sayı değil) takip edebilir, her gün kendinizi bir öncekiyle kıyaslayabilirsiniz.
         </p>
@@ -2491,6 +2644,143 @@
     // 💡 Yeni deploy sonrası sunucu/veritabanı henüz "ısınmamış" olabiliyor —
     // tek bir başarısız denemede oturumun sonuna kadar logosuz kalınmasın diye
     // birkaç kez, aralıklarla tekrar deniyoruz.
+    // 🎨 Hero bölümü — Galatasaray/Fenerbahçe armalarını, logo verisi hazır
+    // olunca gösterip yumuşak bir açılış animasyonuyla ortaya çıkarır.
+    // ✨ Kaydırma ile beliren bölümler — IntersectionObserver kullanarak, her
+    // bölüm ekrana girince yumuşakça belirir. Performans dostu (sadece görünür
+    // olunca tetiklenir), ve "prefers-reduced-motion" ayarına saygı gösterir.
+    // 🎨 Zara tarzı hamburger menü — açma/kapama mantığı. Mevcut buton ID'lerine
+    // (playerModeBtn vb.) HİÇ dokunmuyoruz, sadece görünürlük kapsayıcısını
+    // aç/kapa yapıyoruz — bugünkü tüm mod geçiş mantığı bozulmadan çalışıyor.
+    function initHamburgerMenu() {
+        const btn = document.getElementById('hamburgerMenuBtn');
+        const overlay = document.getElementById('hamburgerOverlay');
+        if (!btn || !overlay) return;
+
+        function openMenu() {
+            overlay.style.display = 'block';
+            // 💡 bir sonraki frame'de "open" ekleyerek CSS transition'ın
+            // düzgün tetiklenmesini sağlıyoruz (display:none'dan direkt
+            // transition başlamaz).
+            requestAnimationFrame(() => {
+                overlay.classList.add('open');
+                btn.classList.add('open');
+            });
+            document.body.style.overflow = 'hidden'; // 🛡️ menü açıkken arka plan kaymasın
+        }
+
+        function closeMenu() {
+            overlay.classList.remove('open');
+            btn.classList.remove('open');
+            document.body.style.overflow = '';
+            setTimeout(() => { overlay.style.display = 'none'; }, 450); // 💡 animasyon bitene kadar bekle
+        }
+
+        btn.addEventListener('click', () => {
+            if (overlay.classList.contains('open')) {
+                closeMenu();
+                return;
+            }
+            // 💡 DÜZELTME: zaten bir moddaysak (homeMenuBtn görünürse), hamburger'a
+            // (X şeklinde) basınca menüyü TEKRAR AÇMAK yerine DOĞRUDAN ana sayfaya
+            // dönüyoruz — bu, X ikonunun "kapat" beklentisiyle daha tutarlı.
+            const homeBtn = document.getElementById('homeMenuBtn');
+            const inModeAlready = homeBtn && homeBtn.style.display !== 'none';
+            if (inModeAlready) {
+                homeBtn.click();
+            } else {
+                openMenu();
+            }
+        });
+
+        // 🎨 Hamburger ikonunun X/çizgi görünümünü, "Ana Menü" butonunun
+        // görünürlüğüyle senkron tutuyoruz — bir moddaysak ikon HER ZAMAN X
+        // gösterir (kapatma niyetini netleştirir), menü panelinden bağımsız olarak.
+        const homeBtnForSync = document.getElementById('homeMenuBtn');
+        if (homeBtnForSync) {
+            const syncObserver = new MutationObserver(() => {
+                const inMode = homeBtnForSync.style.display !== 'none';
+                if (inMode) {
+                    btn.classList.add('open');
+                } else if (!overlay.classList.contains('open')) {
+                    btn.classList.remove('open');
+                }
+            });
+            syncObserver.observe(homeBtnForSync, { attributes: true, attributeFilter: ['style'] });
+        }
+
+        // 🛡️ Panel dışına (karartılmış arka plana) tıklayınca da kapansın
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) closeMenu();
+        });
+
+        // 💡 Bir mod seçilince menü otomatik kapansın — kullanıcı tekrar
+        // hamburger'a basmak zorunda kalmasın.
+        ['playerModeBtn', 'duelModeBtn', 'transfermatikModeBtn'].forEach(id => {
+            const modeBtn = document.getElementById(id);
+            if (modeBtn) modeBtn.addEventListener('click', () => setTimeout(closeMenu, 150));
+        });
+    }
+
+    function initScrollReveal() {
+        const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (prefersReducedMotion) return; // 🛡️ erişilebilirlik — hareket istemeyenler için atla
+
+        const revealSelectors = [
+            '.search-card', '#dailyQuestionCard', '#connectionGameSection',
+            '#transferFeeQuizSection', '#championshipPollSection', '#basketballPollSection',
+            '#dailyPlayerBioSection', '#aboutContentSection'
+        ];
+        const elements = revealSelectors
+            .map(sel => document.querySelector(sel))
+            .filter(el => el !== null);
+
+        elements.forEach(el => {
+            el.style.opacity = '0';
+            el.style.transform = 'translateY(16px)';
+            el.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+        });
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.opacity = '1';
+                    entry.target.style.transform = 'translateY(0)';
+                    observer.unobserve(entry.target); // 💡 sadece bir kez tetiklensin
+                }
+            });
+        }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+
+        elements.forEach(el => observer.observe(el));
+    }
+
+    function initHeroSection() {
+        const hero = document.getElementById('heroSection');
+        const leftImg = document.getElementById('heroClubLeft');
+        const rightImg = document.getElementById('heroClubRight');
+        if (!hero || !leftImg || !rightImg) return;
+
+        let attempts = 0;
+        function tryFillLogos() {
+            attempts++;
+            const leftUrl = getClubLogo('Galatasaray');
+            const rightUrl = getClubLogo('Fenerbahce');
+            if (leftUrl) { leftImg.src = leftUrl; leftImg.style.opacity = '1'; }
+            if (rightUrl) { rightImg.src = rightUrl; rightImg.style.opacity = '1'; }
+            if ((!leftUrl || !rightUrl) && attempts < 15) {
+                setTimeout(tryFillLogos, 300); // 💡 logo verisi henüz gelmemişse kısa aralıklarla tekrar dene
+            }
+        }
+        tryFillLogos();
+
+        // ✨ Yumuşak açılış — sayfa yüklenir yüklenmez değil, bir sonraki
+        // frame'de tetiklenerek CSS transition'ın doğru çalışmasını sağlıyoruz.
+        requestAnimationFrame(() => {
+            hero.style.opacity = '1';
+            hero.style.transform = 'translateY(0)';
+        });
+    }
+
     async function loadClubLogos() {
         try {
             const response = await fetch('/clubLogos');
@@ -2826,6 +3116,9 @@
         'i18n-duelModeBtn': { en: '🏆 Race a Friend' },
         'i18n-topLoader': { en: 'Scanning Transfers...' },
         'i18n-footballBtn': { en: '⚽ Football' },
+        'i18n-heroTitle': { en: 'Two clubs. One hidden connection.' },
+        'i18n-heroSubtitle': { en: "Do you remember which player played for both? Type two clubs, and let TransferKolik find the rest." },
+        'i18n-blogCardLink': { en: '📰 Transfer Stories — Blog' },
         'i18n-basketballBtn': { en: '🏀 Basketball' },
         'i18n-aboutTitle': { en: 'What is TransferKolik?' },
         'i18n-aboutBody': { en: `TransferKolik is a free platform, focused on Turkish and Turkish football, where football fans can easily research which clubs and national teams a player has represented throughout their career. By entering two club or country names, you can find every player who has played for both in seconds — a practical tool for both reminiscing about legends of the past and tracking today's transfers. Below, we explain every mode and feature on the site in more detail.` },
@@ -2854,9 +3147,29 @@
 
     function applyLanguage(lang) {
         currentLang = lang;
+        // 🎨 İKON KORUMA: bu iki span, metnin yanında SVG ikon içeriyor —
+        // genel textContent mantığı ikonu SİLERDİ. Özel olarak, ikonu koruyarak işliyoruz.
+        const ICON_SVGS = {
+            'i18n-playerModeBtn': '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; margin-right:5px;"><line x1="6" y1="12" x2="10" y2="12"/><line x1="8" y1="10" x2="8" y2="14"/><line x1="15" y1="13" x2="15.01" y2="13"/><line x1="18" y1="11" x2="18.01" y2="11"/><rect x="2" y="6" width="20" height="12" rx="2"/></svg>',
+            'i18n-duelModeBtn': '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; margin-right:5px;"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>',
+            'i18n-footballBtn': '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" style="vertical-align:-2px; margin-right:5px;"><circle cx="12" cy="12" r="10"/><path d="M12 7l3.5 2.5-1.3 4.1H9.8L8.5 9.5z" fill="currentColor" stroke="none"/><path d="M12 2v5M12 17v5M2.5 9.5l4.5 1.5M17 11l4.5-1.5M6 19.5l1.8-4M16.2 15.5L18 19.5"/></svg>',
+            'i18n-basketballBtn': '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" style="vertical-align:-2px; margin-right:5px;"><circle cx="12" cy="12" r="10"/><path d="M12 2v20M2 12h20M4.2 5.5c2.5 2.5 3.8 5.5 3.8 6.5s-1.3 4-3.8 6.5M19.8 5.5c-2.5 2.5-3.8 5.5-3.8 6.5s1.3 4 3.8 6.5"/></svg>',
+            'i18n-connectionTitle': '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="vertical-align:-3px; margin-right:6px;"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>',
+            'i18n-feeQuizTitle': '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="vertical-align:-3px; margin-right:6px;"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>',
+            'i18n-pollTitle': '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="vertical-align:-3px; margin-right:6px;"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>',
+            'i18n-h3-daily': '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="vertical-align:-2px; margin-right:5px;"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',
+            'i18n-h3-duel': '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="vertical-align:-2px; margin-right:5px;"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>'
+        };
         Object.keys(TRANSLATIONS).forEach(id => {
             const el = document.getElementById(id);
             if (!el) return;
+            if (ICON_SVGS[id]) {
+                // 💡 ikonlu elemanlar — metni SVG'nin YANINA ekliyoruz, üzerine yazmıyoruz
+                const plainTextTr = TR_ORIGINALS[id + '_plain'] || (TR_ORIGINALS[id + '_plain'] = el.textContent.trim());
+                const plainTextEn = TRANSLATIONS[id].en.replace(/^[^\wÇĞİÖŞÜçğıöşü]+/, '').trim(); // baştaki eski emoji varsa temizle
+                el.innerHTML = ICON_SVGS[id] + (lang === 'en' ? plainTextEn : plainTextTr);
+                return;
+            }
             if (!TR_ORIGINALS[id]) TR_ORIGINALS[id] = el.textContent; // ilk seferde orijinali kaydet
             el.textContent = lang === 'en' ? TRANSLATIONS[id].en : TR_ORIGINALS[id];
         });
@@ -4483,6 +4796,8 @@
         if (dqcExit && dqcExit.innerHTML) dqcExit.style.display = 'block';
         const sportToggleExit1 = document.getElementById('sportToggleWrapper');
         if (sportToggleExit1) sportToggleExit1.style.display = 'flex';
+        const heroExit1 = document.getElementById('heroSection');
+        if (heroExit1) heroExit1.style.display = 'block';
         const aboutExit = document.getElementById('aboutContentSection');
         if (aboutExit) aboutExit.style.display = '';
         const blogExit = document.getElementById('blogLinkSection');
@@ -4530,6 +4845,8 @@
         if (tableWrapper) tableWrapper.style.display = '';
         const sportToggle = document.getElementById('sportToggleWrapper');
         if (sportToggle) sportToggle.style.display = 'flex';
+        const heroExit3 = document.getElementById('heroSection');
+        if (heroExit3) heroExit3.style.display = 'block';
         const dq = document.getElementById('dailyQuestionCard');
         if (dq) dq.style.display = 'block';
         const conn = document.getElementById('connectionGameSection');
@@ -6579,6 +6896,8 @@
             if (mainGuessRow) mainGuessRow.style.display = 'none';
             const sportToggle = document.getElementById('sportToggleWrapper');
             if (sportToggle) sportToggle.style.display = 'none';
+            const heroEnter1 = document.getElementById('heroSection');
+            if (heroEnter1) heroEnter1.style.display = 'none';
 
             document.getElementById('transfermatikSection').style.display = 'block';
             document.getElementById('homeMenuBtn').style.display = '';
@@ -6587,11 +6906,6 @@
             btn.classList.add('active');
             transfermatikActive = true;
             tmResetGame();
-        });
-
-        // 🏠 Ana Menü'ye dönünce Transfermatik'ten de çıkılabilsin
-        document.getElementById('tmExitBtn').addEventListener('click', () => {
-            document.getElementById('homeMenuBtn').click();
         });
     }
 
@@ -7055,6 +7369,8 @@
         if (dqcEnter) dqcEnter.style.display = 'none';
         const sportToggleEnter2 = document.getElementById('sportToggleWrapper');
         if (sportToggleEnter2) sportToggleEnter2.style.display = 'none';
+        const heroEnter2 = document.getElementById('heroSection');
+        if (heroEnter2) heroEnter2.style.display = 'none';
         const aboutEnter = document.getElementById('aboutContentSection');
         if (aboutEnter) aboutEnter.style.display = 'none';
         const blogEnter = document.getElementById('blogLinkSection');
@@ -7095,6 +7411,8 @@
         if (dqcDuelExit && dqcDuelExit.innerHTML) dqcDuelExit.style.display = 'block';
         const sportToggleExit2 = document.getElementById('sportToggleWrapper');
         if (sportToggleExit2) sportToggleExit2.style.display = 'flex';
+        const heroExit2 = document.getElementById('heroSection');
+        if (heroExit2) heroExit2.style.display = 'block';
         const aboutDuelExit = document.getElementById('aboutContentSection');
         if (aboutDuelExit) aboutDuelExit.style.display = '';
         const blogDuelExit = document.getElementById('blogLinkSection');
@@ -7681,6 +7999,8 @@
             if (dqcPlayerEnter) dqcPlayerEnter.style.display = 'none';
             const sportToggleEnter1 = document.getElementById('sportToggleWrapper');
             if (sportToggleEnter1) sportToggleEnter1.style.display = 'none';
+            const heroEnter3 = document.getElementById('heroSection');
+            if (heroEnter3) heroEnter3.style.display = 'none';
             const aboutPlayerEnter = document.getElementById('aboutContentSection');
             if (aboutPlayerEnter) aboutPlayerEnter.style.display = 'none';
             const blogPlayerEnter = document.getElementById('blogLinkSection');
@@ -8002,12 +8322,13 @@
     function applySavedTheme() {
         try {
             const saved = localStorage.getItem(THEME_STORAGE_KEY);
-            if (saved && saved !== 'green') {
-                document.body.classList.add('theme-' + saved);
+            const effectiveTheme = saved || 'grass'; // 🎨 YENİ VARSAYILAN: Çim + Amber
+            if (effectiveTheme !== 'green') {
+                document.body.classList.add('theme-' + effectiveTheme);
             }
-            return saved || 'green';
+            return effectiveTheme;
         } catch (e) {
-            return 'green';
+            return 'grass';
         }
     }
 
@@ -8026,18 +8347,19 @@
         });
 
         // 💡 Sayfa yüklenirken zaten uygulanmış temaya göre doğru butonu "active" işaretliyoruz
-        const currentTheme = localStorage.getItem(THEME_STORAGE_KEY) || 'green';
+        const currentTheme = localStorage.getItem(THEME_STORAGE_KEY) || 'grass';
         document.querySelectorAll('.theme-btn').forEach(b => {
             b.classList.toggle('active', b.dataset.theme === currentTheme);
         });
 
         document.querySelectorAll('.theme-btn').forEach(btn => {
             btn.addEventListener('click', () => {
-                document.body.classList.remove('theme-sunset', 'theme-night', 'theme-light');
+                document.body.classList.remove('theme-sunset', 'theme-night', 'theme-light', 'theme-grass');
                 const theme = btn.dataset.theme;
                 if (theme === 'sunset') document.body.classList.add('theme-sunset');
                 if (theme === 'night') document.body.classList.add('theme-night');
                 if (theme === 'light') document.body.classList.add('theme-light');
+                if (theme === 'grass') document.body.classList.add('theme-grass');
 
                 try { localStorage.setItem(THEME_STORAGE_KEY, theme); } catch (e) { /* sessizce geç */ }
 
@@ -8760,6 +9082,9 @@
         setupInstallBanner();
         loadSuggestions();
         loadClubLogos();
+        initHeroSection();
+        initScrollReveal();
+        initHamburgerMenu();
         loadBasketballLogosBulk();
         preloadStadiumPhotos(); // 🏟️ stadyum modu geciktirmesin diye önceden önbelleğe al
         // 📅 Önce sunucu tarihini senkronize edip, ANCAK ONDAN SONRA Günün
