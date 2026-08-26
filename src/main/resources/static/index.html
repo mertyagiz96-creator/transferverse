@@ -1142,6 +1142,7 @@
             align-items: center;
             text-align: center;
             gap: 14px;
+            flex: 1;
             background: rgba(var(--card-tint-rgb), 0.3);
             padding: 30px 26px;
             border-radius: 18px;
@@ -1595,6 +1596,15 @@
                 display: none !important;
             }
 
+            /* 🛡️ DÜZELTME: header'ın negatif marjı, MASAÜSTÜ body dolgusuna
+               (40px/20px) göre ayarlanmıştı — mobilde body dolgusu farklı
+               (20px/10px) olduğu için uyuşmazlık, header çevresinde
+               hizalama/çakışma sorunlarına yol açıyordu. */
+            .site-header {
+                width: calc(100% + 20px) !important;
+                margin: -20px -10px 20px -10px !important;
+            }
+
             /* 🛡️ KRİTİK DÜZELTME: masaüstünde uygun olan 100px üst boşluk,
                mobilde (küçük ekran + tarayıcı arayüzü) menü öğelerini ekranın
                DIŞINA itiyordu — kullanıcı hiçbir şey göremiyordu. */
@@ -1628,6 +1638,34 @@
                Tüm metin kutularını 16px'e sabitleyerek bunu baştan önlüyoruz. */
             input[type="text"], input[type="number"], select, textarea {
                 font-size: 16px !important;
+                min-width: 0 !important;
+            }
+
+            /* 🛡️ DÜZELTME: Günün Sorusu/Transfer Bağlantısı kartlarının dolgusu
+               dar ekranda fazla genişti, içerik taşıyordu — küçültüyoruz. */
+            .daily-question-box,
+            #connectionGameSection,
+            #transferFeeQuizSection {
+                padding: 20px 14px !important;
+            }
+
+            /* 🛡️ DÜZELTME: mobil Safari'de position:fixed + backdrop-filter
+               kombinasyonu, bilinen bir WebKit render hatası yüzünden bazen
+               elemanın GÖRÜNMEZ kalmasına yol açabiliyor — hamburger menünün
+               "hiçbir şey görünmüyor" sorununun olası kaynağı bu olabilir.
+               Mobilde backdrop-filter'ı kaldırıp, tam opak bir arka planla
+               garantiye alıyoruz. Ayrıca inset:0 yerine açık vw/vh birimleri
+               ekliyoruz (bazı mobil tarayıcılarda daha güvenilir). */
+            #hamburgerOverlay {
+                width: 100vw !important;
+                height: 100vh !important;
+                backdrop-filter: none !important;
+                -webkit-backdrop-filter: none !important;
+                background: rgb(var(--surface-strong-rgb)) !important;
+                z-index: 9999 !important;
+            }
+            #hamburgerMenuBtn {
+                z-index: 10000 !important;
             }
 
             #dailyGuessHistoryTable {
@@ -2211,7 +2249,7 @@
     <!-- 🍎 Apple tarzı yan yana kayan kart sırası — masaüstünde yatay kaydırma,
          mobilde otomatik olarak alt alta dizilime döner (bkz. medya sorgusu). -->
     <div id="homeCardsWrapper" style="position: relative; width: 100%; max-width: 1150px; margin-top: 30px;">
-    <div id="homeCardsRow" style="display: flex; align-items: flex-start; gap: 20px; overflow-x: auto; scroll-snap-type: x mandatory; padding: 4px 24px 16px 4px; width: 100%; -webkit-overflow-scrolling: touch;">
+    <div id="homeCardsRow" style="display: flex; align-items: stretch; gap: 20px; overflow-x: auto; scroll-snap-type: x mandatory; padding: 4px 24px 16px 4px; width: 100%; -webkit-overflow-scrolling: touch;">
 
     <div id="dailyQuestionCard" style="display: flex; flex-direction: column; flex: 0 0 380px; scroll-snap-align: start;">
         <div class="daily-question-box">
@@ -5288,7 +5326,7 @@
             </div>
             <div id="connectionAttemptsBox" style="max-width:380px; margin:0 auto 10px;"></div>
             <div id="connectionCounter" style="font-size:0.7rem; opacity:0.6; text-align:center;">Deneme: 0</div>
-            <div style="width:100%; max-width:320px; display:flex; gap:8px; margin: 8px auto 0; position:relative;">
+            <div style="width:100%; max-width:320px; display:flex; flex-wrap:wrap; gap:8px; margin: 8px auto 0; position:relative;">
                 <input type="text" id="connectionGuessInput" placeholder="Köprü oyuncuyu yaz..." autocomplete="off" style="flex:1; padding:10px 12px; border-radius:3px; border:1px solid rgba(var(--fg-rgb),0.18); background:rgba(var(--fg-rgb),0.02); color:rgb(var(--fg-rgb)); font-size: 0.9rem; outline: none;">
                 <div id="connectionGuessDropdown" class="autocomplete-dropdown"></div>
                 <button id="connectionSubmitBtn" class="toolbar-btn" style="padding:8px 14px; font-size:0.72rem;">Dene</button>
@@ -6013,7 +6051,7 @@
                     <span style="opacity:0.5; font-weight:800; font-size: 0.95rem; color: rgb(var(--fg-rgb)); margin-top: 16px;">VS</span>
                     ${teamBlockHtml(data.team2, data.player && data.player.team2Season)}
                 </div>
-                <div style="width:100%; max-width:320px; display:flex; gap:8px;">
+                <div style="width:100%; max-width:320px; display:flex; flex-wrap:wrap; gap:8px;">
                     <input type="text" id="dailyGuessInput" placeholder="Tahminini yaz..." autocomplete="off" style="flex:1; padding:10px 12px; border-radius:3px; border:1px solid rgba(var(--fg-rgb),0.18); background:rgba(var(--fg-rgb),0.02); color:rgb(var(--fg-rgb)); font-size: 0.9rem; outline: none;">
                     <span id="dailyGuessCheck" class="guess-check">✔️</span>
                 </div>
@@ -7351,7 +7389,7 @@
                     <tbody></tbody>
                 </table>
                 <div id="dailyGuessCounter" style="font-size:0.7rem; opacity:0.6;">Tahmin: 0/5</div>
-                <div style="width:100%; max-width:320px; display:flex; gap:8px; position:relative;">
+                <div style="width:100%; max-width:320px; display:flex; flex-wrap:wrap; gap:8px; position:relative;">
                     <input type="text" id="dailyGuessInput" placeholder="Tahminini yaz..." autocomplete="off" style="flex:1; padding:10px 12px; border-radius:3px; border:1px solid rgba(var(--fg-rgb),0.18); background:rgba(var(--fg-rgb),0.02); color:rgb(var(--fg-rgb)); font-size: 0.9rem; outline: none;">
                     <div id="dailyGuessDropdown" class="autocomplete-dropdown"></div>
                     <button id="dailyGuessSubmitBtn" class="toolbar-btn" style="padding:8px 14px; font-size:0.72rem;">Tahmin Et</button>
