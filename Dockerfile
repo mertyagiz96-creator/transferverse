@@ -11,8 +11,10 @@ WORKDIR /app
 RUN apk add --no-cache gcompat
 
 COPY --from=build /app/build/libs/*-all.jar app.jar
-COPY --from=build /app/src/main/resources/football.db /app/football.db
 COPY --from=build /app/src/main/resources/basketball.db /app/basketball.db
+# 💡 football.db artık BURADA kopyalanmıyor — Git LFS bant genişliğini tüketmesin
+# diye, uygulama ayağa kalkarken GitHub Releases'tan otomatik indiriliyor
+# (bkz. Application.kt içindeki ensureFootballDbExists() fonksiyonu).
 
 EXPOSE 8080
 

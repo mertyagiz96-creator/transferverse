@@ -43,3 +43,4 @@ football.db-shm
 *.db-shm
 *.db-wal
 .idea/
+src/main/resources/football.db

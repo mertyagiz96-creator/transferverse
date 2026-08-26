@@ -12,6 +12,10 @@ import io.ktor.server.routing.*
 import kotlinx.serialization.Serializable
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
+import java.io.File
+import java.net.URL
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
 
 @Serializable data class CreateRoomRequest(val playerName: String, val winTarget: Int = 5, val maskingHintEnabled: Boolean = false, val duelMode: String = "genel")
 @Serializable data class JoinRoomRequest(val roomCode: String, val playerName: String)
@@ -20,8 +24,39 @@ import kotlinx.coroutines.launch
 @Serializable data class NextRoundRequest(val roomCode: String)
 @Serializable data class QuizScoreSubmission(val score: Int, val mode: String = "genel")
 
+// 🚀 football.db, artık Git LFS ile DEĞİL, GitHub Releases'tan indiriliyor —
+// bu, her deploy'da Docker build sırasında tüketilen LFS bant genişliğini
+// SIFIRA indiriyor. Dosya zaten varsa (örn. yerel geliştirmede) hiç dokunmuyor.
+fun ensureFootballDbExists() {
+    val dbFile = File("football.db")
+    if (dbFile.exists()) {
+        println("✅ football.db zaten mevcut (${dbFile.length() / 1_000_000} MB), indirme atlanıyor.")
+        return
+    }
+
+    println("⬇️ football.db bulunamadı, GitHub Releases'tan indiriliyor...")
+    val dbUrl = "https://github.com/mertyagiz96-creator/transferverse/releases/download/v1.0.0/football.db"
+
+    try {
+        URL(dbUrl).openStream().use { input ->
+            Files.copy(input, dbFile.toPath(), StandardCopyOption.REPLACE_EXISTING)
+        }
+        println("✅ football.db başarıyla indirildi (${dbFile.length() / 1_000_000} MB).")
+    } catch (e: Exception) {
+        // 🛡️ Veritabanı olmadan uygulama zaten çalışamaz — hatayı loglayıp
+        // süreci durduruyoruz, Render bunu görüp otomatik yeniden dener.
+        System.err.println("❌ football.db indirilemedi: ${e.message}")
+        e.printStackTrace()
+        throw e
+    }
+}
+
 fun main() {
     val port = System.getenv("PORT")?.toIntOrNull() ?: 8080
+
+    // 🚀 Sunucu HERHANGİ bir isteği kabul etmeden ÖNCE, veritabanının hazır
+    // olduğundan emin oluyoruz — yoksa ilk gelen istek anında hataya düşerdi.
+    ensureFootballDbExists()
 
     // 🚀 Sunucu ayağa kalkarken, basketbol logolarını arka planda (sunucuyu
     // hiç bekletmeden) önceden yükleyip önbelleğe alıyoruz.
