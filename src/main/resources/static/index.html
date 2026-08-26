@@ -4,6 +4,22 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TransferKolik | Player Finder</title>
+
+    <!-- 🔗 Sosyal medya paylaşım önizlemesi (Open Graph + Twitter Card) —
+         Reddit/WhatsApp/Twitter'da paylaşılınca zengin bir önizleme kartı
+         (başlık+açıklama+görsel) göstersin diye. -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://transferkolik.com/">
+    <meta property="og:title" content="TransferKolik — İki kulüp, bir gizli bağlantı">
+    <meta property="og:description" content="İki kulübü yaz, aralarında oynamış tüm oyuncuları saniyeler içinde bul. Bil Bakalım, Arkadaşla Yarış, Transfermatik ve daha fazlası.">
+    <meta property="og:image" content="https://transferkolik.com/og-image.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:locale" content="tr_TR">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="TransferKolik — İki kulüp, bir gizli bağlantı">
+    <meta name="twitter:description" content="İki kulübü yaz, aralarında oynamış tüm oyuncuları saniyeler içinde bul.">
+    <meta name="twitter:image" content="https://transferkolik.com/og-image.png">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚽</text></svg>">
 
     <!-- 💡 PWA (Ana Ekrana Ekle) desteği -->
@@ -366,19 +382,19 @@
             width: 100% !important;
         }
 
-        #hamburgerMenuBtn.open span:first-child {
-            transform: translateY(4px) rotate(45deg);
-            background: #ffffff !important;
-            box-shadow: 0 0 6px rgba(255,255,255,0.6);
+        /* 🎯 BASİTLEŞTİRİLDİ: eskiden iki çizgiyi döndürüp X şekli oluşturuyorduk,
+           ama bu bazı durumlarda görünmez kalıyordu (kullanıcı "boş kutu"
+           görüyordu). Artık garanti görünür bir yöntem: açıkken çizgileri
+           tamamen gizleyip, yerine net bir "✕" karakteri gösteriyoruz. */
+        #hamburgerMenuBtn.open .hamburger-line {
+            opacity: 0;
         }
-        #hamburgerMenuBtn.open span:last-child {
-            transform: translateY(-4px) rotate(-45deg);
-            background: #ffffff !important;
-            box-shadow: 0 0 6px rgba(255,255,255,0.6);
+        #hamburgerMenuBtn.open #hamburgerXIcon {
+            display: block !important;
         }
         #hamburgerMenuBtn.open {
-            border-color: rgba(255,255,255,0.5);
-            background: rgba(255,255,255,0.06) !important;
+            border-color: rgba(var(--fg-rgb), 0.5);
+            background: rgba(var(--fg-rgb), 0.06) !important;
         }
         #hamburgerMenuBtn:hover {
             border-color: rgba(var(--fg-rgb), 0.4);
@@ -2179,6 +2195,7 @@
             <button id="hamburgerMenuBtn" aria-label="Menü" style="position: relative; z-index: 1001; background: transparent; border: 1px solid rgba(var(--fg-rgb), 0.16); border-radius: 3px; width: 40px; height: 40px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; cursor: pointer; transition: border-color 0.25s ease, transform 0.25s ease; flex-shrink: 0;">
                 <span class="hamburger-line" style="display:block; width:20px; height:3px; border-radius:2px; background: rgb(var(--fg-rgb)); transition: transform 0.3s ease, opacity 0.3s ease, background 0.3s ease;"></span>
                 <span class="hamburger-line" style="display:block; width:20px; height:3px; border-radius:2px; background: rgb(var(--fg-rgb)); transition: transform 0.3s ease, opacity 0.3s ease, background 0.3s ease;"></span>
+                <span id="hamburgerXIcon" style="display:none; position:absolute; font-size:1.3rem; font-weight:700; line-height:1; color: rgb(var(--fg-rgb));">✕</span>
             </button>
             <button id="homeMenuBtn" class="toolbar-btn" title="Quiz'ndan çıkıp normal arama ekranına dön" style="display: none;">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; margin-right:5px;"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Ana Menü
