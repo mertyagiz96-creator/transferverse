@@ -5573,6 +5573,7 @@
         }
 
         section.style.display = 'block';
+        if (typeof updateHomeCardsRowAlignment === 'function') updateHomeCardsRowAlignment(); // 🛡️ bölüm geç yüklendiyse ok görünürlüğünü tazele
     }
 
     function loadTransferFeeQuiz() {
@@ -5666,6 +5667,7 @@
         }
 
         section.style.display = 'block';
+        if (typeof updateHomeCardsRowAlignment === 'function') updateHomeCardsRowAlignment();
     }
 
     // 🏀 Basketbol Şampiyonluk Anketi — futboldakiyle AYNI backend'i (poll_votes
@@ -6172,8 +6174,9 @@
                     <span style="opacity:0.5; font-weight:800; font-size: 0.95rem; color: rgb(var(--fg-rgb)); margin-top: 16px;">VS</span>
                     ${teamBlockHtml(data.team2, data.player && data.player.team2Season)}
                 </div>
-                <div style="width:100%; max-width:320px; display:flex; flex-wrap:wrap; gap:8px;">
+                <div style="width:100%; max-width:320px; display:flex; flex-wrap:wrap; gap:8px; position:relative;">
                     <input type="text" id="dailyGuessInput" placeholder="Tahminini yaz..." autocomplete="off" style="flex:1; padding:10px 12px; border-radius:3px; border:1px solid rgba(var(--fg-rgb),0.18); background:rgba(var(--fg-rgb),0.02); color:rgb(var(--fg-rgb)); font-size: 0.9rem; outline: none;">
+                    <div id="dailyGuessDropdown" class="autocomplete-dropdown"></div>
                     <span id="dailyGuessCheck" class="guess-check">✔️</span>
                 </div>
                 <div id="dailyQuestionStatus" style="font-size:0.78rem; font-weight: 600; color: rgb(var(--fg-rgb));">${bestTimeText}</div>
@@ -6181,6 +6184,11 @@
         `;
 
         const guessInput = document.getElementById('dailyGuessInput');
+        // 🏀 Oyuncu ismi önerisi — futboldaki AYNI fonksiyon, sadece basketbola özel
+        // uç noktaya ve bağlam takımlarına (data.team1/team2) yönlendiriliyor.
+        setupPlayerNameAutocomplete('dailyGuessInput', 'dailyGuessDropdown', () => [data.team1, data.team2],
+            (query) => `/basketball/playerNameSuggestions?q=${encodeURIComponent(query)}&league=${encodeURIComponent(currentBasketballLeague)}&teams=${encodeURIComponent([data.team1, data.team2].join(','))}`
+        );
         if (guessInput) {
             guessInput.addEventListener('input', () => {
                 if (dailyQuestionSolved) return;
@@ -7185,13 +7193,17 @@
         });
     }
 
-    function setupPlayerNameAutocomplete(inputId, dropdownId, getContextClubs) {
+    // 💡 endpointBuilder: opsiyonel — verilmezse futboldaki varsayılan uç noktayı
+    // kullanır (geriye dönük tam uyumlu). Basketbol gibi farklı bir kaynağa
+    // bağlanmak isteyen çağıranlar, kendi URL'sini üreten bir fonksiyon verebilir.
+    function setupPlayerNameAutocomplete(inputId, dropdownId, getContextClubs, endpointBuilder) {
         const input = document.getElementById(inputId);
         const dropdown = document.getElementById(dropdownId);
         if (!input || !dropdown) return;
 
         let debounceTimer = null;
         let activeIndex = -1;
+        let currentAbortController = null; // 🚀 hızlı yazarken eski (artık gereksiz) istekleri iptal etmek için
 
         function closeDropdown() {
             dropdown.style.display = 'none';
@@ -7207,25 +7219,20 @@
         function repositionDropdown() {
             if (dropdown.style.display === 'none') return;
             const rect = input.getBoundingClientRect();
-            // 🛡️ KESİN DÜZELTME (v2): getBoundingClientRect(), sayfanın normal
-            // (layout) koordinat sistemini kullanıyor — ama visualViewport.height
-            // TEK BAŞINA, klavye açıkken görsel alanın NEREDE BAŞLADIĞINI (offsetTop)
-            // hesaba katmıyordu. İki farklı koordinat sistemini karıştırıyordum,
-            // bu da mobilde YANLIŞ (bazen negatif/çok küçük) bir "alt sınır"
-            // hesaplanmasına ve dropdown'ın istemeden yukarı kaymasına yol açıyordu.
-            // Artık offsetTop + height toplamını kullanıyoruz — ikisi de AYNI
-            // (layout) koordinat sisteminde, karşılaştırma artık doğru.
-            const vv = window.visualViewport;
-            const viewportBottom = vv ? (vv.offsetTop + vv.height) : window.innerHeight;
-            const stillVisible = rect.bottom > (vv ? vv.offsetTop : 0) && rect.top < viewportBottom;
+            // 🎯 BASİTLEŞTİRİLDİ: kullanıcı isteği üzerine, karmaşık "ne kadar yer
+            // var" hesaplamasını tamamen kaldırdık — bazı mobil cihazlarda hâlâ
+            // ara sıra yukarı açılmaya yol açıyordu. Artık KOŞULSUZ olarak her
+            // zaman girdinin ALTINA açılıyor, sabit bir maksimum yükseklikle.
+            // Sayfa/kart kaydırmasını takip eden kısım (aşağıdaki event listener'lar)
+            // AYNEN korundu — o kısım zaten iyi çalışıyordu.
+            const stillVisible = rect.bottom > 0 && rect.top < window.innerHeight;
             if (!stillVisible) {
                 closeDropdown();
                 return;
             }
-            const spaceBelow = Math.max(viewportBottom - rect.bottom - 10, 60);
             dropdown.style.top = (rect.bottom + 6) + 'px';
             dropdown.style.bottom = 'auto';
-            dropdown.style.maxHeight = Math.min(260, spaceBelow) + 'px';
+            dropdown.style.maxHeight = '260px';
             dropdown.style.left = rect.left + 'px';
             dropdown.style.width = rect.width + 'px';
         }
@@ -7269,10 +7276,22 @@
         async function fetchAndRender() {
             const query = input.value.trim();
             if (query.length < 3) { closeDropdown(); return; }
+
+            // 🚀 PERFORMANS: hızlı yazarken önceki (artık geçersiz) istek hâlâ
+            // sunucuda işleniyor olabilir — onu İPTAL EDİYORUZ, hem gereksiz
+            // sunucu yükünü azaltıyor hem "eski cevap geç gelip ekranı yanlış
+            // dolduruyor" sorununu önlüyor.
+            if (currentAbortController) currentAbortController.abort();
+            currentAbortController = new AbortController();
+            const myController = currentAbortController;
+
             try {
                 const clubs = (typeof getContextClubs === 'function') ? getContextClubs() : [];
                 const clubsParam = clubs && clubs.length ? `&clubs=${encodeURIComponent(clubs.join(','))}` : '';
-                const res = await fetch(`/playerNameSuggestions?q=${encodeURIComponent(query)}${clubsParam}`);
+                const url = (typeof endpointBuilder === 'function')
+                    ? endpointBuilder(query, clubs)
+                    : `/playerNameSuggestions?q=${encodeURIComponent(query)}${clubsParam}`;
+                const res = await fetch(url, { signal: myController.signal });
                 if (!res.ok) { closeDropdown(); return; }
                 const names = await res.json();
                 if (!names || names.length === 0) { closeDropdown(); return; }
@@ -7305,8 +7324,11 @@
                 dropdown.style.margin = '0';
                 dropdown.style.zIndex = '2000';
                 dropdown.style.display = 'block';
-                repositionDropdown(); // 💡 aşağıda/yukarıda ne kadar yer olduğuna göre akıllıca konumlandır
-            } catch (e) { closeDropdown(); }
+                repositionDropdown();
+            } catch (e) {
+                if (e.name === 'AbortError') return; // 💡 beklenen durum — daha yeni bir istek bunun yerine geçti, bir şey yapma
+                closeDropdown();
+            }
         }
 
         input.addEventListener('input', () => {
@@ -7681,6 +7703,7 @@
                 if (statusEl) statusEl.textContent = `❌ Bugün bilemedin — doğru cevap: ${cleanFullName}. Yarın tekrar dene!`;
             }
         }
+        if (typeof updateHomeCardsRowAlignment === 'function') updateHomeCardsRowAlignment();
     }
 
     function setupDuelMode() {
@@ -9454,6 +9477,8 @@
         initLogoBallEffect();
         setTimeout(updateHomeCardsRowAlignment, 600);
         setTimeout(updateHomeCardsRowAlignment, 1500);
+        setTimeout(updateHomeCardsRowAlignment, 3000);
+        setTimeout(updateHomeCardsRowAlignment, 5000);
         loadBasketballLogosBulk();
         preloadStadiumPhotos(); // 🏟️ stadyum modu geciktirmesin diye önceden önbelleğe al
         // 📅 Önce sunucu tarihini senkronize edip, ANCAK ONDAN SONRA Günün

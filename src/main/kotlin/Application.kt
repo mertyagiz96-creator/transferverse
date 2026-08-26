@@ -59,6 +59,12 @@ fun main() {
     // olduğundan emin oluyoruz — yoksa ilk gelen istek anında hataya düşerdi.
     ensureFootballDbExists()
 
+    // 🚀 PERFORMANS: oyuncu isim aramasının "bazen hızlı bazen çok yavaş"
+    // olmasının ana sebebi buydu — artık gerekli sütun+indeks, sunucu
+    // isteklere başlamadan ÖNCE garanti altına alınıyor. Sütun zaten varsa
+    // (ikinci ve sonraki her deploy'da) bu neredeyse anında biter.
+    DatabaseClient.ensureNameStdColumn()
+
     // 🚀 Sunucu ayağa kalkarken, basketbol logolarını arka planda (sunucuyu
     // hiç bekletmeden) önceden yükleyip önbelleğe alıyoruz.
     GlobalScope.launch {
@@ -691,6 +697,20 @@ fun main() {
                 val clubsParam = call.request.queryParameters["clubs"]
                 val contextClubs = clubsParam?.split(",")?.map { it.trim() }?.filter { it.isNotBlank() } ?: emptyList()
                 call.respond(DatabaseClient.fetchPlayerNameSuggestions(q, contextClubs))
+            }
+
+            // 🏀 Basketbol için oyuncu isim önerisi — futboldakiyle aynı desen,
+            // ayrıca hangi ligi (europe/nba) arayacağını belirten "league" parametresi var.
+            get("/basketball/playerNameSuggestions") {
+                val q = call.request.queryParameters["q"]
+                if (q.isNullOrBlank()) {
+                    call.respond(emptyList<String>())
+                    return@get
+                }
+                val league = call.request.queryParameters["league"] ?: "europe"
+                val teamsParam = call.request.queryParameters["teams"]
+                val contextTeams = teamsParam?.split(",")?.map { it.trim() }?.filter { it.isNotBlank() } ?: emptyList()
+                call.respond(DatabaseClient.fetchBasketballPlayerNameSuggestions(q, league, contextTeams))
             }
 
             get("/playerInfo") {

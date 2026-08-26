@@ -369,6 +369,60 @@ object DatabaseClient {
         return suggestions.sorted()
     }
 
+    // 🏀 Basketbol oyuncu isim önerisi — futboldaki fetchPlayerNameSuggestions ile
+    // AYNI mantık: bağlam takımlarından birinde oynamış olanlar önce, sonra en
+    // çok kayıtlı (muhtemelen en tanınan). "league" parametresi hangi tabloyu
+    // (Avrupa/EuroLeague-EuroCup ya da NBA) arayacağımızı belirliyor — Günün
+    // Sorusu her gün SADECE birini gösterdiği için, ikisini karıştırmıyoruz.
+    fun fetchBasketballPlayerNameSuggestions(query: String, league: String, contextTeams: List<String> = emptyList()): List<String> {
+        val cleanQuery = query.trim()
+        if (cleanQuery.length < 3) return emptyList()
+        val targetNorm = stripAccentsForCompare(cleanQuery)
+        val isNba = league == "nba"
+        val tableName = if (isNba) "nba_players" else "bb_players"
+        val teamColumn = "team_name_std"
+
+        data class Cand(val name: String, var contextMatch: Boolean, var appearances: Int)
+        val candidates = mutableMapOf<String, Cand>()
+
+        try {
+            withBbConnection { conn ->
+                val sql = "SELECT name, $teamColumn FROM $tableName WHERE ${sqlAccentStripExpr("name")} LIKE ? LIMIT 200"
+                conn.prepareStatement(sql).use { stmt ->
+                    stmt.setString(1, "%$targetNorm%")
+                    stmt.executeQuery().use { rs ->
+                        while (rs.next()) {
+                            val name = rs.getString("name") ?: continue
+                            val nameNorm = stripAccentsForCompare(name)
+                            if (!nameNorm.contains(targetNorm)) continue
+
+                            val teamStd = rs.getString(teamColumn) ?: ""
+                            val teamMatch = contextTeams.any { t ->
+                                val tStd = t.toStandardSearch()
+                                teamStd.contains(tStd) || tStd.contains(teamStd)
+                            }
+
+                            val existing = candidates[name]
+                            if (existing == null) {
+                                candidates[name] = Cand(name, teamMatch, 1)
+                            } else {
+                                existing.appearances++
+                                if (teamMatch) existing.contextMatch = true
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            println("fetchBasketballPlayerNameSuggestions HATASI: ${e.message}")
+        }
+
+        return candidates.values
+            .sortedWith(compareByDescending<Cand> { it.contextMatch }.thenByDescending { it.appearances })
+            .take(12)
+            .map { it.name }
+    }
+
     fun fetchCommonNbaPlayers(team1: String, team2: String): List<BasketballPlayerResult> {
         val startTime = System.currentTimeMillis()
         val std1 = team1.toStandardSearch()
@@ -893,14 +947,19 @@ object DatabaseClient {
 
     fun fetchDailyPlayerBio(dateSeed: Int): DailyPlayerBio? {
         val playerName = dailyPlayerPool[((dateSeed % dailyPlayerPool.size) + dailyPlayerPool.size) % dailyPlayerPool.size]
+        // 🎯 KÖK SEBEP DÜZELTMESİ: havuzdaki isimler aksansız yazılmış ("Mbappe"),
+        // ama veritabanında muhtemelen aksanlı kayıtlı ("Mbappé") — düz LIKE bu
+        // yüzden hiç eşleşmiyor, 404 dönüyordu. Diğer arama fonksiyonlarındaki
+        // AYNI aksan-toleranslı yöntemi burada da kullanıyoruz.
+        val targetNorm = stripAccentsForCompare(playerName)
 
         var result: DailyPlayerBio? = null
         try {
             withConnection { conn ->
                 conn.prepareStatement(
-                    "SELECT id, name, position, nationality, image_url FROM players WHERE name LIKE ? LIMIT 1"
+                    "SELECT id, name, position, nationality, image_url FROM players WHERE name_std LIKE ? LIMIT 1"
                 ).use { stmt ->
-                    stmt.setString(1, "%$playerName%")
+                    stmt.setString(1, "%$targetNorm%")
                     stmt.executeQuery().use { rs ->
                         if (rs.next()) {
                             val pId = rs.getInt("id")
@@ -1291,7 +1350,7 @@ object DatabaseClient {
             SELECT p.name, t.from_club, t.to_club, t.season
             FROM (
                 SELECT id, name FROM players
-                WHERE ${sqlAccentStripExpr("name")} LIKE ?
+                WHERE name_std LIKE ?
                 LIMIT 30
             ) p
             JOIN transfers t ON p.id = t.transfer_id
@@ -1443,7 +1502,7 @@ object DatabaseClient {
         val matched = mutableListOf<MatchedPlayer>()
         try {
             withConnection { conn ->
-                val sql1 = "SELECT id, name FROM players WHERE ${sqlAccentStripExpr("name")} LIKE ? LIMIT 30"
+                val sql1 = "SELECT id, name FROM players WHERE name_std LIKE ? LIMIT 30"
                 conn.prepareStatement(sql1).use { stmt ->
                     stmt.setString(1, "%$targetNorm%")
                     stmt.executeQuery().use { rs ->
@@ -1514,6 +1573,53 @@ object DatabaseClient {
         return expr
     }
 
+    // 🚀 PERFORMANS MİGRASYONU (tek seferlik): "players" tablosunda ~92.000 satır
+    // var, ve isim aramalarında HER SATIR için ~20 iç içe REPLACE() (aksan
+    // temizleme) ANLIK olarak hesaplanıyordu — bu, sunucu biraz yoğunken
+    // aramanın "bazen hızlı bazen çok yavaş" olmasının ana sebebiydi. Bu
+    // fonksiyon, sonucu ÖNCEDEN HESAPLANMIŞ bir sütuna (name_std) yazıp
+    // indeksliyor — böylece her arama, bu ağır hesaplamayı tekrar tekrar
+    // yapmak yerine hazır veriyi okuyor. Sunucu her başladığında çalışır ama
+    // sütun zaten varsa ANINDA çıkar (tekrar tekrar migration yapmaz).
+    fun ensureNameStdColumn() {
+        try {
+            withConnection { conn ->
+                var columnExists = false
+                conn.prepareStatement("PRAGMA table_info(players)").use { stmt ->
+                    stmt.executeQuery().use { rs ->
+                        while (rs.next()) {
+                            if (rs.getString("name") == "name_std") columnExists = true
+                        }
+                    }
+                }
+                if (columnExists) {
+                    println("✅ name_std sütunu zaten mevcut, performans migrasyonu atlanıyor.")
+                    return@withConnection
+                }
+
+                println("⏳ name_std sütunu ekleniyor ve dolduruluyor (tek seferlik, biraz sürebilir)...")
+                val startTime = System.currentTimeMillis()
+
+                conn.createStatement().use { stmt ->
+                    stmt.execute("ALTER TABLE players ADD COLUMN name_std TEXT")
+                }
+                conn.createStatement().use { stmt ->
+                    stmt.execute("UPDATE players SET name_std = ${sqlAccentStripExpr("name")}")
+                }
+                conn.createStatement().use { stmt ->
+                    stmt.execute("CREATE INDEX IF NOT EXISTS idx_players_name_std ON players(name_std)")
+                }
+
+                val elapsed = System.currentTimeMillis() - startTime
+                println("✅ name_std migrasyonu tamamlandı (${elapsed}ms).")
+            }
+        } catch (e: Exception) {
+            // 🛡️ Migrasyon başarısız olursa uygulama ÇÖKMESİN — sadece log basıp
+            // devam ediyoruz, mevcut (daha yavaş ama çalışan) sorgu yolu hâlâ geçerli.
+            println("🔥 ensureNameStdColumn HATASI: ${e.message}")
+        }
+    }
+
     fun fetchPlayerNameSuggestions(query: String, contextClubs: List<String> = emptyList()): List<String> {
         val cleanQuery = query.trim()
         if (cleanQuery.length < 3) return emptyList()
@@ -1523,7 +1629,7 @@ object DatabaseClient {
             SELECT p.id, p.name, t.from_club, t.to_club, COUNT(t.transfer_id) OVER (PARTITION BY p.id) as transfer_count
             FROM (
                 SELECT id, name FROM players
-                WHERE ${sqlAccentStripExpr("name")} LIKE ?
+                WHERE name_std LIKE ?
                 LIMIT 40
             ) p
             LEFT JOIN transfers t ON p.id = t.transfer_id
@@ -1585,7 +1691,7 @@ object DatabaseClient {
                    (SELECT COUNT(*) FROM transfers t2 WHERE t2.transfer_id = p.id) as transfer_count
             FROM (
                 SELECT id, name, position, nationality, birthdate FROM players
-                WHERE ${sqlAccentStripExpr("name")} LIKE ?
+                WHERE name_std LIKE ?
                 LIMIT 30
             ) p
             LEFT JOIN transfers t ON p.id = t.transfer_id
