@@ -348,6 +348,24 @@
             gap: 4px !important;
         }
 
+        /* 🛡️ KESİN DÜZELTME: eski, inline araç çubuğu döneminden kalma mobil
+           kurallar (#playerModeBtn, #transfermatikModeBtn vb. tek-ID
+           seçiciler) hâlâ duruyordu — font boyutunu 0.57rem'e küçültüp,
+           flex:1 ile kutuyu anormal uzatıyorlardı. Bu, Transfermatik'in
+           "koca boş bir alan gibi görünüp içindeki yazının kaybolması"
+           sorununun kök sebebiydi. Çift-ID seçici, o eski kuralları kesin
+           olarak eziyor.
+        */
+        #hamburgerPanel .hamburger-menu-item,
+        #hamburgerPanel #playerModeBtn,
+        #hamburgerPanel #duelModeBtn,
+        #hamburgerPanel #transfermatikModeBtn {
+            flex: 0 0 auto !important;
+            font-size: 1.7rem !important;
+            padding: 20px 4px !important;
+            width: 100% !important;
+        }
+
         #hamburgerMenuBtn.open span:first-child {
             transform: translateY(4px) rotate(45deg);
             background: #ffffff !important;
@@ -1617,7 +1635,10 @@
             #hamburgerPanel {
                 padding: 90px 20px 20px 20px !important;
             }
-            .hamburger-menu-item {
+            #hamburgerPanel .hamburger-menu-item,
+            #hamburgerPanel #playerModeBtn,
+            #hamburgerPanel #duelModeBtn,
+            #hamburgerPanel #transfermatikModeBtn {
                 font-size: 1.35rem !important;
                 padding: 16px 4px !important;
             }
@@ -2136,7 +2157,7 @@
                     <span id="i18n-duelModeBtn"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-6px; margin-right:14px;"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>Arkadaşla Yarış</span>
                 </button>
                 <button id="transfermatikModeBtn" class="hamburger-menu-item" title="En çok transfer yapan gezgin oyuncuları toplayıp 40'a en yakın (ama geçmeden) durmaya çalışın" disabled>
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-6px; margin-right:14px;"><path d="m18 14 4 4-4 4"/><path d="m18 2 4 4-4 4"/><path d="M2 18h1.973a4 4 0 0 0 3.3-1.7l5.454-8.6a4 4 0 0 1 3.3-1.7H22"/><path d="M2 6h1.973a4 4 0 0 1 3.3 1.7l5.454 8.6a4 4 0 0 0 3.3 1.7H22"/></svg>Transfermatik
+                    <span><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-6px; margin-right:14px;"><path d="m18 14 4 4-4 4"/><path d="m18 2 4 4-4 4"/><path d="M2 18h1.973a4 4 0 0 0 3.3-1.7l5.454-8.6a4 4 0 0 1 3.3-1.7H22"/><path d="M2 6h1.973a4 4 0 0 1 3.3 1.7l5.454 8.6a4 4 0 0 0 3.3 1.7H22"/></svg>Transfermatik</span>
                 </button>
             </div>
         </div>
@@ -7091,34 +7112,30 @@
         function repositionDropdown() {
             if (dropdown.style.display === 'none') return;
             const rect = input.getBoundingClientRect();
-            const stillVisible = rect.bottom > 0 && rect.top < window.innerHeight;
+            // 🛡️ KESİN DÜZELTME: mobilde window.innerHeight, klavyenin kapladığı
+            // alanı SAYMIYOR — bu yüzden "yukarıda mı aşağıda mı aç" hesabım
+            // yanlış çıkıp dropdown'ı soruyu kaplayacak şekilde YUKARI açıyordu.
+            // window.visualViewport, klavye dahil GERÇEK görünür alanı veriyor.
+            // Basitleştirdik: ARTIK HER ZAMAN AŞAĞI açıyoruz (asla yukarı,
+            // soruyu asla kaplamasın), sadece mevcut alana göre yüksekliği kısıtlıyoruz.
+            const viewportHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+            const stillVisible = rect.bottom > 0 && rect.top < viewportHeight;
             if (!stillVisible) {
                 closeDropdown();
                 return;
             }
-            // 🛡️ DÜZELTME: mobilde klavye açılınca görünür alan küçülüyor —
-            // eskiden HER ZAMAN aşağı açmaya çalışıyorduk, bu bazen sorunun
-            // üzerine binip "kapanmış" gibi bir his yaratıyordu. Artık aşağıda
-            // ve yukarıda ne kadar yer olduğuna bakıp, DAHA UYGUN olan yöne
-            // açıyoruz — ve seçilen yöne göre yüksekliği o alana sığdırıyoruz.
-            const spaceBelow = window.innerHeight - rect.bottom - 10;
-            const spaceAbove = rect.top - 10;
-            const desiredMaxHeight = 260;
-
-            if (spaceBelow >= 150 || spaceBelow >= spaceAbove) {
-                dropdown.style.top = (rect.bottom + 6) + 'px';
-                dropdown.style.bottom = 'auto';
-                dropdown.style.maxHeight = Math.min(desiredMaxHeight, Math.max(spaceBelow, 80)) + 'px';
-            } else {
-                dropdown.style.bottom = (window.innerHeight - rect.top + 6) + 'px';
-                dropdown.style.top = 'auto';
-                dropdown.style.maxHeight = Math.min(desiredMaxHeight, Math.max(spaceAbove, 80)) + 'px';
-            }
+            const spaceBelow = Math.max(viewportHeight - rect.bottom - 10, 60);
+            dropdown.style.top = (rect.bottom + 6) + 'px';
+            dropdown.style.bottom = 'auto';
+            dropdown.style.maxHeight = Math.min(260, spaceBelow) + 'px';
             dropdown.style.left = rect.left + 'px';
             dropdown.style.width = rect.width + 'px';
         }
         window.addEventListener('scroll', repositionDropdown, true); // 💡 "true" = yakalama aşaması, iç kart kaydırmasını da yakalar
         window.addEventListener('resize', repositionDropdown);
+        if (window.visualViewport) {
+            window.visualViewport.addEventListener('resize', repositionDropdown); // 💡 klavye açılıp kapanınca da yeniden konumlandır
+        }
 
         function updateActiveHighlight() {
             const items = dropdown.querySelectorAll('.autocomplete-item');
