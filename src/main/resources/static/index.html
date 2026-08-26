@@ -168,35 +168,6 @@
             overflow: hidden;
         }
 
-        /* 🎨 Arka plan dokusu — çok soluk, büyük bir saha çizgisi deseni.
-           Belirli bir kulübe ait olmadığı için tarafsız, sadece görsel zenginlik katıyor. */
-        .container::before {
-            content: '';
-            position: absolute;
-            top: -15%;
-            right: -10%;
-            width: 480px;
-            height: 480px;
-            border: 2px solid rgba(var(--accent-gold-rgb), 0.05);
-            border-radius: 50%;
-            z-index: 0;
-            pointer-events: none;
-        }
-        .container::after {
-            content: '';
-            position: absolute;
-            top: -15%;
-            right: -10%;
-            width: 480px;
-            height: 480px;
-            border-top: 2px solid rgba(var(--accent-gold-rgb), 0.05);
-            border-radius: 50% 50% 0 0 / 100% 100% 0 0;
-            transform: scale(0.55);
-            transform-origin: top;
-            z-index: 0;
-            pointer-events: none;
-        }
-
         .top-toolbar {
             display: flex;
             justify-content: flex-end;
@@ -315,6 +286,8 @@
             cursor: pointer;
             transition: all 0.25s ease;
             white-space: nowrap;
+            user-select: none;
+            -webkit-user-select: none;
         }
 
         .toolbar-btn:hover {
@@ -345,6 +318,8 @@
             text-transform: uppercase;
             padding: 20px 4px;
             cursor: pointer;
+            user-select: none;
+            -webkit-user-select: none;
             opacity: 0;
             transform: translateX(-24px);
             transition: opacity 0.4s ease, transform 0.4s ease, color 0.2s ease, border-color 0.2s ease;
@@ -1167,7 +1142,7 @@
             align-items: center;
             text-align: center;
             gap: 14px;
-            background: rgba(var(--accent-gold-rgb), 0.035);
+            background: rgba(var(--card-tint-rgb), 0.3);
             padding: 30px 26px;
             border-radius: 18px;
             border: 1px solid rgba(var(--accent-gold-rgb), 0.28);
@@ -1618,6 +1593,49 @@
             }
             #homeCardsRightArrow, #homeCardsLeftArrow {
                 display: none !important;
+            }
+
+            /* 🛡️ KRİTİK DÜZELTME: masaüstünde uygun olan 100px üst boşluk,
+               mobilde (küçük ekran + tarayıcı arayüzü) menü öğelerini ekranın
+               DIŞINA itiyordu — kullanıcı hiçbir şey göremiyordu. */
+            #hamburgerPanel {
+                padding: 90px 20px 20px 20px !important;
+            }
+            .hamburger-menu-item {
+                font-size: 1.35rem !important;
+                padding: 16px 4px !important;
+            }
+
+            /* 🛡️ DÜZELTME: Pahalı Transfer kartındaki iki kutu + VS rozeti,
+               dar ekranda yan yana SIĞMIYORDU — flex-wrap devreye girip
+               "yamuk" bir görünüm yaratıyordu. Mobilde tamamen alt alta
+               diziyoruz, VS rozetini de ortalıyoruz. */
+            #transferFeeQuizContent > div {
+                flex-direction: column !important;
+            }
+            #transferFeeQuizContent .fee-quiz-option,
+            #transferFeeQuizContent > div > div[style*="min-width:130px"] {
+                width: 100% !important;
+                max-width: none !important;
+            }
+
+            /* 🛡️ DÜZELTME: Günün Sorusu'ndaki tahmin geçmişi tablosu, dar
+               kartta taşıyordu — sütunları küçültüp, gerekirse kartın
+               kendi içinde yatay kaydırmaya izin veriyoruz. */
+            /* 🛡️ DÜZELTME: iOS Safari, font boyutu 16px'den küçük yazı
+               kutularına odaklanınca OTOMATİK YAKINLAŞTIRIYOR — ve odak
+               bitince bazen düzgün geri dönmüyor, ekran "yakın" kalıyor.
+               Tüm metin kutularını 16px'e sabitleyerek bunu baştan önlüyoruz. */
+            input[type="text"], input[type="number"], select, textarea {
+                font-size: 16px !important;
+            }
+
+            #dailyGuessHistoryTable {
+                font-size: 0.68rem !important;
+            }
+            #dailyGuessHistoryTable th,
+            #dailyGuessHistoryTable td {
+                padding: 3px !important;
             }
 
             /* 💡 Transfermatik'te girdi kutusu + Ekle + Dur butonları, dar ekranda
@@ -7035,7 +7053,24 @@
                 closeDropdown();
                 return;
             }
-            dropdown.style.top = (rect.bottom + 6) + 'px';
+            // 🛡️ DÜZELTME: mobilde klavye açılınca görünür alan küçülüyor —
+            // eskiden HER ZAMAN aşağı açmaya çalışıyorduk, bu bazen sorunun
+            // üzerine binip "kapanmış" gibi bir his yaratıyordu. Artık aşağıda
+            // ve yukarıda ne kadar yer olduğuna bakıp, DAHA UYGUN olan yöne
+            // açıyoruz — ve seçilen yöne göre yüksekliği o alana sığdırıyoruz.
+            const spaceBelow = window.innerHeight - rect.bottom - 10;
+            const spaceAbove = rect.top - 10;
+            const desiredMaxHeight = 260;
+
+            if (spaceBelow >= 150 || spaceBelow >= spaceAbove) {
+                dropdown.style.top = (rect.bottom + 6) + 'px';
+                dropdown.style.bottom = 'auto';
+                dropdown.style.maxHeight = Math.min(desiredMaxHeight, Math.max(spaceBelow, 80)) + 'px';
+            } else {
+                dropdown.style.bottom = (window.innerHeight - rect.top + 6) + 'px';
+                dropdown.style.top = 'auto';
+                dropdown.style.maxHeight = Math.min(desiredMaxHeight, Math.max(spaceAbove, 80)) + 'px';
+            }
             dropdown.style.left = rect.left + 'px';
             dropdown.style.width = rect.width + 'px';
         }
@@ -7107,15 +7142,12 @@
                 if (dropdown.parentElement !== document.body) {
                     document.body.appendChild(dropdown);
                 }
-                const rect = input.getBoundingClientRect();
                 dropdown.style.position = 'fixed';
-                dropdown.style.top = (rect.bottom + 6) + 'px';
-                dropdown.style.left = rect.left + 'px';
-                dropdown.style.width = rect.width + 'px';
                 dropdown.style.right = 'auto';
                 dropdown.style.margin = '0';
                 dropdown.style.zIndex = '2000';
                 dropdown.style.display = 'block';
+                repositionDropdown(); // 💡 aşağıda/yukarıda ne kadar yer olduğuna göre akıllıca konumlandır
             } catch (e) { closeDropdown(); }
         }
 
