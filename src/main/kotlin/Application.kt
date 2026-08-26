@@ -93,7 +93,7 @@ fun main() {
         install(CachingHeaders) {
             options { call, outgoingContent ->
                 when (outgoingContent.contentType?.withoutParameters()) {
-                    ContentType.Text.Html -> CachingOptions(CacheControl.NoCache(null))
+                    ContentType.Text.Html -> CachingOptions(CacheControl.NoCache(null), expires = null)
                     else -> null
                 }
             }
