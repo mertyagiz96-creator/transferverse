@@ -20,6 +20,10 @@
     <meta name="twitter:title" content="TransferKolik — İki kulüp, bir gizli bağlantı">
     <meta name="twitter:description" content="İki kulübü yaz, aralarında oynamış tüm oyuncuları saniyeler içinde bul.">
     <meta name="twitter:image" content="https://transferkolik.com/og-image.png">
+
+    <!-- 🔍 Google arama sonucu için standart açıklama — Open Graph'tan AYRI,
+         bu spesifik olarak arama motoru sonuç metnini kontrol ediyor. -->
+    <meta name="description" content="TransferKolik — iki kulüp veya ülke yazın, aralarında oynamış tüm futbolcuları saniyeler içinde bulun. Ücretsiz, üyelik gerektirmez. Bil Bakalım, Arkadaşla Yarış, Günün Sorusu ve daha fazlası.">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚽</text></svg>">
 
     <!-- 💡 PWA (Ana Ekrana Ekle) desteği -->
@@ -7342,6 +7346,16 @@
                 dropdown.style.zIndex = '2000';
                 dropdown.style.display = 'block';
                 repositionDropdown();
+                // 🎯 KESİN DÜZELTME: mobilde klavye açılırken, tarayıcı girdiyi
+                // OTOMATİK OLARAK kaydırıp yeni bir konuma getiriyor — ama bu,
+                // klavye animasyonu TAMAMLANANA kadar (birkaç yüz milisaniye)
+                // sürüyor. Tek seferlik konumlandırma bu kaymayı YAKALAYAMIYOR,
+                // dropdown eski (kaymadan önceki) konumda "geride" kalıyor. Birkaç
+                // kısa gecikmeyle tekrar tekrar konumlandırarak bunu telafi ediyoruz.
+                setTimeout(repositionDropdown, 100);
+                setTimeout(repositionDropdown, 300);
+                setTimeout(repositionDropdown, 500);
+                setTimeout(repositionDropdown, 800);
             } catch (e) {
                 if (e.name === 'AbortError') return; // 💡 beklenen durum — daha yeni bir istek bunun yerine geçti, bir şey yapma
                 closeDropdown();
