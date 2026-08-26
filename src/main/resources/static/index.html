@@ -9504,6 +9504,20 @@
 
     window.onload = () => {
         window.scrollTo(0, 0);
+        // 🎯 DENEME: mobil tarayıcıların bazılarında, sayfa AÇILIR AÇILMAZ
+        // (hiç kaydırma olmadan) iç görünüm (viewport) hesaplamaları henüz
+        // "ısınmamış"/tam doğru olmayabiliyor — kullanıcının bulduğu ipucuna
+        // göre (ok'a basınca kalıcı düzeliyor), bir kaydırma olayı bunu
+        // "uyandırıyor" gibi görünüyor. Görünmez, 1px'lik bir kaydırma
+        // yapıp hemen geri alarak bunu OTOMATİK ve ERKENDEN tetikliyoruz —
+        // kullanıcı hiçbir şey fark etmeyecek kadar küçük ve anlık.
+        window.scrollTo(0, 1);
+        window.scrollTo(0, 0);
+        try {
+            if (window.visualViewport) {
+                window.visualViewport.dispatchEvent(new Event('resize'));
+            }
+        } catch (e) { /* desteklenmiyorsa sessizce geç, kritik değil */ }
         initLanguage();
         setupTransfermatikMode();
         applyQueryParamsToInputs();
