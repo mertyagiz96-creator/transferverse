@@ -1,6 +1,7 @@
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.ContentType
-import io.ktor.http.CacheControl
+import io.ktor.http.HttpHeaders
+import io.ktor.http.content.OutgoingContent
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
@@ -8,7 +9,6 @@ import io.ktor.server.http.content.*
 import io.ktor.server.netty.*
 import io.ktor.server.plugins.contentnegotiation.*
 import io.ktor.server.plugins.compression.*
-import io.ktor.server.plugins.cachingheaders.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
@@ -90,11 +90,16 @@ fun main() {
         // sürümünü sunuyordu — "bir yenilemede düzeliyor, bir sonrakinde eski
         // haline dönüyor" tuhaflığının sebebi muhtemelen buydu. HTML içeriğini
         // ASLA önbelleğe almamasını söylüyoruz — her istek TAZE gelsin.
-        install(CachingHeaders) {
-            options { call, outgoingContent ->
-                when (outgoingContent.contentType?.withoutParameters()) {
-                    ContentType.Text.Html -> CachingOptions(CacheControl.NoCache(null), expires = null)
-                    else -> null
+        // 🚀 DÜZELTME: CachingOptions API'sinin bu Ktor sürümünde bilinen bir
+        // "belirsiz overload" hatası var (expires parametresi bazen null kabul
+        // etmiyor, bazen zorunlu görünüyor) — eklentiyi kullanmak yerine,
+        // doğrudan yanıt başlığına Cache-Control ekleyen basit bir interceptor
+        // kullanıyoruz. Aynı amaca hizmet ediyor, daha güvenilir.
+        intercept(ApplicationCallPipeline.Plugins) {
+            call.response.pipeline.intercept(ApplicationSendPipeline.Before) { message ->
+                val contentType = (message as? OutgoingContent)?.contentType?.withoutParameters()
+                if (contentType == ContentType.Text.Html) {
+                    call.response.header(HttpHeaders.CacheControl, "no-cache, no-store, must-revalidate")
                 }
             }
         }
