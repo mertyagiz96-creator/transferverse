@@ -7225,11 +7225,13 @@
         let debounceTimer = null;
         let activeIndex = -1;
         let currentAbortController = null; // 🚀 hızlı yazarken eski (artık gereksiz) istekleri iptal etmek için
+        let repositionInterval = null; // 🎯 KESİN DÜZELTME: sabit gecikmeler yerine, dropdown açıkken SÜREKLİ çalışan bir kontrol
 
         function closeDropdown() {
             dropdown.style.display = 'none';
             dropdown.innerHTML = '';
             activeIndex = -1;
+            if (repositionInterval) { clearInterval(repositionInterval); repositionInterval = null; }
         }
 
         // 🛡️ DÜZELTME: dropdown <body>'e taşındığı (position:fixed) için, sayfa
@@ -7262,18 +7264,6 @@
         if (window.visualViewport) {
             window.visualViewport.addEventListener('resize', repositionDropdown); // 💡 klavye açılıp kapanınca da yeniden konumlandır
         }
-
-        // 🎯 KESİN DÜZELTME: kullanıcı bulduğu ipucuna göre — mobil klavye,
-        // girdiye İLK dokunulduğunda açılmaya başlıyor ve TAM YERLEŞMESİ,
-        // dropdown açılana kadarki süreden DAHA UZUN sürebiliyor. Artık
-        // konumlandırma denemelerini dropdown açılınca DEĞİL, girdiye
-        // ODAKLANIR ODAKLANMAZ (yazmaya başlamadan önce) başlatıyoruz — hem
-        // daha uzun, daha sık bir aralıkla, klavye tam yerleşene kadar.
-        input.addEventListener('focus', () => {
-            [50, 150, 300, 500, 700, 1000, 1400, 1800].forEach(delay => {
-                setTimeout(repositionDropdown, delay);
-            });
-        });
 
         function updateActiveHighlight() {
             const items = dropdown.querySelectorAll('.autocomplete-item');
@@ -7358,16 +7348,24 @@
                 dropdown.style.zIndex = '2000';
                 dropdown.style.display = 'block';
                 repositionDropdown();
-                // 🎯 KESİN DÜZELTME: mobilde klavye açılırken, tarayıcı girdiyi
-                // OTOMATİK OLARAK kaydırıp yeni bir konuma getiriyor — ama bu,
-                // klavye animasyonu TAMAMLANANA kadar (birkaç yüz milisaniye)
-                // sürüyor. Tek seferlik konumlandırma bu kaymayı YAKALAYAMIYOR,
-                // dropdown eski (kaymadan önceki) konumda "geride" kalıyor. Birkaç
-                // kısa gecikmeyle tekrar tekrar konumlandırarak bunu telafi ediyoruz.
-                setTimeout(repositionDropdown, 100);
-                setTimeout(repositionDropdown, 300);
-                setTimeout(repositionDropdown, 500);
-                setTimeout(repositionDropdown, 800);
+                // 🎯 KESİN DÜZELTME: eskiden ODAKLANMA anından itibaren sabit
+                // gecikmelerle (50ms, 150ms...) deniyordum — ama kullanıcı YAVAŞ
+                // yazarsa, dropdown açılana kadar bu gecikmelerin HEPSİ boşa
+                // gidip bitmiş oluyordu (dropdown henüz yokken çalışıp bir işe
+                // yaramıyorlardı). Artık dropdown GERÇEKTEN açıldığı andan
+                // itibaren, 2.5 saniye boyunca HER 100ms'de bir SÜREKLİ
+                // konumlandırıyoruz — kullanıcının ne zaman yazmaya başladığından
+                // TAMAMEN bağımsız, klavye ne zaman yerleşirse yerleşsin yakalıyor.
+                if (repositionInterval) clearInterval(repositionInterval);
+                let intervalTicks = 0;
+                repositionInterval = setInterval(() => {
+                    repositionDropdown();
+                    intervalTicks++;
+                    if (intervalTicks >= 25) { // 25 × 100ms = 2.5 saniye sonra durdur
+                        clearInterval(repositionInterval);
+                        repositionInterval = null;
+                    }
+                }, 100);
             } catch (e) {
                 if (e.name === 'AbortError') return; // 💡 beklenen durum — daha yeni bir istek bunun yerine geçti, bir şey yapma
                 closeDropdown();
