@@ -1592,6 +1592,12 @@
                 flex: 1 1 auto !important;
                 width: 100% !important;
             }
+            /* 🛡️ DÜZELTME: masaüstü için tasarlanmış asimetrik dolgu (sağ ok
+               boşluğu için), mobilde kartların sola yakın, sağda fazla
+               boşlukla görünmesine yol açıyordu — mobilde simetrik yapıyoruz. */
+            #homeCardsRow {
+                padding: 4px 4px 16px 4px !important;
+            }
             #homeCardsRightArrow, #homeCardsLeftArrow {
                 display: none !important;
             }
@@ -4954,7 +4960,6 @@
         document.getElementById('yearFilterWrapper').style.display = '';
         document.getElementById('resultsTableHead').style.display = '';
         document.getElementById('duelModeBtn').style.display = '';
-        document.getElementById('transfermatikModeBtn').style.display = '';
         document.getElementById('resultsTable').innerHTML = ''; // 💡 quiz kartı anında kaybolsun
         showIdleSearchState();
     }
@@ -7610,7 +7615,6 @@
         document.getElementById('mainGuessRow').style.display = 'none';
         document.getElementById('resultsTableHead').style.display = 'none';
         document.getElementById('playerModeBtn').style.display = 'none';
-        document.getElementById('transfermatikModeBtn').style.display = 'none';
         document.getElementById('homeMenuBtn').style.display = '';
 
         renderDuelSetupScreen();
@@ -7647,7 +7651,6 @@
         document.getElementById('yearFilterWrapper').style.display = '';
         document.getElementById('resultsTableHead').style.display = '';
         document.getElementById('playerModeBtn').style.display = '';
-        document.getElementById('transfermatikModeBtn').style.display = '';
         document.getElementById('homeMenuBtn').style.display = 'none';
 
         showIdleSearchState();
@@ -8241,7 +8244,6 @@
             document.getElementById('mainGuessInput').value = '';
             tableHead.style.display = 'none';
             document.getElementById('duelModeBtn').style.display = 'none';
-            document.getElementById('transfermatikModeBtn').style.display = 'none';
             document.getElementById('resultsTable').innerHTML = ''; // 💡 eski "İki kulüp seçip Ara'ya basın" mesajı anında kaybolsun
             renderQuizModeSelectScreen(); // 🇹🇷 Genel Mod / Türkiye Ligi Modu seçimi
         });
