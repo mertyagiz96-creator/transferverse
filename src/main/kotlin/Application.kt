@@ -447,20 +447,83 @@ fun main() {
                     <meta name="viewport" content="width=device-width, initial-scale=1.0">
                     <title>$title | TransferKolik Blog</title>
                     <meta name="description" content="$description">
+                    <link rel="preconnect" href="https://fonts.googleapis.com">
+                    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+                    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Oswald:wght@500;600;700&display=swap" rel="stylesheet">
                     <style>
-                        body { font-family: -apple-system, sans-serif; max-width: 720px; margin: 0 auto; padding: 24px 20px 60px; background: #12140f; color: rgba(255,255,255,0.88); line-height: 1.75; }
-                        h1 { font-size: 1.6rem; color: #d4af37; margin-bottom: 8px; }
-                        h2 { font-size: 1.3rem; color: #d4af37; margin-top: 32px; }
-                        a { color: #d4af37; }
-                        p { margin-bottom: 16px; font-size: 0.95rem; }
-                        .back-link { display: inline-block; margin-right: 16px; margin-bottom: 24px; font-size: 0.85rem; opacity: 0.7; }
-                        .article-list a { display: block; padding: 14px 0; border-bottom: 1px solid rgba(255,255,255,0.08); text-decoration: none; font-weight: 500; font-size: 0.98rem; letter-spacing: 0.2px; color: rgba(255,255,255,0.88); transition: opacity 0.15s; }
-                        .article-list a:hover { opacity: 0.75; }
+                        * { box-sizing: border-box; }
+                        body {
+                            font-family: 'Inter', -apple-system, sans-serif;
+                            max-width: 720px;
+                            margin: 0 auto;
+                            padding: 32px 20px 70px;
+                            background: linear-gradient(180deg, #fbfbfd 0%, #f5f5f7 100%);
+                            color: #1d1d1f;
+                            line-height: 1.75;
+                            min-height: 100vh;
+                        }
+                        h1 {
+                            font-family: 'Oswald', sans-serif;
+                            font-size: 1.7rem;
+                            font-weight: 600;
+                            letter-spacing: 0.3px;
+                            color: #1d1d1f;
+                            margin-bottom: 10px;
+                        }
+                        h2 {
+                            font-family: 'Oswald', sans-serif;
+                            font-size: 1.15rem;
+                            font-weight: 600;
+                            letter-spacing: 0.3px;
+                            color: #1d1d1f;
+                            margin-top: 36px;
+                            margin-bottom: 6px;
+                        }
+                        a { color: #0071e3; text-decoration: none; }
+                        p { margin-bottom: 16px; font-size: 0.95rem; color: rgba(29,29,31,0.82); }
+                        .back-links { display: flex; gap: 10px; margin-bottom: 28px; flex-wrap: wrap; }
+                        .back-link {
+                            display: inline-flex;
+                            align-items: center;
+                            gap: 6px;
+                            padding: 8px 14px;
+                            border-radius: 20px;
+                            background: rgba(0,0,0,0.04);
+                            border: 1px solid rgba(0,0,0,0.08);
+                            font-size: 0.8rem;
+                            font-weight: 600;
+                            color: rgba(29,29,31,0.75);
+                            transition: background 0.2s ease, transform 0.2s ease;
+                        }
+                        .back-link:hover { background: rgba(0,0,0,0.07); transform: translateY(-1px); }
+                        .article-list { display: flex; flex-direction: column; gap: 10px; }
+                        .article-list a {
+                            display: block;
+                            padding: 18px 20px;
+                            border-radius: 14px;
+                            background: rgba(0,0,0,0.03);
+                            border: 1px solid rgba(0,0,0,0.06);
+                            box-shadow: 0 4px 14px rgba(0,0,0,0.04);
+                            text-decoration: none;
+                            font-weight: 600;
+                            font-size: 0.95rem;
+                            letter-spacing: 0.1px;
+                            color: #1d1d1f;
+                            transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+                        }
+                        .article-list a:hover {
+                            transform: translateY(-2px);
+                            box-shadow: 0 10px 26px rgba(0,0,0,0.08);
+                            border-color: rgba(0,113,227,0.25);
+                        }
+                        .subtitle { color: rgba(29,29,31,0.55); font-size: 0.9rem; margin-top: -4px; margin-bottom: 28px; }
                     </style>
                 </head>
                 <body>
-                    <a href="/" class="back-link">← TransferKolik Ana Sayfa</a>
-                    <a href="/blog" class="back-link">📰 Tüm Yazılar</a>
+                    <div class="back-links">
+                        <a href="/" class="back-link">← Ana Sayfa</a>
+                        <a href="/blog" class="back-link">📰 Tüm Yazılar</a>
+                    </div>
                     $bodyHtml
                 </body>
                 </html>
@@ -479,8 +542,8 @@ fun main() {
                 val html = blogPageHtml(
                     "Transfer Hikayeleri",
                     """
-                    <h1>✍️ Bonservissiz Yazarın Kaleminden — Haftanın Blogları</h1>
-                    <p style="opacity:0.6;">Futbol, basketbol ve Formula 1 tarihinin en dramatik, en şaşırtıcı transfer anları.</p>
+                    <h1>Bonservissiz Yazarın Kaleminden — Haftanın Blogları</h1>
+                    <p class="subtitle">Futbol, basketbol ve Formula 1 tarihinin en dramatik, en şaşırtıcı transfer anları.</p>
                     <h2>⚽ Futbol</h2>
                     <div class="article-list">$footballHtml</div>
                     <h2>🏀 Basketbol</h2>

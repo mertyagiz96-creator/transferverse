@@ -2813,11 +2813,24 @@
         }
 
         row.addEventListener('scroll', updateArrowVisibility);
-        // 💡 İçerik (kartlar) yüklendikçe genişlik değişebilir — periyodik birkaç
-        // kontrol yeterli, sürekli bir observer'a gerek yok.
-        setTimeout(updateArrowVisibility, 500);
-        setTimeout(updateArrowVisibility, 1500);
         window.addEventListener('resize', updateArrowVisibility);
+
+        // 🛡️ KESİN DÜZELTME: sabit gecikmeler (500ms/1500ms), localhost'ta her
+        // şey anında yüklendiği için yeterliydi ama canlı sitede ağ gecikmesi
+        // yüzünden kartlar henüz tam boyutlanmadan kontrol çalışıp okları
+        // yanlışlıkla gizleyebiliyordu. ResizeObserver, satırın GERÇEK
+        // içerik genişliği her değiştiğinde (kartlar yüklendikçe, veri
+        // geldikçe) güvenilir şekilde tetikleniyor — ağ hızından bağımsız.
+        if (window.ResizeObserver) {
+            const resizeObserver = new ResizeObserver(() => updateArrowVisibility());
+            resizeObserver.observe(row);
+            Array.from(row.children).forEach(child => resizeObserver.observe(child));
+        } else {
+            // 💡 Çok eski tarayıcılar için yedek — ResizeObserver yoksa aynı sabit gecikmeler
+            setTimeout(updateArrowVisibility, 500);
+            setTimeout(updateArrowVisibility, 1500);
+        }
+        updateArrowVisibility(); // 💡 ilk anlık durum için hemen bir kez çalıştır
     }
 
     function initHamburgerMenu() {

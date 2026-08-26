@@ -12,8 +12,6 @@ import io.ktor.client.statement.*
 import io.ktor.http.*
 import kotlinx.serialization.json.*
 
-// 💡 "Oyuncu Modu" için yeni, izole veri sınıfları — mevcut Player sınıfına ya da
-// başka bir endpoint'e hiç dokunmuyor, tamamen ek/ayrı bir yapı.
 @Serializable
 data class ClubSeason(val club: String, val season: String)
 
@@ -22,12 +20,11 @@ data class MultiClubPlayerResult(
     val playerName: String,
     val position: String,
     val clubs: List<ClubSeason>,
-    val imageUrl: String? = null, // 💡 YENİ: Cevap açıldıktan sonra göstermek için
-    val nationality: String? = null, // 🎯 Wordle modu ipucu için — oyuncunun uyruğu
-    val birthDate: String? = null // 🎯 Wordle modu ipucu için — yaş karşılaştırması
+    val imageUrl: String? = null,
+    val nationality: String? = null,
+    val birthDate: String? = null
 )
 
-// 🎯 Günün Sorusu (Wordle modu) — tahmin edilen oyuncunun kendi bilgileri
 @Serializable
 data class PlayerBasicInfo(
     val name: String,
@@ -36,14 +33,9 @@ data class PlayerBasicInfo(
     val birthDate: String?
 )
 
-// 🏆 Supabase'e YAZILAN skor kaydı — Postgres sütun adı `score` (tek sütun, tek satır).
-// ⚠️ ÖNEMLİ: id'ye varsayılan değer VERİLMEMELİ — kotlinx.serialization, değeri
-// varsayılanla aynıysa alanı JSON'a hiç eklemiyor, bu da Supabase'e "id" alanı
-// olmadan giden bir istek gönderip "null value in column id" hatasına yol açıyordu.
 @Serializable
 data class SupabaseHighScoreInsert(val id: Int, val score: Int)
 
-// 🗳️ Şampiyonluk Anketi — Supabase'teki poll_votes tablosunu okuyup güncelliyor.
 @Serializable
 data class PollOption(val league: String, val team: String, val votes: Int)
 
@@ -74,13 +66,11 @@ object DatabaseClient {
         "romanya" to "romania", "romania" to "romania",
         "ukrayna" to "ukraine", "ukraine" to "ukraine",
         "avusturya" to "austria", "austria" to "austria",
-
         "cek" to "czech republic", "çek" to "czech republic",
         "cekya" to "czech republic", "çekya" to "czech republic",
         "cek cumhuriyeti" to "czech republic", "çek cumhuriyeti" to "czech republic",
         "czech republic" to "czech republic", "czechia" to "czech republic",
         "cekoslovakya" to "czechoslovakia", "çekoslovakya" to "czechoslovakia",
-
         "bosna hersek" to "bosnia-herzegovina", "bosna" to "bosnia-herzegovina",
         "kanada" to "canada", "amerika" to "united states", "abd" to "united states", "united states" to "united states",
         "brezilya" to "brazil", "brazil" to "brazil",
@@ -110,8 +100,6 @@ object DatabaseClient {
         "suudi arabistan" to "saudi arabia",
         "katar" to "qatar", "qatar" to "qatar",
         "ozbekistan" to "uzbekistan",
-
-        // 💡 Aşağıdakiler ek olarak eklendi, mevcut hiçbir eşleme değiştirilmedi
         "iskocya" to "scotland", "scotland" to "scotland",
         "galler" to "wales", "wales" to "wales",
         "irlanda" to "ireland", "ireland" to "ireland", "republic of ireland" to "ireland",
@@ -146,10 +134,6 @@ object DatabaseClient {
         "gine" to "guinea", "guinea" to "guinea"
     )
 
-    // 💡 Bazı kulüpler veritabanında tam isimle değil, kısaltmayla kayıtlı
-    // (örn. "Manchester United" değil "Man Utd" olarak geçiyor). Bu sözlük,
-    // kullanıcı tam ismi yazınca aramayı veritabanındaki gerçek kısaltmaya
-    // çeviriyor. Sadece bilinen istisnalar için, diğer kulüplere dokunmuyor.
     private val clubAliasMap = mapOf(
         "manchester united" to "man utd",
         "manchester utd" to "man utd",
@@ -158,29 +142,14 @@ object DatabaseClient {
         "borussia dortmund" to "bor. dortmund"
     )
 
-    // Arama teriminin standartlaştırılmış + (varsa) alias'ı çözülmüş hâlini döndürür.
-    // SQL sorgusuna ve Kotlin tarafındaki matchesOriginalClub kontrolüne aynı terim
-    // gönderilsin diye tek bir yerden hesaplanıyor.
     private fun resolveClubSearchTerm(raw: String): String {
         val std = raw.toStandardSearch()
         return clubAliasMap[std] ?: std
     }
 
-    // 💡 EŞZAMANLI GÜVENLİK: Tek paylaşılan connection yerine küçük bir havuz (pool)
-    // kullanıyoruz. SQLite JDBC sürücüsü, tek bir Connection nesnesinin birden fazla
-    // thread tarafından TAM OLARAK AYNI ANDA kullanılmasını güvenli desteklemiyor.
-    // Bu havuz sayesinde her istek kendi bağlantısını alıp işini bitirince geri
-    // bırakıyor; havuz o an boşsa istek kısa bir süre bekliyor (hata almak yerine).
-    // Ayrıca WAL modu, eşzamanlı okumaları çok daha güvenli ve hızlı hale getiriyor.
     private const val POOL_SIZE = 6
     private val connectionPool: java.util.concurrent.BlockingQueue<Connection> by lazy { createConnectionPool() }
 
-    // 🏆 Bil Bakalım global rekoru — artık SQLite'ta DEĞİL, Supabase'in ücretsiz
-    // Postgres'inde tutuluyor (REST API üzerinden). Render'ın free tier'ı kalıcı
-    // disk sunmadığı için SQLite'taki rekor her uyku/deploy/restart sonrası
-    // sıfırlanıyordu — Supabase gerçekten kalıcı, ücretsiz bir dış servis.
-    // NetKalan'daki quiz_records liderlik tablosuyla AYNI kanıtlanmış yöntem,
-    // burada sadece tek bir sayı (leaderboard değil) tutuluyor.
     private val supabaseUrl = System.getenv("SUPABASE_URL")?.trimEnd('/')
     private val supabaseKey = System.getenv("SUPABASE_KEY")
 
@@ -188,8 +157,6 @@ object DatabaseClient {
         install(HttpTimeout) { requestTimeoutMillis = 15_000 }
     }
 
-    // 🏆 4 ayrı Bil Bakalım modu, 4 ayrı rekor — Supabase'teki quiz_highscore
-    // tablosunda id=1..4, her biri farklı bir moda karşılık geliyor.
     private val quizModeIds = mapOf(
         "genel" to 1,
         "turkiye" to 2,
@@ -205,7 +172,7 @@ object DatabaseClient {
     private suspend fun fetchQuizHighScoreSuspend(modeId: Int): Int {
         val fallback = defaultScoreForMode(modeId)
         if (supabaseUrl == null || supabaseKey == null) {
-            println("⚠️ SUPABASE_URL / SUPABASE_KEY ayarlanmamış, rekor devre dışı (varsayılan $fallback dönüyor).")
+            println("SUPABASE_URL / SUPABASE_KEY ayarlanmamış, rekor devre dışı (varsayılan $fallback dönüyor).")
             return fallback
         }
         return try {
@@ -220,14 +187,11 @@ object DatabaseClient {
             val rows = Json.parseToJsonElement(body).jsonArray
             if (rows.isEmpty()) fallback else (rows[0].jsonObject["score"]?.jsonPrimitive?.int ?: fallback)
         } catch (e: Exception) {
-            println("🔥 Supabase rekor okuma hatası: ${e.message}")
+            println("Supabase rekor okuma hatası: ${e.message}")
             fallback
         }
     }
 
-    // 📈 Skoru gönderir, mevcut rekordan büyükse günceller — her durumda sonuçtaki
-    // (güncel) rekoru döndürür. Supabase'te "upsert" (varsa güncelle, yoksa oluştur)
-    // için Prefer: resolution=merge-duplicates header'ı kullanılıyor.
     private suspend fun submitQuizScoreSuspend(modeId: Int, score: Int): Int {
         val current = fetchQuizHighScoreSuspend(modeId)
         if (supabaseUrl == null || supabaseKey == null) {
@@ -246,19 +210,16 @@ object DatabaseClient {
             }
             if (!response.status.isSuccess()) {
                 val errorBody = response.bodyAsText()
-                println("🔥 Supabase rekor yazma hatası: HTTP ${response.status} — $errorBody")
+                println("Supabase rekor yazma hatası: HTTP ${response.status} — $errorBody")
                 return current
             }
             score
         } catch (e: Exception) {
-            println("🔥 Supabase rekor yazma hatası: ${e.message}")
+            println("Supabase rekor yazma hatası: ${e.message}")
             current
         }
     }
 
-    // 🗳️ ŞAMPİYONLUK ANKETİ — Supabase'teki poll_votes tablosunu okuyup güncelliyor.
-    // Rekor sistemiyle aynı ruhta: Render'ın kalıcı olmayan diskine değil,
-    // Supabase'in kalıcı Postgres'ine yazıyoruz ki oylar kaybolmasın.
     fun fetchPollResults(): List<PollOption> = kotlinx.coroutines.runBlocking { fetchPollResultsSuspend() }
 
     fun submitPollVote(league: String, team: String): List<PollOption> = kotlinx.coroutines.runBlocking { submitPollVoteSuspend(league, team) }
@@ -274,14 +235,11 @@ object DatabaseClient {
             val body = response.bodyAsText()
             Json.decodeFromString<List<PollOption>>(body)
         } catch (e: Exception) {
-            println("🔥 Anket okuma hatası: ${e.message}")
+            println("Anket okuma hatası: ${e.message}")
             emptyList()
         }
     }
 
-    // 💡 Basit oku-artır-yaz mantığı (rekor sistemiyle aynı) — çok nadir, aynı
-    // anda iki oy gelirse teorik olarak biri kaybolabilir ama bu ölçekte
-    // (küçük bir anket) kabul edilebilir bir basitleştirme.
     private suspend fun submitPollVoteSuspend(league: String, team: String): List<PollOption> {
         if (supabaseUrl == null || supabaseKey == null) return emptyList()
         try {
@@ -296,10 +254,10 @@ object DatabaseClient {
                 setBody(Json.encodeToString(PollVoteUpdate(currentVotes + 1)))
             }
             if (!response.status.isSuccess()) {
-                println("🔥 Anket oy yazma hatası: HTTP ${response.status} — ${response.bodyAsText()}")
+                println("Anket oy yazma hatası: HTTP ${response.status} — ${response.bodyAsText()}")
             }
         } catch (e: Exception) {
-            println("🔥 Anket oy yazma hatası: ${e.message}")
+            println("Anket oy yazma hatası: ${e.message}")
         }
         return fetchPollResultsSuspend()
     }
@@ -313,10 +271,6 @@ object DatabaseClient {
         return pool
     }
 
-    // 🏀 Basketbol — football.db'den TAMAMEN AYRI, ikinci bir veritabanı
-    // (basketball.db). EuroLeague + EuroCup verisi, "oyuncu-sezon-takım"
-    // şeklinde. Mevki/uyruk verisi YOK (kaynakta bulunmuyor) — sadece
-    // "iki takımda da oynayan oyuncu" sorgusu için kullanılıyor.
     private const val BB_POOL_SIZE = 6
     private val bbConnectionPool: java.util.concurrent.BlockingQueue<Connection> by lazy { createBbConnectionPool() }
 
@@ -342,7 +296,7 @@ object DatabaseClient {
         val dbFile = File("basketball.db")
         if (!dbFile.exists()) {
             throw IllegalStateException(
-                "❌ basketball.db bulunamadı: ${dbFile.absolutePath}. " +
+                "basketball.db bulunamadı: ${dbFile.absolutePath}. " +
                         "Local çalıştırıyorsanız dosyayı proje kök dizinine kopyalayın."
             )
         }
@@ -354,15 +308,10 @@ object DatabaseClient {
         return conn
     }
 
-    // 🏀 Öneri (autocomplete) listesi — benzersiz takım isimleri.
     fun fetchAllBasketballSuggestions(): List<String> {
         val suggestions = mutableSetOf<String>()
         try {
             withBbConnection { conn ->
-                // ⚡ YENİDEN YAZILDI: eski sürüm her satır için 5 ayrı iç içe (correlated)
-                // EXISTS sorgusu çalıştırıyordu (indekssiz team_name üzerinden) — 14.836
-                // satırda bu ~19 SANİYE sürüyordu! Yeni sürüm TEK GEÇİŞTE (GROUP BY +
-                // HAVING) aynı sonucu veriyor, milisaniyeler içinde.
                 val sql = """
                     SELECT team_name FROM (
                         SELECT team_name, substr(season_code, -4) as yr
@@ -385,7 +334,7 @@ object DatabaseClient {
                 }
             }
         } catch (e: Exception) {
-            println("🔥 fetchAllBasketballSuggestions HATASI: ${e.message}")
+            println("fetchAllBasketballSuggestions HATASI: ${e.message}")
         }
         return suggestions.sorted()
     }
@@ -396,21 +345,13 @@ object DatabaseClient {
         val team1Season: String?,
         val team2Season: String?,
         val competition: String,
-        val nbaOfficialId: String? = null // 💡 varsa, NBA'in kendi resmi foto CDN'inde kullanılıyor
+        val nbaOfficialId: String? = null
     )
 
-    // 🏀 NBA — Avrupa basketbolundan (EuroLeague/EuroCup) TAMAMEN AYRI bir havuz,
-    // aynı basketball.db içinde ama farklı tablo (nba_players). 1947-2026 arası,
-    // BAA/NBA/ABA liglerini kapsıyor. Rastgele eşleşmede Avrupa ile karışmasın diye
-    // ayrı endpoint'ler kullanılıyor.
     fun fetchAllNbaSuggestions(): List<String> {
         val suggestions = mutableSetOf<String>()
         try {
             withBbConnection { conn ->
-                // 💡 team_name = team_abbr olanlar, tam ismini ÇÖZEMEDİĞİMİZ eski/
-                // lağvedilmiş takımlar (örn. "SDC", "NOH" gibi ham kısaltmalar) —
-                // bunları öneri/rastgele havuzundan çıkarıyoruz, çirkin/anlamsız
-                // görünüyorlardı. Gerçek verileri hâlâ duruyor, sadece önerilmiyorlar.
                 conn.prepareStatement(
                     "SELECT DISTINCT team_name FROM nba_players WHERE team_name != team_abbr"
                 ).use { stmt ->
@@ -423,7 +364,7 @@ object DatabaseClient {
                 }
             }
         } catch (e: Exception) {
-            println("🔥 fetchAllNbaSuggestions HATASI: ${e.message}")
+            println("fetchAllNbaSuggestions HATASI: ${e.message}")
         }
         return suggestions.sorted()
     }
@@ -468,40 +409,24 @@ object DatabaseClient {
                 }
             }
         } catch (e: Exception) {
-            println("🔥 fetchCommonNbaPlayers HATASI: ${e.message}")
+            println("fetchCommonNbaPlayers HATASI: ${e.message}")
         }
         val elapsed = System.currentTimeMillis() - startTime
         if (elapsed > 1000) {
-            println("⏱️ fetchCommonNbaPlayers YAVAŞ: ${elapsed}ms ($team1 vs $team2, ${results.size} sonuç)")
+            println("fetchCommonNbaPlayers YAVAŞ: ${elapsed}ms ($team1 vs $team2, ${results.size} sonuç)")
         }
         return results.sortedByDescending { it.team1Season?.toIntOrNull() ?: 0 }
     }
 
-    // 🖼️ Basketbol logo/foto — TARAYICIDAN DEĞİL, SUNUCUDAN TheSportsDB'ye
-    // istek atıyoruz. Tarayıcıdan atılan istekler CORS'a takılıyordu (TheSportsDB'nin
-    // ücretsiz anahtarı bunu desteklemiyor gibi görünüyor); sunucudan sunucuya
-    // istekte CORS diye bir kavram yok, bu yüzden garanti çalışıyor.
-    // 🛡️ Sunucu tarafında, TÜM kullanıcılar için PAYLAŞILAN önbellek — bir takım
-    // bir kez bulunduktan sonra bir daha ASLA TheSportsDB'ye sorulmuyor. Ücretsiz
-    // anahtarın paylaşılan hız sınırını (rate limit) korumak için kritik.
     private val basketballLogoCache = java.util.concurrent.ConcurrentHashMap<String, String>()
     private val basketballPhotoCache = java.util.concurrent.ConcurrentHashMap<String, String>()
 
-    // 🚀 Uygulama açılışında, TÜM basketbol takımlarının (Avrupa + NBA, toplam
-    // ~50-55 takım) logolarını ÖNCEDEN çekip önbelleğe alıyoruz — futbolun
-    // stadyum fotoğrafı ön-yükleme mantığıyla aynı. Böylece hiçbir kullanıcı
-    // "önce boş, sonra doluyor" gecikmesi yaşamıyor, her şey baştan hazır.
     suspend fun preloadAllBasketballLogos() {
         try {
             val europeTeams = fetchAllBasketballSuggestions()
             val nbaTeams = fetchAllNbaSuggestions()
             val allTeams = (europeTeams + nbaTeams).distinct()
 
-            // 🚀 KRİTİK OPTİMİZASYON: Eğer zaten HEPSİ (ya da neredeyse hepsi)
-            // kalıcı veritabanında kayıtlıysa, döngüye HİÇ girmiyoruz — tek bir
-            // hızlı COUNT sorgusu yeterli. Böylece sunucu açılışında (soğuk
-            // başlangıçta) bağlantı havuzu boşuna meşgul edilmiyor, kullanıcının
-            // İLK isteği (Bil Bakalım vb.) hiç beklemeden anında işlenebiliyor.
             val alreadyCachedCount = withBbConnection { conn ->
                 var count = 0
                 conn.prepareStatement("SELECT COUNT(*) as cnt FROM bb_team_logos").use { stmt ->
@@ -512,48 +437,39 @@ object DatabaseClient {
                 count
             }
             if (alreadyCachedCount >= allTeams.size) {
-                println("🏀 Logolar zaten kalıcı veritabanında ($alreadyCachedCount/${allTeams.size}) — ön-yükleme atlandı, sunucu anında hazır.")
+                println("Logolar zaten kalıcı veritabanında ($alreadyCachedCount/${allTeams.size}) — ön-yükleme atlandı.")
                 return
             }
 
-            println("🏀 ${allTeams.size} takımın logosu önceden yükleniyor...")
+            println("${allTeams.size} takımın logosu önceden yükleniyor...")
             var found = 0
             for (team in allTeams) {
                 val callStart = System.currentTimeMillis()
                 val logo = fetchBasketballTeamLogo(team)
                 if (logo != null) found++
                 val callElapsed = System.currentTimeMillis() - callStart
-                // 💡 100ms'den hızlıysa muhtemelen veritabanından geldi (ağa hiç
-                // gidilmedi) — bu durumda BEKLEMEYE GEREK YOK. Sadece gerçekten
-                // TheSportsDB'ye gidilen (yavaş) durumlarda aralık koyuyoruz.
                 if (callElapsed > 100) {
-                    kotlinx.coroutines.delay(600) // 💡 hız sınırını zorlamayalım diye aralıklı
+                    kotlinx.coroutines.delay(600)
                 }
             }
-            println("🏀 Logo ön-yükleme tamamlandı: $found / ${allTeams.size} bulundu.")
+            println("Logo ön-yükleme tamamlandı: $found / ${allTeams.size} bulundu.")
         } catch (e: Exception) {
-            println("🔥 preloadAllBasketballLogos HATASI: ${e.message}")
+            println("preloadAllBasketballLogos HATASI: ${e.message}")
         }
     }
 
-    // ⚽ Futbol kulüp logosu YEDEK sistemi — club_logos tablosunda olmayan
-    // kulüpler için. Basketboldan TAMAMEN AYRI önbellek (aynı isimli kulüpler
-    // olabilir, örn. "Barcelona" hem futbolda hem basketbolda var — karışmasın).
     private val footballLogoFallbackCache = java.util.concurrent.ConcurrentHashMap<String, String>()
     private val footballLogoFallbackFailedRecently = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
 
     suspend fun fetchFootballTeamLogoFallback(teamName: String): String? {
         val cacheKey = teamName.trim().lowercase()
         footballLogoFallbackCache[cacheKey]?.let { return it }
-        // 🛡️ Başarısız bir denemeyi de KISA SÜRELİĞİNE önbelleğe alıyoruz — TheSportsDB
-        // şu an ulaşılamıyor/yavaşsa, AYNI kulüp için art arda gelen istekler (birden
-        // fazla kullanıcı aynı anda arama yapınca) her biri ayrı ayrı 15sn beklemesin.
         if (footballLogoFallbackFailedRecently.contains(cacheKey)) return null
 
         try {
             val response = httpClient.get("https://www.thesportsdb.com/api/v1/json/123/searchteams.php") {
                 parameter("t", teamName)
-                timeout { requestTimeoutMillis = 3_000 } // 💡 15sn yerine sadece 3sn — sunucuyu tıkamasın
+                timeout { requestTimeoutMillis = 3_000 }
             }
             if (response.status.isSuccess()) {
                 val body = response.bodyAsText()
@@ -561,8 +477,6 @@ object DatabaseClient {
                 val teamsElement = root["teams"]
                 if (teamsElement != null && teamsElement !is JsonNull) {
                     val teams = teamsElement.jsonArray
-                    // 💡 Futbolda "Soccer" sporunu tercih ediyoruz ama bulunamazsa
-                    // (bazı kayıtlarda sport alanı boş/farklı olabiliyor) ilk sonucu kullanıyoruz.
                     val footballTeam = teams.map { it.jsonObject }.firstOrNull {
                         (it["strSport"]?.jsonPrimitive?.contentOrNull ?: "").equals("Soccer", ignoreCase = true)
                     } ?: teams.firstOrNull()?.jsonObject
@@ -575,7 +489,7 @@ object DatabaseClient {
                 }
             }
         } catch (e: Exception) {
-            println("🔥 fetchFootballTeamLogoFallback hata: ${e.message}")
+            println("fetchFootballTeamLogoFallback hata: ${e.message}")
             footballLogoFallbackFailedRecently.add(cacheKey)
         }
         return null
@@ -585,9 +499,6 @@ object DatabaseClient {
         val cacheKey = teamName.trim().lowercase()
         basketballLogoCache[cacheKey]?.let { return it }
 
-        // 🗄️ Kalıcı veritabanı kontrolü — RAM önbelleği sunucu her uyandığında
-        // sıfırlanıyordu (Render'ın ücretsiz katmanı uykuya dalıp uyanıyor),
-        // ama bu tablo diskte duruyor, hiç kaybolmuyor.
         try {
             val cachedUrl = withBbConnection { conn ->
                 var result: String? = null
@@ -606,14 +517,9 @@ object DatabaseClient {
                 return cachedUrl
             }
         } catch (e: Exception) {
-            println("🔥 bb_team_logos okuma hatası: ${e.message}")
+            println("bb_team_logos okuma hatası: ${e.message}")
         }
 
-        // 💡 Artık sonuç KALICI olarak veritabanına yazılıyor — bir takım için
-        // fazladan deneme yapmanın maliyeti sadece BİR KEZ ödeniyor (o takım bir
-        // daha hiç aranmıyor). Bu yüzden daha kapsamlı deneyebiliriz: hem orijinal
-        // hem Title Case, her ikisinde de kelime kelime kırparak (sponsor/şehir
-        // isimleri genelde sonda oluyor).
         val titleCased = teamName.trim().split(Regex("\\s+")).joinToString(" ") {
             it.lowercase().replaceFirstChar { c -> c.uppercase() }
         }
@@ -629,7 +535,7 @@ object DatabaseClient {
         }
 
         for (attempt in attempts.distinct()) {
-            kotlinx.coroutines.delay(150) // 💡 aynı takım içindeki denemeler arasında da küçük bir ara
+            kotlinx.coroutines.delay(150)
             try {
                 val response = httpClient.get("https://www.thesportsdb.com/api/v1/json/123/searchteams.php") {
                     parameter("t", attempt)
@@ -656,14 +562,14 @@ object DatabaseClient {
                                     }
                                 }
                             } catch (e: Exception) {
-                                println("🔥 bb_team_logos yazma hatası: ${e.message}")
+                                println("bb_team_logos yazma hatası: ${e.message}")
                             }
                             return badge
                         }
                     }
                 }
             } catch (e: Exception) {
-                println("🔥 fetchBasketballTeamLogo hata ($attempt): ${e.message}")
+                println("fetchBasketballTeamLogo hata ($attempt): ${e.message}")
             }
         }
         return null
@@ -691,12 +597,9 @@ object DatabaseClient {
                 return cachedUrl
             }
         } catch (e: Exception) {
-            println("🔥 bb_player_photos okuma hatası: ${e.message}")
+            println("bb_player_photos okuma hatası: ${e.message}")
         }
 
-        // 💡 TheSportsDB'nin dokümantasyonu isimleri ALT ÇİZGİLİ gösteriyor
-        // (örn. "Danny_Welbeck") — normal boşluklu format tam eşleşmeyebiliyordu.
-        // İkisini de deniyoruz.
         val nameVariants = listOf(playerName.trim(), playerName.trim().replace(Regex("\\s+"), "_")).distinct()
         for (variant in nameVariants) {
             try {
@@ -722,30 +625,24 @@ object DatabaseClient {
                                     }
                                 }
                             } catch (e: Exception) {
-                                println("🔥 bb_player_photos yazma hatası: ${e.message}")
+                                println("bb_player_photos yazma hatası: ${e.message}")
                             }
                             return photo
                         }
                     }
                 }
             } catch (e: Exception) {
-                println("🔥 fetchBasketballPlayerPhoto hata ($variant): ${e.message}")
+                println("fetchBasketballPlayerPhoto hata ($variant): ${e.message}")
             }
         }
         return null
     }
 
-    // 🏀 İki takımda da oynamış oyuncuları buluyor — futboldaki fetchCommonPlayers
-    // ile aynı ruhta, ama basketbolun (oyuncu-sezon-takım) daha basit yapısına uygun.
     fun fetchCommonBasketballPlayers(team1: String, team2: String): List<BasketballPlayerResult> {
         val startTime = System.currentTimeMillis()
         val std1 = team1.toStandardSearch()
         val std2 = team2.toStandardSearch()
 
-        // 🛡️ Sadece son 5 sezonda (2021-2025) aktif olan takımlar aranabilir —
-        // Galatasaray gibi yıllardır bu kupalarda olmayan takımlar, elle yazılsa
-        // bile sonuç vermiyor (öneri listesinden zaten çıkarılmıştı, burada da
-        // aynı kısıtlama uygulanıyor).
         val sql = """
             SELECT p1.player_id, p1.name,
                    MIN(p1.season_code) as season1, MIN(p2.season_code) as season2,
@@ -787,19 +684,15 @@ object DatabaseClient {
                 }
             }
         } catch (e: Exception) {
-            println("🔥 fetchCommonBasketballPlayers HATASI: ${e.message}")
+            println("fetchCommonBasketballPlayers HATASI: ${e.message}")
         }
         val elapsed = System.currentTimeMillis() - startTime
         if (elapsed > 1000) {
-            println("⏱️ fetchCommonBasketballPlayers YAVAŞ: ${elapsed}ms ($team1 vs $team2, ${results.size} sonuç)")
+            println("fetchCommonBasketballPlayers YAVAŞ: ${elapsed}ms ($team1 vs $team2, ${results.size} sonuç)")
         }
-        // 🕰️ Futboldaki gibi güncelden eskiye sıralıyoruz — season_code'daki
-        // (örn. "E2024") yıl kısmını sayıya çevirip azalan sıraya diziyoruz.
         return results.sortedByDescending { it.team1Season?.filter { c -> c.isDigit() }?.toIntOrNull() ?: 0 }
     }
 
-    // Havuzdan bir bağlantı alıp işi bitince geri bırakan yardımcı fonksiyon.
-    // Tüm sorgular artık bunun üzerinden çalışıyor, hiçbiri connection'ı doğrudan paylaşmıyor.
     private fun <T> withConnection(block: (Connection) -> T): T {
         val conn = connectionPool.take()
         try {
@@ -809,24 +702,18 @@ object DatabaseClient {
         }
     }
 
-    // 💡 Artık runtime'da resources'tan kopyalama YOK. football.db Docker image'ında
-    // doğrudan /app/football.db konumunda hazır bulunuyor (bkz. Dockerfile).
-    // Local'de çalıştırırken de proje kök dizininde football.db bulunmalı.
     private fun createConnection(): Connection {
         val dbFile = File("football.db")
 
         if (!dbFile.exists()) {
             throw IllegalStateException(
-                "❌ football.db bulunamadı: ${dbFile.absolutePath}. " +
+                "football.db bulunamadı: ${dbFile.absolutePath}. " +
                 "Local çalıştırıyorsanız dosyayı proje kök dizinine kopyalayın."
             )
         }
 
         val conn = DriverManager.getConnection("jdbc:sqlite:${dbFile.absolutePath}")
 
-        // 💡 WAL modu: birden fazla kullanıcı aynı anda arama yaparken okumaları
-        // güvenli ve hızlı hale getiriyor. busy_timeout: nadir bir çakışma anında
-        // hemen hata vermek yerine kısa süre bekleyip tekrar denemesini sağlıyor.
         conn.createStatement().use { stmt ->
             stmt.execute("PRAGMA journal_mode=WAL;")
             stmt.execute("PRAGMA busy_timeout=5000;")
@@ -836,12 +723,6 @@ object DatabaseClient {
     }
 
     private fun String.toStandardSearch(): String {
-        // 💡 ÖNEMLİ SIRA: Türkçe karakter dönüşümlerini lowercase()'DEN ÖNCE yapıyoruz.
-        // Sebep: Kotlin'in genel .lowercase() fonksiyonu (locale belirtilmeden), Türkçe
-        // büyük "İ" harfini tek bir "i" değil, "i" + görünmez bir nokta işareti (iki ayrı
-        // karakter) haline çeviriyor. Bu yüzden önce lowercase() çağrılırsa "İnter" gibi
-        // aramalar sessizce bozuluyor ve hiçbir sonuçla eşleşmiyordu. Değişimleri önce
-        // yapıp en sona sadece düz ASCII harfler için .lowercase() çağırmak bu sorunu çözüyor.
         return this
             .replace("İ", "i").replace("ı", "i")
             .replace("Ğ", "g").replace("ğ", "g")
@@ -860,45 +741,24 @@ object DatabaseClient {
             "u15", "u16", "u17", "u18", "u19", "u20", "u21", "u23",
             "u-15", "u-16", "u-17", "u-18", "u-19", "u-20", "u-21", "u-23",
             "yth", "youth", "academy", "akademi", "reserves", "amateur", "ii",
-            "res.", "sva" // 💡 Çin ligi kısaltmaları (örn. "SH Shenhua Res.", "SH Shenhua SVA")
+            "res.", "sva"
         )
         if (youthKeywords.any { lower.contains(it) }) return true
-
-        // 💡 "Barcelona B", "Real Madrid C" gibi rezerv takım isimleri — sadece
-        // isim SONUNDA, tek başına bir " b"/" c" harfi varsa yakalıyoruz (kelime
-        // sınırı ile), yoksa "Bilbao" gibi normal isimleri yanlışlıkla eşleştirebilirdi.
         if (Regex("\\s[bc]$").containsMatchIn(lower)) return true
-
         return false
     }
 
     private fun matchesOriginalClub(clubName: String?, resolvedTarget: String): Boolean {
         if (clubName == null) return false
         val cleanClub = clubName.toStandardSearch()
-
         if (isYouthClub(cleanClub)) {
             return false
         }
-
         return cleanClub.contains(resolvedTarget)
     }
 
-    // 🎯 Tam eşleşme kontrolü — "Inter" ile "Inter Miami" gibi, biri diğerinin
-    // içinde geçen ama FARKLI kulüpleri ayırt etmek için kullanılıyor.
-    // 💡 Bazı kulüpler veritabanında hem "Atalanta" hem "Atalanta BC" gibi iki
-    // farklı yazımla geçebiliyor — aynı kulüp, sadece ek (BC/FC/CF/SK/AC/SC)
-    // farkı. Bu ekleri yok sayarak karşılaştırıyoruz ki "tam eşleşme" filtresi
-    // bu kulübün diğer yazımını (Merih Demiral'ın "Atalanta BC" kayıtları gibi)
-    // yanlışlıkla dışlamasın. "Inter" ile "Inter Miami" gibi GERÇEKTEN farklı
-    // kulüpler ise (şehir ismi bir ek değil) hâlâ doğru şekilde ayrı kalıyor.
     private fun stripClubSuffix(s: String): String {
-        // 💡 Bilerek "ii", "u21", "u19" gibi genç/yedek takım göstergelerini EKLEMEDİK —
-        // onlar zaten isYouthClub() ile ayrı tutuluyor, buraya karışmamalı.
         var result = s.replace(Regex("\\s+(bc|fc|cf|sk|ac|sc|afc|kk|fk|cp|sd|cd|if|bk|ff|bsc)$"), "").trim()
-        // 💡 Almanca kulüplerde bu kısaltmalar genelde BAŞTA olur (VfB Stuttgart,
-        // TSV München, SV Werder gibi) — sadece BELİRGİN olanları kontrol ediyoruz,
-        // genel "FC"/"SC" önekini kasıtlı olarak dahil etmedik (çok geniş, farklı
-        // kulüpleri yanlışlıkla birleştirme riski taşırdı).
         result = result.replace(Regex("^(1\\.\\s*fc|vfb|vfl|tsv)\\s+"), "").trim()
         return result
     }
@@ -910,19 +770,12 @@ object DatabaseClient {
         return cleanClub == resolvedTarget || stripClubSuffix(cleanClub) == stripClubSuffix(resolvedTarget)
     }
 
-    // 💡 Sadece SADECE ilk/ana uyruğu baz alan kusursuz kontrol
     private fun isPrimaryCountryMatch(playerNationality: String, searchParam: String, mappedCountry: String): Boolean {
         val stdNat = playerNationality.toStandardSearch()
         val stdSearch = searchParam.toStandardSearch()
         val stdMapped = mappedCountry.toStandardSearch()
-
-        // Birden fazla uyruk verisi ÇİFT BOŞLUKLA ayrılıyor (örn: "Cameroon  France").
-        // Bu yüzden sadece çift boşlukta bölüyoruz; tek boşluklu veya apostroflu çok
-        // kelimelik ülke isimleri (örn. "Czech Republic", "Cote d'Ivoire") bu sayede
-        // bölünmeden tek parça kalıyor ve doğru şekilde eşleşiyor.
         val primaryNationality = stdNat.split(Regex("\\s{2,}")).firstOrNull()?.trim()
             ?: return false
-
         return primaryNationality == stdSearch || primaryNationality == stdMapped
     }
 
@@ -941,11 +794,35 @@ object DatabaseClient {
         return 0
     }
 
-    // 🖼️ Kulüp logoları — club_logos tablosundan tek seferde tüm eşlemeyi çekiyor
-    // 🎲 Bil Bakalım için rastgele soru — TÜM deneme mantığı SUNUCUDA, tek bir
-    // istekte. Önceden istemci 8 farklı takım çiftini TEK TEK sunucuya soruyordu
-    // (her biri ayrı bir ağ gidiş-gelişi = Render'da ~3-4sn × 8 = 25-30sn!). Artık
-    // döngü burada, dahili — ağ gecikmesi sadece BİR KEZ ödeniyor.
+    fun fetchRandomBasketballQuestion(pool: List<String>, isNba: Boolean): RandomBasketballQuestion {
+        if (pool.size < 2) return RandomBasketballQuestion(found = false)
+        val overallStart = System.currentTimeMillis()
+        repeat(15) { attemptNum ->
+            val team1 = pool.random()
+            var team2: String
+            do { team2 = pool.random() } while (team2 == team1)
+
+            val players = if (isNba) fetchCommonNbaPlayers(team1, team2) else fetchCommonBasketballPlayersLean(team1, team2)
+            if (players.isNotEmpty()) {
+                val player = players.random()
+                val totalElapsed = System.currentTimeMillis() - overallStart
+                if (totalElapsed > 500 || attemptNum >= 3) {
+                    println("fetchRandomBasketballQuestion YAVAŞ: ${totalElapsed}ms, ${attemptNum + 1} deneme")
+                }
+                return RandomBasketballQuestion(
+                    found = true,
+                    team1 = team1,
+                    team2 = team2,
+                    playerName = player.name,
+                    team1Season = player.team1Season,
+                    team2Season = player.team2Season,
+                    nbaOfficialId = player.nbaOfficialId
+                )
+            }
+        }
+        return RandomBasketballQuestion(found = false)
+    }
+
     @Serializable
     data class RandomBasketballQuestion(
         val found: Boolean,
@@ -957,9 +834,6 @@ object DatabaseClient {
         val nbaOfficialId: String? = null
     )
 
-    // ⚡ HAFİF sürüm — pool'dan gelen takımlar zaten 5-sezon filtresinden geçmiş
-    // (fetchAllBasketballSuggestions bunu garanti ediyor), bu yüzden o 10 tane
-    // EXISTS kontrolünü BURADA TEKRAR yapmıyoruz — gereksiz yük, sorguyu yavaşlatıyordu.
     private fun fetchCommonBasketballPlayersLean(team1: String, team2: String): List<BasketballPlayerResult> {
         val std1 = team1.toStandardSearch()
         val std2 = team2.toStandardSearch()
@@ -993,44 +867,11 @@ object DatabaseClient {
                 }
             }
         } catch (e: Exception) {
-            println("🔥 fetchCommonBasketballPlayersLean HATASI: ${e.message}")
+            println("fetchCommonBasketballPlayersLean HATASI: ${e.message}")
         }
         return results
     }
 
-    fun fetchRandomBasketballQuestion(pool: List<String>, isNba: Boolean): RandomBasketballQuestion {
-        if (pool.size < 2) return RandomBasketballQuestion(found = false)
-        val overallStart = System.currentTimeMillis()
-        repeat(15) { attemptNum ->
-            val team1 = pool.random()
-            var team2: String
-            do { team2 = pool.random() } while (team2 == team1)
-
-            val players = if (isNba) fetchCommonNbaPlayers(team1, team2) else fetchCommonBasketballPlayersLean(team1, team2)
-            if (players.isNotEmpty()) {
-                val player = players.random()
-                val totalElapsed = System.currentTimeMillis() - overallStart
-                if (totalElapsed > 500 || attemptNum >= 3) {
-                    println("⏱️ fetchRandomBasketballQuestion YAVAŞ: ${totalElapsed}ms, ${attemptNum + 1} deneme")
-                }
-                return RandomBasketballQuestion(
-                    found = true,
-                    team1 = team1,
-                    team2 = team2,
-                    playerName = player.name,
-                    team1Season = player.team1Season,
-                    team2Season = player.team2Season,
-                    nbaOfficialId = player.nbaOfficialId
-                )
-            }
-        }
-        return RandomBasketballQuestion(found = false)
-    }
-
-    // 📰 GÜNÜN OYUNCUSU — AdSense'in "gerçek, günlük değişen içerik" önerisi için.
-    // Tanınmış oyunculardan sabit bir havuzdan, TARİHE GÖRE (herkese aynı gün aynı
-    // oyuncu) birini seçip, GERÇEK transfer geçmişini veritabanından çekiyoruz —
-    // metin frontend'de bu gerçek veriden oluşturuluyor, uydurma değil.
     private val dailyPlayerPool = listOf(
         "Cristiano Ronaldo", "Lionel Messi", "Zlatan Ibrahimovic", "Wesley Sneijder",
         "Didier Drogba", "Samuel Eto'o", "Arjen Robben", "Frank Lampard",
@@ -1096,7 +937,7 @@ object DatabaseClient {
                 }
             }
         } catch (e: Exception) {
-            println("🔥 fetchDailyPlayerBio HATASI: ${e.message}")
+            println("fetchDailyPlayerBio HATASI: ${e.message}")
         }
         return result
     }
@@ -1116,14 +957,11 @@ object DatabaseClient {
                 }
             }
         } catch (e: Exception) {
-            println("🔥 fetchAllClubLogos HATASI: ${e.message}")
+            println("fetchAllClubLogos HATASI: ${e.message}")
         }
         return result
     }
 
-    // 🏀 Basketbol için de futboldaki TOPLU yükleme deseni — az önce her takım
-    // AYRI AYRI, istek üzerine çekiliyordu (veri zaten hazır olsa bile en az bir
-    // ağ gidiş-gelişi gerektiriyordu). Artık tek sorguda HEPSİ birden geliyor.
     fun fetchAllBasketballLogos(): Map<String, String> {
         val result = mutableMapOf<String, String>()
         try {
@@ -1139,7 +977,7 @@ object DatabaseClient {
                 }
             }
         } catch (e: Exception) {
-            println("🔥 fetchAllBasketballLogos HATASI: ${e.message}")
+            println("fetchAllBasketballLogos HATASI: ${e.message}")
         }
         return result
     }
@@ -1160,11 +998,6 @@ object DatabaseClient {
                             val value = rs.getString(1)
                             if (!value.isNullOrBlank()) {
                                 val cleaned = value.replace('\u00a0', ' ').trim()
-                                // 💡 Çift-uyruklu değerler (örn. "Czech Republic  Angola") için
-                                // sadece ana/ilk parçayı öneriye ekliyoruz, böylece "Czech Republic X",
-                                // "Czech Republic Y" gibi onlarca anlamsız tekrar yerine tek temiz
-                                // "Czech Republic" önerisi kalıyor. Kulüp isimlerinde çift boşluk
-                                // olmadığı için bu, kulüp önerilerini etkilemiyor.
                                 val primaryValue = cleaned.split(Regex("\\s{2,}")).firstOrNull()?.trim() ?: cleaned
                                 if (primaryValue.length > 1 && !isYouthClub(primaryValue)) {
                                     suggestions.add(primaryValue)
@@ -1175,7 +1008,7 @@ object DatabaseClient {
                 }
             }
         } catch (e: Exception) {
-            println("🔥 suggestions HATASI: ${e.message}")
+            println("suggestions HATASI: ${e.message}")
         }
 
         val mappedTurkishCountries = countryMap.keys
@@ -1189,29 +1022,17 @@ object DatabaseClient {
             "Senegal", "Fildişi Sahili", "Güney Afrika", "Japonya", "Güney Kore", "İran",
             "Suudi Arabistan", "Katar", "Özbekistan", "Brezilya", "Arjantin", "Kolombiya",
             "Uruguay", "Meksika", "Şili", "İsveç", "Norveç", "Danimarka", "Çekya",
-            // 💡 Veritabanında bu isimlerle DEĞİL, kısaltmayla ("Man Utd", "Man City")
-            // kayıtlı olduğu için otomatik listeye giremiyorlardı. Elle ekliyoruz;
-            // aramada zaten clubAliasMap üzerinden doğru şekilde çözümleniyor.
             "Manchester United", "Manchester City"
         ))
 
         return suggestions.sorted()
     }
 
-    // 💡 ARTIK SQL SEVİYESİNDE FİLTRELİYORUZ: from_club_std / to_club_std / nationality_std
-    // kolonları + index'ler sayesinde 1.1M satırlık tabloyu taramak yerine sadece eşleşen
-    // satırlar çekiliyor. Kotlin tarafındaki matchesOriginalClub/isPrimaryCountryMatch kontrolü
-    // ise SQL'in kaba LIKE eşleşmesinden sonra "youth club eleme" ve "tam eşleşme" gibi ince
-    // iş mantığını uygulamak için hâlâ çalışıyor (ama artık çok daha az satır üzerinde).
     fun fetchPlayersByClub(clubOrCountry: String): List<Player> {
         val stdParam = clubOrCountry.toStandardSearch()
         val mappedCountry = countryMap[stdParam] ?: stdParam
         val resolvedClubTerm = resolveClubSearchTerm(clubOrCountry)
 
-        // 💡 Artık "ya kulüp ya ülke" seçmiyoruz — countryMap sadece Türkçe->İngilizce
-        // çeviri gereken ~90 ülke için var, TÜM dünya ülkelerini kapsamıyor (örn. Togo
-        // orada yoktu). Bu yüzden HER zaman hem kulüp hem uyruk alanını kontrol
-        // ediyoruz (union), hangisi eşleşirse o sayılıyor.
         val sql = """
             SELECT p.id, p.name, p.position, p.nationality, p.birthdate, p.slug, p.image_url, t.from_club, t.to_club, t.season 
             FROM players p 
@@ -1263,7 +1084,7 @@ object DatabaseClient {
                 }
             }
         } catch (e: Exception) {
-            println("🔥 fetchPlayersByClub HATASI: ${e.message}")
+            println("fetchPlayersByClub HATASI: ${e.message}")
         }
 
         val resultList = mutableListOf<Player>()
@@ -1291,8 +1112,6 @@ object DatabaseClient {
             }
         }
 
-        // 🎯 Tam kulüp eşleşmesi (örn. tam olarak "Inter") varsa, SADECE onu göster —
-        // "Inter Miami" gibi ismi içeren ama farklı bir kulübü karıştırmasın diye.
         val hasExactClubMatch = playerAllTransfers.values.any { transfers ->
             transfers.any { (f, t, _) -> isExactClubMatch(f, resolvedClubTerm) || isExactClubMatch(t, resolvedClubTerm) }
         }
@@ -1321,8 +1140,6 @@ object DatabaseClient {
         val resolvedClubTerm1 = resolveClubSearchTerm(param1)
         val resolvedClubTerm2 = resolveClubSearchTerm(param2)
 
-        // 💡 Her iki parametre için de HEM kulüp HEM uyruk kontrolü yapıyoruz (union) —
-        // countryMap sadece ~90 ülke için Türkçe çeviri içeriyor, TÜMÜNü kapsamıyor.
         val sql = """
             SELECT p.id, p.name, p.position, p.nationality, p.birthdate, p.slug, p.image_url, t.from_club, t.to_club, t.season 
             FROM players p 
@@ -1381,7 +1198,7 @@ object DatabaseClient {
                 }
             }
         } catch (e: Exception) {
-            println("🔥 fetchCommonPlayers HATASI: ${e.message}")
+            println("fetchCommonPlayers HATASI: ${e.message}")
         }
 
         val rawList = mutableListOf<Player>()
@@ -1419,8 +1236,6 @@ object DatabaseClient {
             }
         }
 
-        // 🎯 Her terim için ayrı ayrı: tam kulüp eşleşmesi varsa (örn. tam "Inter"),
-        // sadece onu tercih ediyoruz — "Inter Miami" gibi farklı bir kulübü karıştırmasın.
         fun hasExactMatchFor(term: String): Boolean {
             return playerAllTransfers.values.any { transfers ->
                 transfers.any { (f, t, _) -> isExactClubMatch(f, term) || isExactClubMatch(t, term) }
@@ -1449,20 +1264,19 @@ object DatabaseClient {
             .sortedByDescending { parseSeasonToSortValue(it.season1) }
     }
 
-    // 💡 "OYUNCU MODU" — verilen 2 (ya da daha fazla) kulübün HEPSİNDE gerçekten
-    // oynamış rastgele bir oyuncu buluyor. Mevcut fetchPlayersByClub/fetchCommonPlayers
-    // fonksiyonlarına hiç dokunmuyor, tamamen ayrı ve izole bir sorgu yolu.
-    // 💡 GENİŞLETİLMİŞ: her terim artık ya KULÜP ya da ÜLKE olabilir (Pair'in ikinci
-    // değeri isCountry). Ülke terimleri nationality_std üzerinden, kulüp terimleri
-    // eskisi gibi from_club_std/to_club_std üzerinden eşleştiriliyor.
-    // 🎯 GÜNÜN SORUSU (Wordle modu) İÇİN: kullanıcının yazdığı tahmin edilen
-    // oyuncunun kendi bilgilerini (uyruk/mevki/yaş) çekiyoruz — hedef oyuncuyla
-    // karşılaştırıp renkli ipucu üretebilmek için. Sadece isimle arıyor, en iyi
-    // (en çok transfer kaydı olan, muhtemelen en "gerçek/bilinen") eşleşmeyi döndürüyor.
-    // 🔗 TRANSFER BAĞLANTISI İÇİN: sabit bir köprü listesine güvenmek yerine,
-    // kullanıcının yazdığı ismin GERÇEKTEN o kulüpte oynayıp oynamadığını
-    // veritabanına soruyoruz — böylece listede unuttuğum bir isim bile
-    // (Vinícius, Rodrygo gibi) doğru şekilde kabul ediliyor.
+    // 🎯 KÖK SEBEP DÜZELTMESİ (bu turda): transfers tablosu SEZON-SEZON değil,
+    // OLAY (TRANSFER) BAZLI kayıt tutuyor — bir oyuncu bir kulübe transfer olup
+    // yıllarca orada kalsa bile, veritabanında SADECE O TRANSFERİN olduğu tek
+    // bir sezon satırı var (örn. Rodri, City'ye 2019'da geldi ve hâlâ orada —
+    // kaydı sadece "19/20"). Önceki sürüm, "oyuncunun sezonu TAM OLARAK
+    // startYear/endYear'a eşit olmalı" diye kontrol ediyordu — bu, uzun süre
+    // aynı kulüpte kalan oyuncuları YANLIŞLIKLA reddediyordu.
+    //
+    // DOĞRU MANTIK: bir köprü oyuncusunun katılım sezonu, [startYear, endYear]
+    // aralığının EN GEÇ (en küçük) sınırından ÖNCE ya da TAM O ANDA olmalı —
+    // çünkü veride yeni bir transfer YOKSA oyuncu hâlâ o kulüpte olduğu
+    // varsayılıyor. Bu, hem yeni gelenleri hem uzun süredir orada olanları
+    // (Rodri gibi) doğru şekilde kabul ediyor.
     fun verifyPlayerPlayedForClub(playerName: String, clubName: String, startYear: Int? = null, endYear: Int? = null): Boolean {
         val cleanName = playerName.trim()
         if (cleanName.isEmpty()) return false
@@ -1477,19 +1291,13 @@ object DatabaseClient {
             ) p
             JOIN transfers t ON p.id = t.transfer_id
         """.trimIndent()
-        // 🎯 KRİTİK DÜZELTME: sadece "kulüpte oynadı mı" değil, "HANGİ YILLARDA
-        // oynadığı" da kontrol ediyoruz — Benzema (Arda katılmadan ÖNCE ayrılan)
-        // gibi, kulüpte oynamış ama HEDEF OYUNCULARLA ZAMAN OLARAK ÖRTÜŞMEYEN
-        // birinin yanlışlıkla kabul edilmesini önlüyor.
-        var overlapsStart = startYear == null
-        var overlapsEnd = endYear == null
+
+        val latestBoundary = listOfNotNull(startYear, endYear).minOrNull()
         var found = false
+        var joinedInTimeForOverlap = latestBoundary == null
+        var earliestJoinYear: Int? = null
+
         try {
-            // 🎯 KÖKTEN DÜZELTME: pozisyon bazlı '_' joker karakteri, çok baytlı
-            // Türkçe harflerde (ü, ğ gibi) hizasını kaybedip aramayı bozuyordu.
-            // Artık düz metin araması yapıyoruz — önce tam sorgu, olmazsa kelime
-            // kelime (örn. "Bülent Korkmaz" aksanlı ismi bulamasa bile "Korkmaz"
-            // soyadı üzerinden bulunabiliyor).
             fun tryPattern(likePattern: String) {
                 if (found) return
                 withConnection { conn ->
@@ -1501,7 +1309,15 @@ object DatabaseClient {
                                 val nameNorm = stripAccentsForCompare(pName.replace(Regex("\\s*\\(\\d+\\)\\s*"), ""))
                                 val words = nameNorm.trim().split(Regex("\\s+"))
                                 val surnameNorm = words.lastOrNull() ?: ""
-                                if (nameNorm != targetNorm && surnameNorm != targetNorm) continue
+                                val firstNameNorm = words.firstOrNull() ?: ""
+                                // 🎯 DÜZELTME: gerçek futbolcular çoğu zaman TAKMA/KISALTILMIŞ
+                                // isimle biliniyor (Rodri = Rodrigo, Cristiano vb.) — veritabanında
+                                // tam ad kayıtlıyken, kullanıcı kısaltılmış hâliyle yazabiliyor. En
+                                // az 4 karakter şartıyla (çok kısa/gevşek eşleşmeleri önlemek için),
+                                // ad veya soyadın kısaltılmış hâli olup olmadığını da kontrol ediyoruz.
+                                val isNicknameMatch = targetNorm.length >= 4 &&
+                                    (firstNameNorm.startsWith(targetNorm) || surnameNorm.startsWith(targetNorm))
+                                if (nameNorm != targetNorm && surnameNorm != targetNorm && !isNicknameMatch) continue
 
                                 val fromClub = rs.getString("from_club") ?: ""
                                 val toClub = rs.getString("to_club") ?: ""
@@ -1509,14 +1325,11 @@ object DatabaseClient {
 
                                 found = true
                                 val seasonYear = parseSeasonToSortValue(rs.getString("season"))
-                                // 🎯 DÜZELTME: tolerans KALDIRILDI — "22/23" (Benzema'nın son
-                                // sezonu) ile "23/24" (Arda'nın ilk sezonu) ARDIŞIK ama HİÇ
-                                // örtüşmeyen sezonlar. ±1 tolerans bunu yanlışlıkla kabul
-                                // ediyordu. Artık TAM sezon eşleşmesi istiyoruz — uzun süre
-                                // orada kalan gerçek köprü oyuncuların zaten HER sezon için
-                                // ayrı kaydı olduğundan, bu onları etkilemez.
-                                if (startYear != null && seasonYear == startYear) overlapsStart = true
-                                if (endYear != null && seasonYear == endYear) overlapsEnd = true
+                                if (seasonYear > 0) {
+                                    if (earliestJoinYear == null || seasonYear < earliestJoinYear!!) {
+                                        earliestJoinYear = seasonYear
+                                    }
+                                }
                             }
                         }
                     }
@@ -1525,18 +1338,17 @@ object DatabaseClient {
 
             tryPattern("%$targetNorm%")
         } catch (e: Exception) {
-            println("🔥 verifyPlayerPlayedForClub HATASI: ${e.message}")
+            println("verifyPlayerPlayedForClub HATASI: ${e.message}")
         }
-        return found && overlapsStart && overlapsEnd
+
+        if (latestBoundary != null && earliestJoinYear != null) {
+            joinedInTimeForOverlap = earliestJoinYear!! <= latestBoundary
+        }
+
+        return found && joinedInTimeForOverlap
     }
 
-    // 💡 SQLite'ın LIKE'ı aksan-duyarsız DEĞİL ("Müller" ile "Muller" eşleşmez).
-    // Java'nın Normalizer'ı ile, frontend'deki normalizeGuess ile AYNI mantıkla
-    // aksanları temizliyoruz — tutarlı karşılaştırma için.
     private fun stripAccentsForCompare(s: String): String {
-        // 🇹🇷 KRİTİK: "ğ", "ı", "ş", "ç" gibi Türkçe harfler standart NFD ile
-        // düzgün ayrışmıyor (örn. "ğ" hiç ayrışmıyor) — bu yüzden açıkça elle
-        // dönüştürüyoruz, frontend'deki normalize() ile aynı mantık.
         val turkishFixed = s
             .replace('İ', 'I').replace('ı', 'i')
             .replace('Ğ', 'G').replace('ğ', 'g')
@@ -1548,18 +1360,9 @@ object DatabaseClient {
         return normalized.replace(Regex("\\p{M}"), "").lowercase()
     }
 
-    // 🔍 Günün Sorusu ve Transfer Bağlantısı'ndaki tahmin kutuları için — 3+ harf
-    // yazınca eşleşen GERÇEK oyuncu isimlerini öneriyor. 92.000+ oyuncu olduğu
-    // için tamamını önceden yüklemek yerine, her yazışta sunucuya soruyoruz.
-    // 🃏 TRANSFERMATİK — oyuncunun TOPLAM transfer sayısını döndürüyor. Aynı
-    // aksan/Türkçe-toleranslı, 2-aşamalı arama mantığı (kesin önce, geniş yedek).
     @Serializable
     data class PlayerTransferCountResult(val name: String, val transferCount: Int)
 
-    // 🃏 TRANSFERMATİK — YENİ SİSTEM: serbest yazı yerine, her el 3 rastgele
-    // tanınmış oyuncu sunuyoruz, kullanıcı birini SEÇİYOR. Bu hem bugünkü tüm
-    // hizalama sorunlarını ortadan kaldırıyor (artık yazı kutusu yok) hem de
-    // kullanıcıların hep aynı "ezberlenmiş" ismi girmesini engelliyor.
     private val EASY_CLUBS_TM = listOf(
         "Real Madrid", "Barcelona", "Manchester United", "Manchester City", "Chelsea", "Liverpool",
         "Juventus", "Inter", "Bayern Munich", "Paris SG", "Galatasaray", "Fenerbahce", "Besiktas"
@@ -1570,7 +1373,6 @@ object DatabaseClient {
         val clubLikeParams = EASY_CLUBS_TM.flatMap { listOf("%$it%", "%$it%") }
         val whereClubs = EASY_CLUBS_TM.joinToString(" OR ") { "t.from_club LIKE ? OR t.to_club LIKE ?" }
 
-        // 1. AŞAMA: bu kulüplerden birine bağlı, rastgele bir grup oyuncu ID'si çek
         val candidateIds = mutableSetOf<Int>()
         try {
             withConnection { conn ->
@@ -1590,12 +1392,10 @@ object DatabaseClient {
                 }
             }
         } catch (e: Exception) {
-            println("🔥 fetchRandomTransferCandidates (aday ID) HATASI: ${e.message}")
+            println("fetchRandomTransferCandidates (aday ID) HATASI: ${e.message}")
             return emptyList()
         }
 
-        // 2. AŞAMA: her adayın GERÇEK (gençlik hariç) transfer sayısını hesapla,
-        // zaten kullanılmışları (excludeNames) ele, sonuçtan rastgele "count" tanesini seç.
         val results = mutableListOf<PlayerTransferCountResult>()
         for (pId in candidateIds.shuffled()) {
             if (results.size >= count) break
@@ -1620,24 +1420,17 @@ object DatabaseClient {
                 if (results.any { it.name == pName }) continue
                 results.add(PlayerTransferCountResult(pName, realCount))
             } catch (e: Exception) {
-                println("🔥 fetchRandomTransferCandidates (detay) HATASI: ${e.message}")
+                println("fetchRandomTransferCandidates (detay) HATASI: ${e.message}")
             }
         }
         return results
     }
-
 
     fun fetchPlayerTransferCount(query: String): PlayerTransferCountResult? {
         val cleanQuery = query.trim()
         if (cleanQuery.isEmpty()) return null
         val targetNorm = stripAccentsForCompare(cleanQuery)
 
-        // 🚀 KESİN PERFORMANS DÜZELTMESİ: önceki "alt sorgu" denemesi muhtemelen
-        // SQLite'ın sorgu planlayıcısı tarafından eski (yavaş) hâline geri
-        // döndürüldü ("subquery flattening"). Bu sefer, planlayıcının araya
-        // GİREMEYECEĞİ şekilde, Kotlin'de İKİ AYRI, BASİT sorgu çalıştırıyoruz:
-        // 1. Adım: SADECE players tablosunda (küçük, ~92 bin satır) isim ara.
-        // 2. Adım: SADECE eşleşen birkaç ID için transfers'a doğrudan/indeksli sorgu.
         data class MatchedPlayer(val id: Int, val name: String)
         val matched = mutableListOf<MatchedPlayer>()
         try {
@@ -1659,7 +1452,7 @@ object DatabaseClient {
                 }
             }
         } catch (e: Exception) {
-            println("🔥 fetchPlayerTransferCount (1. adım) HATASI: ${e.message}")
+            println("fetchPlayerTransferCount (1. adım) HATASI: ${e.message}")
             return null
         }
 
@@ -1668,10 +1461,6 @@ object DatabaseClient {
         var best: PlayerTransferCountResult? = null
         var bestCount = -1
         try {
-            // 🚀 GERÇEK PERFORMANS DÜZELTMESİ: eskiden bu döngü, HER aday için AYRI
-            // bağlantı açıp kapatıyordu (30 aday = 30 bağlantı!) — asıl yavaşlığın
-            // sebebi muhtemelen buydu. Artık TEK bağlantı, döngü İÇİNDE tekrar
-            // kullanılıyor — bağlantı açma/kapama yükü ortadan kalkıyor.
             withConnection { conn ->
                 conn.prepareStatement("SELECT from_club, to_club FROM transfers WHERE transfer_id = ?").use { stmt ->
                     for (m in matched) {
@@ -1692,23 +1481,12 @@ object DatabaseClient {
                 }
             }
         } catch (e: Exception) {
-            println("🔥 fetchPlayerTransferCount (2. adım) HATASI: ${e.message}")
+            println("fetchPlayerTransferCount (2. adım) HATASI: ${e.message}")
         }
         return best
     }
 
-
-    // 🎯 SQL SEVİYESİNDE aksan temizleme — REPLACE zincirleri kullanıyoruz (pozisyonel
-    // joker YOK, bayt hizalama sorunu YOK). Hem sütun hem sorgu parametresi AYNI
-    // şekilde normalize edilip karşılaştırılıyor — "gom" ile "Gómez" gibi durumlar
-    // artık güvenilir şekilde eşleşiyor.
     private fun sqlAccentStripExpr(column: String): String {
-        // 🚨 KRİTİK DÜZELTME #2: SQLite'ın LOWER() fonksiyonu, ASCII DIŞI harfleri
-        // (Ç, Ş, Ö, Ü, Ğ gibi BÜYÜK Türkçe harfler) HİÇ küçültmüyor — bu yüzden
-        // "Çalhanoğlu" gibi BÜYÜK harfle başlayan isimler, LOWER()'dan sonra bile
-        // "Ç" olarak kalıyor ve sonraki küçük-harf REPLACE'leri hiç eşleşmiyordu.
-        // Artık HER karakterin hem BÜYÜK hem küçük hâlini AYRI AYRI, doğrudan hedef
-        // harfe çeviriyoruz — LOWER()'ın davranışına bağımlı değiliz.
         var expr = "LOWER($column)"
         val replacements = listOf(
             "İ" to "i", "I" to "i", "ı" to "i",
@@ -1743,10 +1521,8 @@ object DatabaseClient {
             LEFT JOIN transfers t ON p.id = t.transfer_id
             ORDER BY transfer_count DESC
         """.trimIndent()
-        // playerId -> (isim, transferSayısı, bağlamKulübündeOynadıMı)
         data class Cand(val name: String, val count: Int, var contextMatch: Boolean)
 
-        // 💡 Belirli bir SQL deseniyle arayıp, sonuçları candidates map'ine dolduran yardımcı.
         fun runQuery(likePattern: String, candidates: MutableMap<Int, Cand>) {
             withConnection { conn ->
                 conn.prepareStatement(sql).use { stmt ->
@@ -1757,7 +1533,7 @@ object DatabaseClient {
                             val name = rs.getString("name") ?: continue
                             val cleanName = name.replace(Regex("\\s*\\(\\d+\\)\\s*"), "").trim()
                             val nameNorm = stripAccentsForCompare(cleanName)
-                            if (!nameNorm.contains(targetNorm)) continue // 🎯 kesin doğrulama
+                            if (!nameNorm.contains(targetNorm)) continue
 
                             val fromClub = rs.getString("from_club") ?: ""
                             val toClub = rs.getString("to_club") ?: ""
@@ -1779,33 +1555,10 @@ object DatabaseClient {
 
         val candidates = mutableMapOf<Int, Cand>()
         try {
-            // 🎯 KÖKTEN DÜZELTME: alt çizgi (_) joker karakteri, SQLite'ta bazen
-            // "1 karakter" değil "1 bayt" olarak yorumlanıyor. "ü" gibi Türkçe
-            // harfler 2 bayt kapladığı için, pozisyona bağlı joker desenim çok
-            // baytlı harflerde HİZASINI kaybedip aramayı tamamen bozuyordu — bu
-            // yüzden "Bülent Korkmaz" gibi isimler kaçırılıyordu. Artık pozisyon
-            // bazlı joker YOK — bunun yerine DÜZ metin araması yapıyoruz (bayt
-            // hizalama sorunu olmaz), önce tam sorguyla, HER ZAMAN kelime kelime
-            // de — böylece "Bülent" aksanlı olsa bile "Korkmaz" kelimesi
-            // (aksansız) üzerinden bulunabiliyor.
-            //
-            // 🎯 İKİNCİ DÜZELTME: eskiden kelime-kelime arama SADECE tam sorgu hiç
-            // sonuç getirmediyse çalışıyordu. Ama "hakan çal" gibi bir sorgu, aksanlı
-            // "ç" nedeniyle TESADÜFEN başka alakasız bir kayıtla eşleşebiliyordu — bu
-            // da doğru sonucu (Çalhanoğlu) bulacak kelime-kelime aramanın HİÇ
-            // TETİKLENMEMESİNE yol açıyordu. Artık HER İKİ strateji de HER ZAMAN
-            // çalışıyor, biri diğerine bağımlı değil.
-            // 🎯 KÖKTEN DÜZELTME: artık SQL'in KENDİSİ (sqlAccentStripExpr ile) hem
-            // sütunu hem sorguyu aksansızlaştırıp karşılaştırıyor — pozisyonel joker
-            // YOK (bayt hizalama sorunu yok), kelime-kelime yedek aramaya da GEREK YOK
-            // (harf-harf değil, karakter-karakter normalize edildiği için "gom" ile
-            // "Gómez", "bülent" ile "bulent" hepsi TEK sorguda doğru eşleşiyor).
             runQuery("%$targetNorm%", candidates)
         } catch (e: Exception) {
-            println("🔥 fetchPlayerNameSuggestions HATASI: ${e.message}")
+            println("fetchPlayerNameSuggestions HATASI: ${e.message}")
         }
-        // 🎯 ÖNCELİK: (1) bağlam kulüplerinden birinde oynamış olanlar önce,
-        // (2) sonra en çok transferli (muhtemelen en tanınan).
         return candidates.values
             .sortedWith(compareByDescending<Cand> { it.contextMatch }.thenByDescending { it.count })
             .distinctBy { it.name }
@@ -1813,15 +1566,11 @@ object DatabaseClient {
             .map { it.name }
     }
 
-
     fun fetchPlayerBasicInfoByName(name: String, contextClubs: List<String> = emptyList()): PlayerBasicInfo? {
         val cleanName = name.trim()
         if (cleanName.isEmpty()) return null
         val targetNorm = stripAccentsForCompare(cleanName)
 
-        // 💡 SQL'in LIKE'ı aksanları kaçırabileceği için, geniş bir aday havuzu
-        // çekip GERÇEK karşılaştırmayı Kotlin tarafında aksan-duyarsız yapıyoruz.
-        // Adayları sadece isim başlangıcına/soyadına göre kabaca daraltıyoruz.
         val sql = """
             SELECT p.id, p.name, p.position, p.nationality, p.birthdate,
                    t.from_club, t.to_club,
@@ -1838,9 +1587,6 @@ object DatabaseClient {
         val candidates = mutableMapOf<Int, Candidate>()
 
         try {
-            // 🎯 KÖKTEN DÜZELTME: pozisyon bazlı '_' joker karakteri çok baytlı
-            // Türkçe harflerde (ü, ğ gibi) hizasını kaybediyordu. Artık düz metin
-            // araması — önce tam sorgu, olmazsa kelime kelime.
             fun tryPattern(likePattern: String) {
                 withConnection { conn ->
                     conn.prepareStatement(sql).use { stmt ->
@@ -1849,7 +1595,6 @@ object DatabaseClient {
                             while (rs.next()) {
                                 val pId = rs.getInt("id")
                                 val pName = rs.getString("name") ?: continue
-                                // 🎯 GERÇEK doğrulama: aksan-duyarsız tam/soyad eşleşmesi
                                 val nameNorm = stripAccentsForCompare(pName.replace(Regex("\\s*\\(\\d+\\)\\s*"), ""))
                                 val words = nameNorm.trim().split(Regex("\\s+"))
                                 val surnameNorm = words.lastOrNull() ?: ""
@@ -1873,7 +1618,7 @@ object DatabaseClient {
                                         matchesClub = clubMatch
                                     )
                                 } else if (clubMatch) {
-                                    existing.matchesClub = true // 💡 herhangi bir satırda kulüp eşleşmesi varsa işaretle
+                                    existing.matchesClub = true
                                 }
                             }
                         }
@@ -1883,15 +1628,12 @@ object DatabaseClient {
 
             tryPattern("%$targetNorm%")
         } catch (e: Exception) {
-            println("🔥 fetchPlayerBasicInfoByName HATASI: ${e.message}")
+            println("fetchPlayerBasicInfoByName HATASI: ${e.message}")
             return null
         }
 
         if (candidates.isEmpty()) return null
 
-        // 🎯 SEÇİM ÖNCELİĞİ: (1) bağlam kulüplerinden birinde oynamış olan —
-        // "Muller" araması Bayern bağlamındaysa, alakasız bir Brezilyalı'yı
-        // değil, gerçek Bayern oyuncusunu seçmeli. (2) Yoksa en çok transferli.
         val best = candidates.values
             .sortedWith(compareByDescending<Candidate> { it.matchesClub }.thenByDescending { it.transferCount })
             .first()
@@ -1930,7 +1672,6 @@ object DatabaseClient {
             append(conditions.joinToString(" OR "))
         }
 
-        // playerId -> (orijinal terim -> o terime ait en erken sezon, ülke için "-")
         val playerTermSeasons = mutableMapOf<Int, MutableMap<String, String>>()
         val playerNames = mutableMapOf<Int, String>()
         val playerPositions = mutableMapOf<Int, String>()
@@ -1992,24 +1733,17 @@ object DatabaseClient {
                 }
             }
         } catch (e: Exception) {
-            println("🔥 fetchPlayerAcrossClubs HATASI: ${e.message}")
+            println("fetchPlayerAcrossClubs HATASI: ${e.message}")
             return null
         }
 
-        // Sadece istenen TÜM terimlerde eşleşmiş oyuncular kalsın
         var fullMatches = playerTermSeasons.filter { (_, m) -> terms.all { (term, _) -> m.containsKey(term) } }
 
-        // 🎯 GÜNÜN SORUSU İÇİN: minYear verilmişse, en az bir kulüpteki sezonu
-        // o yıl veya sonrasına denk gelen oyuncularla sınırlıyoruz — genel arama
-        // (minYear=null) bundan HİÇ etkilenmiyor, geriye dönük tam uyumlu.
         if (minYear != null) {
             val yearFiltered = fullMatches.filter { (_, m) ->
                 m.values.any { season -> season != "-" && parseSeasonToSortValue(season) >= minYear }
             }
             if (yearFiltered.isNotEmpty()) fullMatches = yearFiltered
-            // 💡 yıl filtresi hiç eşleşme bırakmazsa (nadir durum), filtresiz listeye
-            // sessizce geri dönüyoruz — soru üretilemeyip kullanıcının karşısına
-            // boş ekran çıkmasındansa, filtre dışı bile olsa bir soru göstermek daha iyi.
         }
 
         if (fullMatches.isEmpty()) return null
@@ -2027,11 +1761,6 @@ object DatabaseClient {
             birthDate = playerBirthDates[chosenId]
         )
     }
-
-    // 💡 Not: eski List<String> imzalı sürüm kaldırıldı — Kotlin'de jenerik tipler
-    // (List<String> vs List<Pair<String,Boolean>>) JVM bytecode seviyesinde aynı
-    // imzaya sıkışıyor (tip silme), bu yüzden iki ayrı fonksiyon olarak duramıyorlardı.
-    // Zaten hiçbir yerde eski imza çağrılmıyordu, üstteki yeni imza tek başına yeterli.
 
     private fun cleanNationalityText(rawNat: String): String {
         return rawNat.replace('\u00a0', ' ')
