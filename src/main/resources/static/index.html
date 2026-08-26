@@ -5493,29 +5493,34 @@
 
         const today = getTodayDateString();
         const seed = seededHash(today + '-fee-quiz');
-        // 💡 DÜZELTME: eskiden tamamen rastgele 2 tane seçiliyordu — bu bazen
-        // Neymar (222M) ile küçük bir transferi eşleştirip çok bariz bir soru
-        // yaratabiliyordu. Artık ücrete göre SIRALAYIP, birbirine YAKIN iki
-        // transferi eşleştiriyoruz — fark küçük, tahmin gerçekten zorlayıcı.
+        // 🎯 DÜZELTME: "hemen yanındaki" transferi eşleştirmek bazen BİREBİR
+        // AYNI ücrete (örn. iki 65M€'luk transfer) ya da çok küçük farka
+        // (1-2M€) yol açıp soruyu ya cevapsız ya da can sıkıcı derecede zor
+        // yapıyordu. Artık: ücrete göre sıralayıp, o gün için 10'luk RASTGELE
+        // bir dilim seçiyoruz (örn. 24-34. sıra), o dilimden İKİ FARKLI rastgele
+        // transfer alıyoruz — bu, doğal olarak en az birkaç milyon € fark
+        // garantiliyor, ama yine de "hangisi daha pahalı" gerçekten düşündürüyor.
         const sortedPool = [...famousTransfersPool].sort((a, b) => b.fee - a.fee);
-        const idx1 = seed % (sortedPool.length - 1); // son elemanı komşusuz bırakmasın diye -1
-        let idx2 = idx1 + 1; // sıralı listede HEMEN yanındaki (en yakın ücretli)
-        // 🛡️ DÜZELTME: bazı komşu transferler BİREBİR AYNI ücrete sahip olabiliyor
-        // (örn. iki ayrı 65M€'luk transfer) — bu durumda soru cevaplanamaz hale
-        // geliyordu ("hangisi daha pahalı" diye sorup ikisi de eşitse adil değil).
-        // Farklı bir ücrete rastlayana kadar ileri, olmazsa geriye doğru arıyoruz.
-        while (idx2 < sortedPool.length - 1 && sortedPool[idx2].fee === sortedPool[idx1].fee) {
-            idx2++;
+        const WINDOW_SIZE = 10;
+        const maxWindowStart = sortedPool.length - WINDOW_SIZE;
+        const windowStart = seed % (maxWindowStart + 1);
+
+        // 🎲 Pencere içinden İKİ FARKLI indeks — basit ama deterministik bir
+        // yöntemle (aynı seed'den türetilen iki farklı sayı, çakışırsa kaydır).
+        let offset1 = (seed * 7 + 3) % WINDOW_SIZE;
+        let offset2 = (seed * 13 + 5) % WINDOW_SIZE;
+        if (offset2 === offset1) offset2 = (offset2 + 1) % WINDOW_SIZE;
+        // 🛡️ Ek güvenlik: rastgele seçilen ikisi yine de eşit ücrete denk gelirse
+        // (aynı dilimde aynı ücretli iki transfer olabilir), pencere içinde farklı
+        // bir ücrete rastlayana kadar offset2'yi kaydırıyoruz.
+        let safety = 0;
+        while (sortedPool[windowStart + offset2].fee === sortedPool[windowStart + offset1].fee && safety < WINDOW_SIZE) {
+            offset2 = (offset2 + 1) % WINDOW_SIZE;
+            safety++;
         }
-        let finalIdx1 = idx1;
-        if (sortedPool[idx2].fee === sortedPool[idx1].fee) {
-            finalIdx1 = idx1;
-            while (finalIdx1 > 0 && sortedPool[finalIdx1].fee === sortedPool[idx1].fee) {
-                finalIdx1--;
-            }
-        }
-        const t1 = sortedPool[finalIdx1];
-        const t2 = sortedPool[idx2];
+
+        const t1 = sortedPool[windowStart + offset1];
+        const t2 = sortedPool[windowStart + offset2];
 
         function renderCard(t, side, revealed, isWinner) {
             const logoUrl = getClubLogo(t.toClub);
