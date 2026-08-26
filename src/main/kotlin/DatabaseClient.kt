@@ -1281,6 +1281,11 @@ object DatabaseClient {
         val cleanName = playerName.trim()
         if (cleanName.isEmpty()) return false
         val resolvedClub = resolveClubSearchTerm(clubName)
+        // 🎯 KESİN DÜZELTME: bazı kayıtlar kulübü KISALTILMIŞ ("Man City"), bazıları
+        // TAM ("Manchester City") isimle tutuyor — gerçek veri tutarsız olabiliyor.
+        // Tek bir forma güvenmek yerine, HER İKİSİNİ de kabul ediyoruz.
+        val originalStdClub = clubName.toStandardSearch()
+        val clubVariants = listOf(resolvedClub, originalStdClub).distinct()
         val targetNorm = stripAccentsForCompare(cleanName)
         val sql = """
             SELECT p.name, t.from_club, t.to_club, t.season
@@ -1321,7 +1326,10 @@ object DatabaseClient {
 
                                 val fromClub = rs.getString("from_club") ?: ""
                                 val toClub = rs.getString("to_club") ?: ""
-                                if (!(matchesOriginalClub(fromClub, resolvedClub) || matchesOriginalClub(toClub, resolvedClub))) continue
+                                val clubMatches = clubVariants.any { variant ->
+                                    matchesOriginalClub(fromClub, variant) || matchesOriginalClub(toClub, variant)
+                                }
+                                if (!clubMatches) continue
 
                                 found = true
                                 val seasonYear = parseSeasonToSortValue(rs.getString("season"))
