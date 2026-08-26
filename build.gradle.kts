@@ -22,6 +22,7 @@ dependencies {
     implementation("io.ktor:ktor-server-content-negotiation:2.3.4")
     implementation("io.ktor:ktor-serialization-kotlinx-json:2.3.4")
     implementation("io.ktor:ktor-server-compression:2.3.4") // 🚀 gzip sıkıştırma — 479KB'lık index.html'i büyük ölçüde küçültür
+    implementation("io.ktor:ktor-server-caching-headers:2.3.4") // 🚀 HTML'in tarayıcıda eski sürümde önbelleğe takılmasını önler
 
     // Client tarafı
     implementation("io.ktor:ktor-client-core:2.3.4")

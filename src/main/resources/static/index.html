@@ -7263,6 +7263,18 @@
             window.visualViewport.addEventListener('resize', repositionDropdown); // 💡 klavye açılıp kapanınca da yeniden konumlandır
         }
 
+        // 🎯 KESİN DÜZELTME: kullanıcı bulduğu ipucuna göre — mobil klavye,
+        // girdiye İLK dokunulduğunda açılmaya başlıyor ve TAM YERLEŞMESİ,
+        // dropdown açılana kadarki süreden DAHA UZUN sürebiliyor. Artık
+        // konumlandırma denemelerini dropdown açılınca DEĞİL, girdiye
+        // ODAKLANIR ODAKLANMAZ (yazmaya başlamadan önce) başlatıyoruz — hem
+        // daha uzun, daha sık bir aralıkla, klavye tam yerleşene kadar.
+        input.addEventListener('focus', () => {
+            [50, 150, 300, 500, 700, 1000, 1400, 1800].forEach(delay => {
+                setTimeout(repositionDropdown, delay);
+            });
+        });
+
         function updateActiveHighlight() {
             const items = dropdown.querySelectorAll('.autocomplete-item');
             items.forEach((el, i) => {

@@ -1,5 +1,6 @@
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.ContentType
+import io.ktor.http.CacheControl
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
@@ -7,6 +8,7 @@ import io.ktor.server.http.content.*
 import io.ktor.server.netty.*
 import io.ktor.server.plugins.contentnegotiation.*
 import io.ktor.server.plugins.compression.*
+import io.ktor.server.plugins.cachingheaders.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
@@ -83,6 +85,18 @@ fun main() {
         }
         install(ContentNegotiation) {
             json()
+        }
+        // 🚀 DÜZELTME: tarayıcı bazen index.html'in ESKİ (önbelleğe alınmış)
+        // sürümünü sunuyordu — "bir yenilemede düzeliyor, bir sonrakinde eski
+        // haline dönüyor" tuhaflığının sebebi muhtemelen buydu. HTML içeriğini
+        // ASLA önbelleğe almamasını söylüyoruz — her istek TAZE gelsin.
+        install(CachingHeaders) {
+            options { call, outgoingContent ->
+                when (outgoingContent.contentType?.withoutParameters()) {
+                    ContentType.Text.Html -> CachingOptions(CacheControl.NoCache(null))
+                    else -> null
+                }
+            }
         }
 
         routing {
