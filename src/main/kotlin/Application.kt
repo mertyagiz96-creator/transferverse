@@ -445,6 +445,128 @@ fun main() {
                     önemli bir dönüm noktası olarak basketbol tarihine geçti.</p>
                     """.trimIndent()
                 ),
+                "toprak-kawasakiden-motogpye-yolculuk" to Pair(
+                    "Kawasaki'den MotoGP'ye: Toprak Razgatlıoğlu'nun İnanılmaz Yolculuğu",
+                    """
+                    <p>2018'de Toprak Razgatlıoğlu, Dünya Superbike Şampiyonası'na (WSBK) Kawasaki'nin uydu 
+                    takımı Puccetti Racing ile giriş yaptığında, kimse onun birkaç yıl içinde dört farklı 
+                    üreticiyle yarışıp iki dünya şampiyonluğu kazanacağını tahmin edemezdi. 2019'da, Suzuka 8 
+                    Saat dayanıklılık yarışında fabrika Kawasaki pilotları Jonathan Rea ve Leon Haslam'la 
+                    aynı motosikleti paylaşmasına izin verilmeyince, Toprak'ın Kawasaki'den yolu ayrılmaya 
+                    başladı.</p>
+                    <p>2020'de fabrika Yamaha pilotu olan Toprak, 2021'de tarih yazdı — Jonathan Rea'nın altı 
+                    yıllık şampiyonluk hakimiyetini kırıp, WSBK'de şampiyon olan ilk Türk pilot oldu. Ama 2023 
+                    sezonunda, Ducati'nin gerisinde kalınca beklenmedik bir karar aldı: şampiyonluk kazandığı 
+                    Yamaha'dan ayrılıp, o dönem WSBK'de neredeyse son sırada olan BMW'ye transfer oldu. 
+                    MotoGP'ye geçiş için Yamaha ile test bile yapmıştı, ama sonuçlar karışıktı — "eğer WSBK'de 
+                    kalacaksam, yeni bir meydan okumaya ihtiyacım var" diyerek riskli bir bahse girdi.</p>
+                    <p>Bahis fazlasıyla karşılığını verdi: Toprak, BMW'deki daha dördüncü yarışında kazandı ve 
+                    2024'te markanın 100 yılı aşkın tarihinde tek motosikletli dünya şampiyonasındaki ilk 
+                    şampiyonluğunu getirdi. 2025'te ikinci BMW şampiyonluğunu da kazandıktan sonra, kariyerinin 
+                    belki de en büyük adımını attı: 2026 sezonunda, Prima Pramac Yamaha takımıyla MotoGP'ye — 
+                    motosiklet sporunun en üst kademesine — çıkacağını duyurdu.</p>
+                    <p>Kawasaki'den Yamaha'ya, oradan BMW'ye, ve şimdi tekrar Yamaha ile MotoGP'ye — Toprak'ın 
+                    kariyeri, bir sporcunun konfor alanından defalarca çıkıp her seferinde daha büyük bir 
+                    meydan okumayı seçmesinin nadir görülen bir örneği.</p>
+                    """.trimIndent()
+                ),
+                "rossi-honda-yamaha-riskli-kumar" to Pair(
+                    "Şampiyon Motosikleti Bırakıp Kaybeden Markaya İmza Atan Pilot: Rossi'nin Yamaha Kumarı",
+                    """
+                    <p>2003 sonunda Valentino Rossi, Honda ile üst üste şampiyonluklar kazanmış, sporun en 
+                    baskın motosikletinde oturan üç kez dünya şampiyonuydu. Tam bu noktada, kariyerinin en 
+                    akıl almaz kararını aldı: 1992'den beri hiç şampiyonluk kazanamamış Yamaha'ya transfer 
+                    olmaya karar verdi. Honda, bu karara o kadar kızmıştı ki, Rossi'yi sözleşmesinin resmi 
+                    bitiş tarihine kadar bağlı tuttu — yeni sezona kadar Yamaha'sını test etmesine bile izin 
+                    vermedi.</p>
+                    <p>Yamaha'daki ekibiyle ilk kez karşılaştığında motosikletin ne kadar geride olduğunu 
+                    gören Rossi, yine de pes etmedi — efsanevi şef mekanisyeni Jeremy Burgess'le birlikte, 
+                    motosikleti aylar içinde neredeyse baştan tasarladılar. 2004 sezonunun ilk yarışında, 
+                    Güney Afrika'da, eski Honda'lı rakibi Max Biaggi'ye karşı mücadele ederek kazandı — bu, 
+                    MotoGP tarihinde bir pilotun bir markayla sezonu kazanıp, hemen ertesi sezon FARKLI bir 
+                    markayla ilk yarışını da kazandığı tek örnekti.</p>
+                    <p>Rossi, o sezonu şampiyon olarak bitirdi — aynı sayıda yarış kazanarak, herkesi "asıl 
+                    yetenek pilotta mı motosiklette mi" sorusuna net bir cevap vermeye zorladı. Yamaha ile 
+                    başlayan ortaklık, iki döneme (2004-2010 ve 2013-2021) yayılan 16 sezon sürdü ve dört 
+                    dünya şampiyonluğu daha getirdi.</p>
+                    <p>Bu hikaye, bugün hâlâ "kazanan takımı bırakıp riske girmenin" motosiklet sporundaki en 
+                    çarpıcı örneği olarak anlatılıyor.</p>
+                    """.trimIndent()
+                ),
+                "stoner-ducati-ilk-sampiyonluk" to Pair(
+                    "Kimsenin Beklemediği Şampiyon: Stoner'ın Ducati'yle Yazdığı Tarih",
+                    """
+                    <p>2006 sonunda Casey Stoner, MotoGP'de henüz kendini kanıtlamamış genç bir Avustralyalı 
+                    pilotti — küçük bir takımda yarışıyor, üst sıralara pek yaklaşamıyordu. Ducati'nin, 2007 
+                    sezonu için onu fabrika takımına alma kararı, çoğu kişiye riskli göründü — İtalyan marka, 
+                    o zamana kadar MotoGP'de hiç şampiyonluk kazanmamıştı ve motosikleti "zor kullanılır" 
+                    olarak biliniyordu.</p>
+                    <p>Ama Stoner ile Ducati'nin Desmosedici motosikleti arasında beklenmedik bir uyum oluştu. 
+                    Sezon boyunca art arda yarışlar kazanan Stoner, deneyimli rakiplerini geride bırakarak 
+                    şampiyonluğa ulaştı — Ducati'ye markanın MotoGP tarihindeki ilk (ve uzun yıllar tek) dünya 
+                    şampiyonluğunu kazandırdı.</p>
+                    <p>Bu başarı, "zor" bir motosikletin doğru pilotla buluştuğunda ne kadar güçlü olabileceğinin 
+                    kanıtıydı — Stoner, bu motosikleti başka hiçbir pilotun tam olarak süremediği bir tarzda 
+                    kullanmayı başarmıştı. Yıllar sonra Ducati'ye dönecek olan Stoner'ın bu ilk imzası, MotoGP 
+                    tarihinin en beklenmedik şampiyonluk hikayelerinden biri olarak hatırlanıyor.</p>
+                    """.trimIndent()
+                ),
+                "marquez-honda-ducati-sok-transfer" to Pair(
+                    "Yıllarca Sadakatten Sonra Şok Ayrılık: Marquez'in Ducati'ye Geçişi",
+                    """
+                    <p>Marc Marquez, 2013'ten itibaren Honda ile adeta özdeşleşmiş, markayla altı MotoGP dünya 
+                    şampiyonluğu kazanmış bir isimdi. Ama 2020'de yaşadığı ciddi kol sakatlığı, kariyerinin 
+                    gidişatını tamamen değiştirdi — sonraki sezonlarda hem sakatlıkla hem de Honda'nın giderek 
+                    rekabetçiliğini kaybeden motosikletiyle mücadele etmek zorunda kaldı.</p>
+                    <p>Yıllarca süren sadakatin ardından, Marquez sonunda zor bir karara vardı: 2024 sezonu 
+                    için Honda'dan ayrılıp, üstelik fabrika takımı bile değil, uydu takımı Gresini Ducati'ye 
+                    transfer oldu. Bu, sporun en büyük isimlerinden birinin, gururunu bir kenara bırakıp rekabetçi 
+                    bir motosiklete geri dönmeyi tercih ettiği bir hamleydi.</p>
+                    <p>Karar hızla meyvesini verdi — Marquez, Ducati'nin motosikletiyle yıllardır göremediği 
+                    performansına yeniden kavuştu, sezon boyunca ön sıralarda mücadele etti. Bu geçiş, bir 
+                    pilotun bile bazen "en iyi bilinen" markadan ayrılıp, rekabetçiliği yeniden bulmak için 
+                    cesur bir adım atması gerektiğinin çarpıcı bir örneği olarak MotoGP tarihine geçti.</p>
+                    """.trimIndent()
+                ),
+                "figo-barcelona-real-madrid-ihanet" to Pair(
+                    "Kulüp Efsanesinden 'Hain'e: Figo'nun Real Madrid'e Geçişi",
+                    """
+                    <p>2000 yazında Luis Figo, Barcelona'nın kalbinde özel bir yere sahipti — taraftarların 
+                    gözdesi, takım kaptanı adayı bir yıldızdı. Hatta o dönem, Real Madrid'e asla transfer 
+                    olmayacağına dair kamuoyu önünde neredeyse söz vermişti. Bu yüzden, o yazın sonunda gelen 
+                    haber Barcelona taraftarlarını derinden sarstı: Figo, dönemin dünya rekoru transfer 
+                    ücretiyle, ezeli rakip Real Madrid'e imza atmıştı.</p>
+                    <p>Transferin arkasındaki hikaye de en az sonucu kadar dramatikti — Real Madrid Başkan 
+                    adayı Florentino Pérez, seçim vaadi olarak Figo'yu kulübe getireceğini açıklamış, seçildikten 
+                    sonra da bu sözü tutmuştu. Barcelona taraftarları için bu, sadece bir oyuncu kaybı değil, 
+                    bir ihanet olarak görüldü.</p>
+                    <p>Figo'nun Camp Nou'ya Real Madrid formasıyla ilk dönüşü, futbol tarihinin en gergin 
+                    sahnelerinden birine dönüştü — taraftarlar sahaya çeşitli nesneler fırlattı, karşılaşma 
+                    defalarca durduruldu. Bu olay, bugün hâlâ "büyük bir transferin bir kulüp-taraftar 
+                    ilişkisini nasıl derinden yaralayabileceğinin" en bilinen örneği olarak anlatılıyor.</p>
+                    <p>TransferKolik'te "Barcelona" ve "Real Madrid" aratarak, bu iki ezeli rakipte de forma 
+                    giymiş diğer oyuncuları keşfedebilirsiniz.</p>
+                    """.trimIndent()
+                ),
+                "shaq-lakers-miami-kobe-catismasi" to Pair(
+                    "Üç Şampiyonluğun Ardından Ayrılık: Shaq'ın Lakers'tan Miami'ye Gönderilişi",
+                    """
+                    <p>Shaquille O'Neal ve Kobe Bryant, 2000-2002 arasında Los Angeles Lakers'a üst üste üç 
+                    NBA şampiyonluğu kazandırmış, basketbol tarihinin en güçlü ikililerinden biriydi. Ama 
+                    sahadaki bu başarı, kulisteki gerilimi gizleyemedi — iki yıldız arasındaki liderlik 
+                    çatışması, yıllar içinde giderek büyüdü ve kamuoyuna yansıyan bir rekabete dönüştü.</p>
+                    <p>2004 yazında Lakers yönetimi, ikisinden birini seçmek zorunda kaldı — ve genç, uzun 
+                    vadeli potansiyele sahip Kobe'yi tercih etti. Otuz iki yaşındaki Shaq, kulübün merkez 
+                    oyuncusu ve şampiyonluk mimarı olmasına rağmen, Miami Heat'e takas edildi.</p>
+                    <p>Karar, o dönem NBA çevrelerinde büyük tartışma yarattı — bazıları Lakers'ın bir efsaneyi 
+                    çok erken gönderdiğini düşünürken, bazıları kulübün geleceği için doğru bir hamle olduğunu 
+                    savundu. Shaq, Miami'de daha ilk sezonunda dördüncü şampiyonluğuna ulaşarak kararının 
+                    isabetli olduğunu kanıtladı — Lakers ise Kobe ile yeniden şampiyonluğa ulaşmak için birkaç 
+                    yıl daha beklemek zorunda kaldı.</p>
+                    <p>Bu ayrılık, bugün hâlâ "iki yıldızın bir arada var olamaması" durumunun NBA tarihindeki 
+                    en bilinen örneklerinden biri olarak anlatılıyor.</p>
+                    """.trimIndent()
+                ),
             )
 
             // 🏷️ Hangi makale hangi spora ait — mevcut makale tanımlarına dokunmadan,
@@ -461,7 +583,13 @@ fun main() {
                 "hamilton-ferrari-1-nisan-mi-bu" to "f1",
                 "verstappen-bir-haftada-sampiyon-koltuguna" to "f1",
                 "schumacher-zayif-ferrariyi-secti" to "f1",
-                "vettel-alonsonun-ayrildigi-koltuga-oturdu" to "f1"
+                "vettel-alonsonun-ayrildigi-koltuga-oturdu" to "f1",
+                "toprak-kawasakiden-motogpye-yolculuk" to "motogp",
+                "rossi-honda-yamaha-riskli-kumar" to "motogp",
+                "stoner-ducati-ilk-sampiyonluk" to "motogp",
+                "marquez-honda-ducati-sok-transfer" to "motogp",
+                "figo-barcelona-real-madrid-ihanet" to "futbol",
+                "shaq-lakers-miami-kobe-catismasi" to "basketbol"
             )
 
             // 🎨 Ana sayfadaki modern çizim ikonlarıyla AYNI SVG'ler — blog
@@ -469,8 +597,9 @@ fun main() {
             fun svgFootball(): String = """<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" style="vertical-align:-2px; margin-right:5px;"><circle cx="12" cy="12" r="10"/><path d="M12 7l3.5 2.5-1.3 4.1H9.8L8.5 9.5z" fill="currentColor" stroke="none"/><path d="M12 2v5M12 17v5M2.5 9.5l4.5 1.5M17 11l4.5-1.5M6 19.5l1.8-4M16.2 15.5L18 19.5"/></svg>"""
             fun svgBasketball(): String = """<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" style="vertical-align:-2px; margin-right:5px;"><circle cx="12" cy="12" r="10"/><path d="M12 2v20M2 12h20M4.2 5.5c2.5 2.5 3.8 5.5 3.8 6.5s-1.3 4-3.8 6.5M19.8 5.5c-2.5 2.5-3.8 5.5-3.8 6.5s1.3 4 3.8 6.5"/></svg>"""
             fun svgF1(): String = """<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" style="vertical-align:-2px; margin-right:5px;"><rect x="3" y="4" width="7" height="7"/><rect x="14" y="4" width="7" height="7"/><rect x="3" y="13" width="7" height="7"/><rect x="14" y="13" width="7" height="7"/></svg>"""
+            fun svgMotoGp(): String = """<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" style="vertical-align:-2px; margin-right:5px;"><circle cx="5" cy="17" r="3"/><circle cx="19" cy="17" r="3"/><path d="M8 17h5l3-7h3M13 10l-2-3H7l-2 5"/></svg>"""
 
-            fun blogPageHtml(title: String, bodyHtml: String, description: String): String = """
+            fun blogPageHtml(title: String, bodyHtml: String, description: String, showAllArticlesLink: Boolean = true): String = """
                 <!DOCTYPE html>
                 <html lang="tr">
                 <head>
@@ -568,7 +697,7 @@ fun main() {
                 <body>
                     <div class="back-links">
                         <a href="/" class="back-link">← Ana Sayfa</a>
-                        <a href="/blog" class="back-link">📰 Tüm Yazılar</a>
+                        ${if (showAllArticlesLink) "<a href=\"/blog\" class=\"back-link\">📰 Tüm Yazılar</a>" else ""}
                     </div>
                     $bodyHtml
                 </body>
@@ -585,16 +714,20 @@ fun main() {
                 val f1Html = blogArticles.entries
                     .filter { articleSport[it.key] == "f1" }
                     .joinToString("") { (slug, pair) -> "<a href=\"/blog/$slug\">${pair.first}</a>" }
+                val motogpHtml = blogArticles.entries
+                    .filter { articleSport[it.key] == "motogp" }
+                    .joinToString("") { (slug, pair) -> "<a href=\"/blog/$slug\">${pair.first}</a>" }
                 val html = blogPageHtml(
                     "Transfer Hikayeleri",
                     """
                     <h1>Bonservissiz Yazarın Kaleminden — Haftanın Blogları</h1>
-                    <p class="subtitle">Futbol, basketbol ve Formula 1 tarihinin en dramatik, en şaşırtıcı transfer anları.</p>
+                    <p class="subtitle">Futbol, basketbol, Formula 1 ve MotoGP tarihinin en dramatik, en şaşırtıcı transfer anları.</p>
                     <div class="sport-filter-bar">
                         <button class="sport-filter-btn active" data-filter="all" onclick="filterBlogBySport('all', this)">Tümü</button>
                         <button class="sport-filter-btn" data-filter="futbol" onclick="filterBlogBySport('futbol', this)">${svgFootball()} Futbol</button>
                         <button class="sport-filter-btn" data-filter="basketbol" onclick="filterBlogBySport('basketbol', this)">${svgBasketball()} Basketbol</button>
                         <button class="sport-filter-btn" data-filter="f1" onclick="filterBlogBySport('f1', this)">${svgF1()} Formula 1</button>
+                        <button class="sport-filter-btn" data-filter="motogp" onclick="filterBlogBySport('motogp', this)">${svgMotoGp()} MotoGP</button>
                     </div>
                     <div class="sport-section" data-sport="futbol">
                         <h2>${svgFootball()} Futbol</h2>
@@ -608,6 +741,10 @@ fun main() {
                         <h2>${svgF1()} Formula 1</h2>
                         <div class="article-list">$f1Html</div>
                     </div>
+                    <div class="sport-section" data-sport="motogp">
+                        <h2>${svgMotoGp()} MotoGP</h2>
+                        <div class="article-list">$motogpHtml</div>
+                    </div>
                     <script>
                         function filterBlogBySport(sport, btn) {
                             document.querySelectorAll('.sport-filter-btn').forEach(b => b.classList.remove('active'));
@@ -618,7 +755,8 @@ fun main() {
                         }
                     </script>
                     """.trimIndent(),
-                    "Futbol, basketbol ve Formula 1 dünyasının en dramatik ve şaşırtıcı transfer hikayeleri — TransferKolik Blog."
+                    "Futbol, basketbol ve Formula 1 dünyasının en dramatik ve şaşırtıcı transfer hikayeleri — TransferKolik Blog.",
+                    showAllArticlesLink = false
                 )
                 call.respondText(html, ContentType.Text.Html)
             }
@@ -723,6 +861,23 @@ fun main() {
                 val endYear = call.request.queryParameters["endYear"]?.toIntOrNull()
                 val nationality = call.request.queryParameters["nationality"]
                 val valid = DatabaseClient.verifyPlayerPlayedForClub(name, club, startYear, endYear, nationality)
+                call.respond(mapOf("valid" to valid))
+            }
+
+            // 🏀 Basketbol köprü doğrulama — futboldakiyle aynı desen, ama uyruk
+            // şartı YOK (veri kaynağında bulunmuyor). "league" parametresi
+            // europe/nba tablosundan hangisine bakılacağını belirtiyor.
+            get("/basketball/verifyBridge") {
+                val name = call.request.queryParameters["name"]
+                val team = call.request.queryParameters["team"]
+                if (name.isNullOrBlank() || team.isNullOrBlank()) {
+                    call.respond(HttpStatusCode.BadRequest)
+                    return@get
+                }
+                val league = call.request.queryParameters["league"] ?: "europe"
+                val startYear = call.request.queryParameters["startYear"]?.toIntOrNull()
+                val endYear = call.request.queryParameters["endYear"]?.toIntOrNull()
+                val valid = DatabaseClient.verifyBasketballPlayerPlayedForTeam(name, team, league, startYear, endYear)
                 call.respond(mapOf("valid" to valid))
             }
 

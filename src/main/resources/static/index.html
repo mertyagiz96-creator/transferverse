@@ -2384,6 +2384,20 @@
         <div id="transferFeeQuizContent"></div>
     </div>
 
+    <div id="bbConnectionGameSection" style="flex: 0 0 380px; scroll-snap-align: start; padding: 30px 26px; background: rgba(var(--card-tint-rgb), 0.3); border-radius: 18px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18); transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease; display: none;" onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 16px 40px rgba(0,0,0,0.22), 0 0 0 2px rgba(var(--accent-gold-rgb),0.35)';" onmouseout="this.style.transform=''; this.style.boxShadow='0 10px 30px rgba(0,0,0,0.18)';">
+        <div style="display:flex; align-items:center; justify-content:center; gap:10px; flex-wrap:wrap;">
+            <h2 id="i18n-bbConnectionTitle" style="font-size: 1.05rem; font-weight: 700; color: rgba(var(--fg-rgb), 0.85); margin: 0;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="vertical-align:-3px; margin-right:6px;"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>🏀 Transfer Bağlantısı</h2>
+            <button id="bbConnectionHowToPlayBtn" style="font-size:0.65rem; padding:3px 8px; background:rgba(var(--fg-rgb),0.06); border:1px solid rgba(var(--fg-rgb),0.15); border-radius:10px; color:rgb(var(--fg-rgb)); cursor:pointer;">❓ Nasıl Oynanır?</button>
+        </div>
+        <div id="bbConnectionHowToPlayBox" style="display:none; font-size:0.72rem; line-height:1.6; background:rgba(var(--fg-rgb),0.04); border-radius:8px; padding:10px 14px; max-width:420px; margin: 8px auto 0;">
+            Verilen iki oyuncuyu, ortak bir takım arkadaşı ile birbirine bağla!<br>
+            📌 Örnek: <b>LeBron James ➔ ( ? ) ➔ Kobe Bryant</b><br>
+            ✍️ Kutuya <b>Dwight Howard</b> yazarsan zinciri kurarsın (Lakers'ta hem Kobe'yle 2012-13'te, hem LeBron'la 2019'dan itibaren aynı takımdaydı).<br>
+            En az denemeyle hedefe ulaş, skorunu paylaş!
+        </div>
+        <div id="bbConnectionGameContent" style="margin-top: 14px;"></div>
+    </div>
+
     </div><!-- /#homeCardsRow -->
 
     <button id="homeCardsLeftArrow" aria-label="Sola kaydır" style="position: absolute; top: 50%; left: 4px; transform: translateY(-50%); width: 44px; height: 44px; border-radius: 50%; border: none; background: rgba(var(--surface-strong-rgb), 0.92); box-shadow: 0 4px 16px rgba(0,0,0,0.2); display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 5; opacity: 0; pointer-events: none; transition: opacity 0.25s ease, transform 0.2s ease;">
@@ -3442,12 +3456,27 @@
         'i18n-h3-data': { en: '📊 Data and Sources' },
         'i18n-p-data': { en: `The transfer history and player information on TransferKolik has been compiled from publicly available football databases; club logos and stadium images are sourced from providers like TheSportsDB and Wikimedia Commons. Since the data reflects a snapshot taken at a specific point in time, very recent transfers may not yet appear. The site works instantly with no registration required and is compatible with all devices, including desktop, tablet, and mobile.` },
         'i18n-connectionTitle': { en: '🔗 Transfer Connection' },
+        'i18n-bbConnectionTitle': { en: '🏀 Transfer Connection' },
         'i18n-feeQuizTitle': { en: '💰 Which Transfer Was More Expensive?' },
         'i18n-pollTitle': { en: '🗳️ Who Will Win the Title This Season?' },
         'i18n-bbPollTitle': { en: '🏀 Who Will Win the Title This Season?' },
         'i18n-bioTitle': { en: '📰 Player of the Day' }
     };
     const TR_ORIGINALS = {}; // 💡 Türkçeye geri dönmek için orijinal metinleri saklıyoruz
+
+    // 🌍 Köprü oyunundaki uyruk ipuçları için — veritabanı/havuzda İngilizce
+    // ülke isimleri (Germany, Italy vb.) tutuluyor, kullanıcı Türkçe seçiliyse
+    // Türkçesini gösteriyoruz.
+    const NATIONALITY_TR = {
+        'Belgium': 'Belçika', 'Germany': 'Almanya', 'Italy': 'İtalya',
+        'England': 'İngiltere', 'Brazil': 'Brezilya', 'France': 'Fransa'
+    };
+    // 💡 Dinamik (JS ile oluşturulan) metinler için küçük yardımcı — o anki
+    // dile göre doğru metni döndürüyor. TRANSLATIONS haritasına dahil OLMAYAN
+    // (statik id'si olmayan) yerlerde kullanılıyor.
+    function t(trText, enText) {
+        return currentLang === 'en' ? enText : trText;
+    }
     let currentLang = 'tr'; // 🌍 Dinamik (JS ile oluşturulan) başlıkların kontrol edebilmesi için
 
     function applyLanguage(lang) {
@@ -3460,6 +3489,7 @@
             'i18n-footballBtn': '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" style="vertical-align:-2px; margin-right:5px;"><circle cx="12" cy="12" r="10"/><path d="M12 7l3.5 2.5-1.3 4.1H9.8L8.5 9.5z" fill="currentColor" stroke="none"/><path d="M12 2v5M12 17v5M2.5 9.5l4.5 1.5M17 11l4.5-1.5M6 19.5l1.8-4M16.2 15.5L18 19.5"/></svg>',
             'i18n-basketballBtn': '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" style="vertical-align:-2px; margin-right:5px;"><circle cx="12" cy="12" r="10"/><path d="M12 2v20M2 12h20M4.2 5.5c2.5 2.5 3.8 5.5 3.8 6.5s-1.3 4-3.8 6.5M19.8 5.5c-2.5 2.5-3.8 5.5-3.8 6.5s1.3 4 3.8 6.5"/></svg>',
             'i18n-connectionTitle': '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="vertical-align:-3px; margin-right:6px;"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>',
+            'i18n-bbConnectionTitle': '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="vertical-align:-3px; margin-right:6px;"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>',
             'i18n-feeQuizTitle': '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="vertical-align:-3px; margin-right:6px;"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>',
             'i18n-pollTitle': '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="vertical-align:-3px; margin-right:6px;"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>',
             'i18n-h3-daily': '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="vertical-align:-2px; margin-right:5px;"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',
@@ -5449,7 +5479,38 @@
         { start: 'Vinicius Junior', end: 'Iker Casillas', club: 'Real Madrid', startYear: 2018, endYear: 2015, bridges: ['Marcelo'], nationality: 'Brazil', flag: '🇧🇷' },
         { start: 'Federico Chiesa', end: 'Paul Pogba', club: 'Juventus', startYear: 2020, endYear: 2016, bridges: ['Leonardo Bonucci', 'Giorgio Chiellini'], nationality: 'Italy', flag: '🇮🇹' },
         { start: 'Marcus Thuram', end: 'Romelu Lukaku', club: 'Inter', startYear: 2023, endYear: 2021, bridges: ['Nicolo Barella', 'Alessandro Bastoni'], nationality: 'Italy', flag: '🇮🇹' },
-        { start: 'Vinicius Junior', end: 'Xabi Alonso', club: 'Real Madrid', startYear: 2018, endYear: 2014, bridges: ['Karim Benzema'], nationality: 'France', flag: '🇫🇷' }
+        { start: 'Vinicius Junior', end: 'Xabi Alonso', club: 'Real Madrid', startYear: 2018, endYear: 2014, bridges: ['Karim Benzema'], nationality: 'France', flag: '🇫🇷' },
+        { start: 'Bernardo Silva', end: 'Vincent Kompany', club: 'Manchester City', startYear: 2017, endYear: 2019, bridges: ['Kevin De Bruyne'], nationality: 'Belgium', flag: '🇧🇪' },
+        { start: 'Eden Hazard', end: 'James Rodriguez', club: 'Real Madrid', startYear: 2019, endYear: 2017, bridges: ['Toni Kroos'], nationality: 'Germany', flag: '🇩🇪' },
+        { start: 'Leroy Sane', end: 'Arjen Robben', club: 'Bayern Munich', startYear: 2020, endYear: 2019, bridges: ['Thomas Muller'], nationality: 'Germany', flag: '🇩🇪' },
+        { start: 'Achraf Hakimi', end: 'Thiago Silva', club: 'Paris SG', startYear: 2021, endYear: 2020, bridges: ['Marco Verratti'], nationality: 'Italy', flag: '🇮🇹' },
+        { start: 'Aurelien Tchouameni', end: 'Isco', club: 'Real Madrid', startYear: 2022, endYear: 2021, bridges: ['Karim Benzema'], nationality: 'France', flag: '🇫🇷' }
+    ];
+
+    // 🏀 Basketbol köprü havuzu — futboldakinden FARKLI olarak, "bridges" (hazır
+    // cevap) listesi BİLEREK BOŞ bırakıldı. Sebep: hangi oyuncunun hangi
+    // takımlarda TAM OLARAK hangi yıllarda oynadığı gibi ince roster detaylarında
+    // yeterince emin değilim — yanlış bir isim yazmak yerine, doğrulamayı
+    // TAMAMEN veritabanına (gerçek veri, %100 doğru) bırakıyoruz. Oyun yine de
+    // tam çalışıyor, sadece "hızlı yerel kontrol" adımı atlanıp direkt DB'ye gidiyor.
+    // 💡 NOT: "LeBron James / Kobe Bryant / Los Angeles Lakers" çifti BİLEREK
+    // havuzda YOK — cevabı (Dwight Howard) "Nasıl Oynanır?" örneğinde açıkça
+    // gösteriliyor, gerçek soru olarak çıkarsa spoiler olurdu.
+    const BB_CONNECTION_POOL_NBA = [
+        { start: 'Anthony Davis', end: 'Dwight Howard', team: 'Los Angeles Lakers', startYear: 2019, endYear: 2020, bridges: [] },
+        { start: 'Jimmy Butler', end: 'Dwyane Wade', team: 'Miami Heat', startYear: 2019, endYear: 2019, bridges: [] },
+        { start: 'Kevin Durant', end: 'Klay Thompson', team: 'Golden State Warriors', startYear: 2016, endYear: 2019, bridges: [] },
+        { start: 'James Harden', end: 'Dwight Howard', team: 'Houston Rockets', startYear: 2012, endYear: 2016, bridges: [] }
+    ];
+    const BB_CONNECTION_POOL_EUROPE = [
+        { start: 'Facundo Campazzo', end: 'Sergio Llull', team: 'Real Madrid', startYear: 2016, endYear: 2011, bridges: [] },
+        { start: 'Mike James', end: 'Nando de Colo', team: 'CSKA Moscow', startYear: 2020, endYear: 2018, bridges: [] },
+        { start: 'Kostas Sloukas', end: 'Vassilis Spanoulis', team: 'Panathinaikos', startYear: 2013, endYear: 2011, bridges: [] },
+        { start: 'Sasha Vezenkov', end: 'Georgios Printezis', team: 'Olympiacos', startYear: 2020, endYear: 2015, bridges: [] },
+        { start: 'Nikola Milutinov', end: 'Vassilis Spanoulis', team: 'Olympiacos', startYear: 2015, endYear: 2013, bridges: [] },
+        { start: 'Bogdan Bogdanovic', end: 'Jan Vesely', team: 'Fenerbahce', startYear: 2015, endYear: 2015, bridges: [] },
+        { start: 'Kostas Sloukas', end: 'Ekpe Udoh', team: 'Fenerbahce', startYear: 2017, endYear: 2019, bridges: [] },
+        { start: 'Nikola Mirotic', end: 'Juan Carlos Navarro', team: 'Barcelona', startYear: 2011, endYear: 2008, bridges: [] }
     ];
 
     function loadConnectionGame() {
@@ -5487,13 +5548,13 @@
                 <span style="opacity:0.5; font-weight:700;">➔ ( ? ) ➔</span>
                 <span style="font-weight:800; font-size:0.92rem;">${escapeHtml(pair.end)}</span>
             </div>
-            ${pair.nationality ? `<div style="text-align:center; font-size:0.78rem; margin-bottom:10px; opacity:0.75;">💡 İpucu: köprü oyuncu <span style="font-size:1.1rem;">${pair.flag}</span> <b>${escapeHtml(pair.nationality)}</b> uyruklu olmalı</div>` : ''}
+            ${pair.nationality ? `<div style="text-align:center; font-size:0.78rem; margin-bottom:10px; opacity:0.75;">💡 ${t('İpucu: köprü oyuncu', 'Hint: bridge player must be')} <span style="font-size:1.1rem;">${pair.flag}</span> <b>${escapeHtml(t(NATIONALITY_TR[pair.nationality] || pair.nationality, pair.nationality))}</b> ${t('uyruklu olmalı', 'nationality')}</div>` : ''}
             <div id="connectionAttemptsBox" style="max-width:380px; margin:0 auto 10px;"></div>
-            <div id="connectionCounter" style="font-size:0.7rem; opacity:0.6; text-align:center;">Deneme: 0</div>
+            <div id="connectionCounter" style="font-size:0.7rem; opacity:0.6; text-align:center;">${t('Deneme', 'Attempt')}: 0</div>
             <div style="width:100%; max-width:320px; display:flex; flex-wrap:wrap; gap:8px; margin: 8px auto 0; position:relative;">
-                <input type="text" id="connectionGuessInput" placeholder="Köprü oyuncuyu yaz..." autocomplete="off" style="flex:1; padding:10px 12px; border-radius:3px; border:1px solid rgba(var(--fg-rgb),0.18); background:rgba(var(--fg-rgb),0.02); color:rgb(var(--fg-rgb)); font-size: 0.9rem; outline: none;">
+                <input type="text" id="connectionGuessInput" placeholder="${t('Köprü oyuncuyu yaz...', 'Type the bridge player...')}" autocomplete="off" style="flex:1; padding:10px 12px; border-radius:3px; border:1px solid rgba(var(--fg-rgb),0.18); background:rgba(var(--fg-rgb),0.02); color:rgb(var(--fg-rgb)); font-size: 0.9rem; outline: none;">
                 <div id="connectionGuessDropdown" class="autocomplete-dropdown"></div>
-                <button id="connectionSubmitBtn" class="toolbar-btn" style="padding:8px 14px; font-size:0.72rem;">Dene</button>
+                <button id="connectionSubmitBtn" class="toolbar-btn" style="padding:8px 14px; font-size:0.72rem;">${t('Dene', 'Try')}</button>
             </div>
             <div id="connectionStatus" style="font-size:0.78rem; font-weight:600; color: rgb(var(--fg-rgb)); text-align:center; margin-top:8px;"></div>
         `;
@@ -5521,22 +5582,22 @@
             submitBtn.disabled = true;
             if (won) playCorrectSound();
             statusEl.textContent = won
-                ? `🎉 Doğru! ${attempts} denemede bağlantıyı kurdun.`
-                : `Bugünkü bağlantı: ${pair.bridges[0]}. Yarın tekrar dene!`;
+                ? t(`🎉 Doğru! ${attempts} denemede bağlantıyı kurdun.`, `🎉 Correct! You made the connection in ${attempts} tries.`)
+                : t(`Bugünkü bağlantı: ${pair.bridges[0]}. Yarın tekrar dene!`, `Today's connection: ${pair.bridges[0]}. Try again tomorrow!`);
             try {
                 localStorage.setItem(STATE_KEY, JSON.stringify({ date: today, attempts, solved: won, pair }));
             } catch (e) { /* sessizce geç */ }
 
             const shareBtn = document.createElement('button');
-            shareBtn.textContent = '📤 Sonucu Paylaş';
+            shareBtn.textContent = t('📤 Sonucu Paylaş', '📤 Share Result');
             shareBtn.style.cssText = 'margin-top:8px; padding:6px 14px; background:rgba(var(--fg-rgb),0.08); border:1px solid rgba(var(--fg-rgb),0.15); border-radius:6px; color:rgb(var(--fg-rgb)); font-size:0.72rem; font-weight:700; cursor:pointer;';
             shareBtn.addEventListener('click', () => {
-                const resultLine = won ? `🔗 ${attempts} denemede bağladım!` : '🔗 Bugün bağlayamadım!';
-                const shareText = `⚽ TransferKolik Transfer Bağlantısı\n${escapeHtml(pair.start)} ➔ ➔ ➔ ${escapeHtml(pair.end)}\n${resultLine}\ntransferkolik.com`;
+                const resultLine = won ? t(`🔗 ${attempts} denemede bağladım!`, `🔗 Connected in ${attempts} tries!`) : t('🔗 Bugün bağlayamadım!', "🔗 Couldn't connect today!");
+                const shareText = `⚽ TransferKolik Transfer ${t('Bağlantısı', 'Connection')}\n${escapeHtml(pair.start)} ➔ ➔ ➔ ${escapeHtml(pair.end)}\n${resultLine}\ntransferkolik.com`;
                 if (navigator.clipboard) {
                     navigator.clipboard.writeText(shareText).then(() => {
-                        shareBtn.textContent = '✅ Kopyalandı!';
-                        setTimeout(() => { shareBtn.textContent = '📤 Sonucu Paylaş'; }, 2000);
+                        shareBtn.textContent = t('✅ Kopyalandı!', '✅ Copied!');
+                        setTimeout(() => { shareBtn.textContent = t('📤 Sonucu Paylaş', '📤 Share Result'); }, 2000);
                     }).catch(() => { /* sessizce geç */ });
                 }
             });
@@ -5585,7 +5646,7 @@
             attempts++;
             guessInput.value = '';
             addAttemptRow(rawGuess, isCorrect);
-            if (counterEl) counterEl.textContent = `Deneme: ${attempts}`;
+            if (counterEl) counterEl.textContent = `${t('Deneme', 'Attempt')}: ${attempts}`;
 
             // 💾 Her denemeden sonra kaydet — sadece round bitince değil.
             try {
@@ -5607,23 +5668,182 @@
         // 💾 Bugün zaten oynanmışsa durumu geri yükle
         if (savedState) {
             attempts = savedState.attempts || 0;
-            if (counterEl) counterEl.textContent = `Deneme: ${attempts}`;
+            if (counterEl) counterEl.textContent = `${t('Deneme', 'Attempt')}: ${attempts}`;
             if (savedState.solved) {
                 guessInput.disabled = true;
                 submitBtn.disabled = true;
-                statusEl.textContent = `✅ Bugün bu bağlantıyı ${attempts} denemede kurmuştun!`;
+                statusEl.textContent = t(`✅ Bugün bu bağlantıyı ${attempts} denemede kurmuştun!`, `✅ You already solved this connection today in ${attempts} tries!`);
             } else if (savedState.inProgress) {
                 // 💡 Round DEVAM EDİYOR — kilitleme, kaldığı yerden sürsün.
                 submitBtn.disabled = false;
             } else {
                 guessInput.disabled = true;
                 submitBtn.disabled = true;
-                statusEl.textContent = `Bugünkü bağlantı: ${pair.bridges[0]}. Yarın tekrar dene!`;
+                statusEl.textContent = t(`Bugünkü bağlantı: ${pair.bridges[0]}. Yarın tekrar dene!`, `Today's connection: ${pair.bridges[0]}. Try again tomorrow!`);
             }
         }
 
         section.style.display = 'block';
         if (typeof updateHomeCardsRowAlignment === 'function') updateHomeCardsRowAlignment(); // 🛡️ bölüm geç yüklendiyse ok görünürlüğünü tazele
+    }
+
+    // 🏀 Basketbol köprü oyunu — futboldaki loadConnectionGame ile AYNI ruhta,
+    // ama uyruk ipucu YOK ve gün bazında %50 Avrupa / %50 NBA arasında dönüyor.
+    function loadBasketballConnectionGame() {
+        const section = document.getElementById('bbConnectionGameSection');
+        const content = document.getElementById('bbConnectionGameContent');
+        if (!section || !content) return;
+        if (playerModeActive || duelActive || transfermatikActive || currentSport !== 'basketball') return;
+
+        const howToBtn = document.getElementById('bbConnectionHowToPlayBtn');
+        const howToBox = document.getElementById('bbConnectionHowToPlayBox');
+        if (howToBtn && howToBox && !howToBtn.dataset.bound) {
+            howToBtn.dataset.bound = 'true';
+            howToBtn.addEventListener('click', () => {
+                howToBox.style.display = howToBox.style.display === 'none' ? 'block' : 'none';
+            });
+        }
+
+        const today = getTodayDateString();
+        const leagueSeed = seededHash(today + '-bb-connection-league');
+        const league = (leagueSeed % 2 === 0) ? 'europe' : 'nba'; // 🎯 %50/%50 günlük dönüşüm
+        const pool = league === 'nba' ? BB_CONNECTION_POOL_NBA : BB_CONNECTION_POOL_EUROPE;
+        const seed = seededHash(today + '-bb-connection-game');
+        const pair = pool[seed % pool.length];
+
+        const STATE_KEY = 'transferkolik_bb_connection_state';
+        let savedState = null;
+        try {
+            const raw = localStorage.getItem(STATE_KEY);
+            if (raw) {
+                const parsed = JSON.parse(raw);
+                if (parsed.date === today) savedState = parsed;
+            }
+        } catch (e) { /* sessizce geç */ }
+
+        content.innerHTML = `
+            <div style="display:flex; align-items:center; justify-content:center; gap:16px; flex-wrap:wrap; margin-bottom:8px;">
+                <span style="font-weight:800; font-size:0.92rem;">${escapeHtml(pair.start)}</span>
+                <span style="opacity:0.5; font-weight:700;">➔ ( ? ) ➔</span>
+                <span style="font-weight:800; font-size:0.92rem;">${escapeHtml(pair.end)}</span>
+            </div>
+            <div style="text-align:center; font-size:0.72rem; opacity:0.55; margin-bottom:10px;">${league === 'nba' ? '🇺🇸 NBA' : t('🌍 Avrupa', '🌍 Europe')}</div>
+            <div id="bbConnectionAttemptsBox" style="max-width:380px; margin:0 auto 10px;"></div>
+            <div id="bbConnectionCounter" style="font-size:0.7rem; opacity:0.6; text-align:center;">${t('Deneme', 'Attempt')}: 0</div>
+            <div style="width:100%; max-width:320px; display:flex; flex-wrap:wrap; gap:8px; margin: 8px auto 0; position:relative;">
+                <input type="text" id="bbConnectionGuessInput" placeholder="${t('Köprü oyuncuyu yaz...', 'Type the bridge player...')}" autocomplete="off" style="flex:1; padding:10px 12px; border-radius:3px; border:1px solid rgba(var(--fg-rgb),0.18); background:rgba(var(--fg-rgb),0.02); color:rgb(var(--fg-rgb)); font-size: 0.9rem; outline: none;">
+                <div id="bbConnectionGuessDropdown" class="autocomplete-dropdown"></div>
+                <button id="bbConnectionSubmitBtn" class="toolbar-btn" style="padding:8px 14px; font-size:0.72rem;">${t('Dene', 'Try')}</button>
+            </div>
+            <div id="bbConnectionStatus" style="font-size:0.78rem; font-weight:600; color: rgb(var(--fg-rgb)); text-align:center; margin-top:8px;"></div>
+        `;
+
+        const attemptsBox = document.getElementById('bbConnectionAttemptsBox');
+        const counterEl = document.getElementById('bbConnectionCounter');
+        const statusEl = document.getElementById('bbConnectionStatus');
+        const guessInput = document.getElementById('bbConnectionGuessInput');
+        const submitBtn = document.getElementById('bbConnectionSubmitBtn');
+        setupPlayerNameAutocomplete('bbConnectionGuessInput', 'bbConnectionGuessDropdown', () => [pair.team],
+            (query) => `/basketball/playerNameSuggestions?q=${encodeURIComponent(query)}&league=${encodeURIComponent(league)}&teams=${encodeURIComponent(pair.team)}`
+        );
+
+        let attempts = 0;
+        let solved = false;
+
+        function addAttemptRow(text, correct) {
+            const row = document.createElement('div');
+            row.style.cssText = `padding:6px 10px; margin-bottom:4px; border-radius:6px; font-size:0.78rem; background:${correct ? 'rgba(76,175,80,0.15)' : 'rgba(244,67,54,0.1)'}; color:rgb(var(--fg-rgb));`;
+            row.textContent = (correct ? '🟩 ' : '🟥 ') + text;
+            attemptsBox.appendChild(row);
+        }
+
+        function finish(won) {
+            solved = won;
+            guessInput.disabled = true;
+            submitBtn.disabled = true;
+            if (won) playCorrectSound();
+            const hasKnownAnswer = pair.bridges && pair.bridges.length > 0;
+            statusEl.textContent = won
+                ? t(`🎉 Doğru! ${attempts} denemede bağlantıyı kurdun.`, `🎉 Correct! You made the connection in ${attempts} tries.`)
+                : hasKnownAnswer
+                    ? t(`Bugünkü bağlantı: ${pair.bridges[0]}. Yarın tekrar dene!`, `Today's connection: ${pair.bridges[0]}. Try again tomorrow!`)
+                    : t('Bugün bulamadın. Yarın tekrar dene!', "Couldn't find it today. Try again tomorrow!");
+            try {
+                localStorage.setItem(STATE_KEY, JSON.stringify({ date: today, attempts, solved: won, pair, league }));
+            } catch (e) { /* sessizce geç */ }
+        }
+
+        async function handleSubmit() {
+            if (solved) return;
+            const rawGuess = guessInput.value.trim();
+            if (!rawGuess) return;
+            const guessNorm = normalizeGuess(rawGuess);
+            submitBtn.disabled = true;
+
+            // ⚡ Önce hızlı, hazır listeye bak (varsa) — bulunursa anında cevap.
+            let isCorrect = pair.bridges.some(b => {
+                const bNorm = normalizeGuess(b);
+                if (bNorm === guessNorm) return true;
+                const bWords = b.trim().split(/\s+/);
+                const bSurname = normalizeGuess(bWords[bWords.length - 1]);
+                return bSurname === guessNorm;
+            });
+
+            if (!isCorrect) {
+            try {
+                const params = new URLSearchParams({
+                    name: rawGuess, team: pair.team, league: league,
+                    startYear: pair.startYear, endYear: pair.endYear
+                });
+                const res = await fetch(`/basketball/verifyBridge?${params.toString()}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    isCorrect = !!data.valid;
+                }
+            } catch (e) { /* sessizce geç */ }
+            }
+
+            attempts++;
+            guessInput.value = '';
+            addAttemptRow(rawGuess, isCorrect);
+            if (counterEl) counterEl.textContent = `${t('Deneme', 'Attempt')}: ${attempts}`;
+
+            try {
+                localStorage.setItem(STATE_KEY, JSON.stringify({ date: today, attempts, solved: false, pair, league, inProgress: true }));
+            } catch (e) { /* sessizce geç */ }
+
+            if (isCorrect) {
+                finish(true);
+            } else if (attempts >= 5) {
+                finish(false);
+            } else {
+                submitBtn.disabled = false;
+            }
+        }
+
+        submitBtn.addEventListener('click', handleSubmit);
+        guessInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleSubmit(); });
+
+        if (savedState) {
+            attempts = savedState.attempts || 0;
+            if (counterEl) counterEl.textContent = `${t('Deneme', 'Attempt')}: ${attempts}`;
+            if (savedState.solved) {
+                guessInput.disabled = true;
+                submitBtn.disabled = true;
+                statusEl.textContent = t(`✅ Bugün bu bağlantıyı ${attempts} denemede kurmuştun!`, `✅ You already solved this connection today in ${attempts} tries!`);
+            } else if (savedState.inProgress) {
+                submitBtn.disabled = false;
+            } else {
+                guessInput.disabled = true;
+                submitBtn.disabled = true;
+                statusEl.textContent = (pair.bridges && pair.bridges.length > 0)
+                    ? t(`Bugünkü bağlantı: ${pair.bridges[0]}. Yarın tekrar dene!`, `Today's connection: ${pair.bridges[0]}. Try again tomorrow!`)
+                    : t('Bugün bulamadın. Yarın tekrar dene!', "Couldn't find it today. Try again tomorrow!");
+            }
+        }
+
+        section.style.display = 'block';
+        if (typeof updateHomeCardsRowAlignment === 'function') updateHomeCardsRowAlignment();
     }
 
     function loadTransferFeeQuiz() {
@@ -5706,6 +5926,24 @@
             if (feedback) {
                 feedback.textContent = savedCorrect ? '✅ Bugün doğru bildin!' : '❌ Bugün yanlış tahmin ettin — yarın tekrar dene!';
                 feedback.style.color = savedCorrect ? 'var(--accent-gold)' : 'rgba(var(--fg-rgb), 0.6)';
+
+                // 📤 Diğer iki oyunla AYNI kalıp — sonucu panoya kopyalayıp
+                // paylaşabilme imkanı.
+                const shareBtn = document.createElement('button');
+                shareBtn.textContent = '📤 Sonucu Paylaş';
+                shareBtn.style.cssText = 'display:block; margin:10px auto 0; padding:6px 14px; background:rgba(var(--fg-rgb),0.08); border:1px solid rgba(var(--fg-rgb),0.15); border-radius:6px; color:rgb(var(--fg-rgb)); font-size:0.72rem; font-weight:700; cursor:pointer;';
+                shareBtn.addEventListener('click', () => {
+                    const resultLine = savedCorrect ? '✅ Doğru bildim!' : '❌ Yanılmışım!';
+                    const shareText = `💰 TransferKolik Hangi Transfer Daha Pahalıydı?\n${t1.player} vs ${t2.player}\n${resultLine}\ntransferkolik.com`;
+                    if (navigator.clipboard) {
+                        navigator.clipboard.writeText(shareText).then(() => {
+                            shareBtn.textContent = '✅ Kopyalandı!';
+                            setTimeout(() => { shareBtn.textContent = '📤 Sonucu Paylaş'; }, 2000);
+                        }).catch(() => { /* sessizce geç */ });
+                    }
+                });
+                feedback.appendChild(document.createElement('br'));
+                feedback.appendChild(shareBtn);
             }
         } else {
             content.querySelectorAll('.fee-quiz-option').forEach(el => {
@@ -6204,13 +6442,13 @@
             `;
         }
 
-        let bestTimeText = '🏁 Bugün henüz çözmedin, ilk seferini dene!';
+        let bestTimeText = t('🏁 Bugün henüz çözmedin, ilk seferini dene!', "🏁 You haven't solved it today, give it a try!");
         try {
             const raw = localStorage.getItem(bbBestKey);
             if (raw) {
                 const parsed = JSON.parse(raw);
                 if (parsed.date === today && parsed.seconds) {
-                    bestTimeText = `⏱️ Bugünkü kişisel rekorun: ${parsed.seconds} saniye`;
+                    bestTimeText = t(`⏱️ Bugünkü kişisel rekorun: ${parsed.seconds} saniye`, `⏱️ Today's personal best: ${parsed.seconds} seconds`);
                 }
             }
         } catch (e) { /* sessizce geç */ }
@@ -6219,7 +6457,7 @@
         container.innerHTML = `
             <div class="daily-question-box">
                 <div style="font-size: 0.72rem; text-transform: uppercase; letter-spacing: 1.2px; color: rgba(var(--fg-rgb), 0.6); font-weight: 700;">
-                    ${realCalendarIconHtml()} Günün Sorusu (${currentBasketballLeague === 'nba' ? '🇺🇸 NBA' : '🌍 Avrupa'}) — İki takımda da oynayan oyuncu kim?
+                    ${realCalendarIconHtml()} ${t('Günün Sorusu', 'Question of the Day')} (${currentBasketballLeague === 'nba' ? '🇺🇸 NBA' : t('🌍 Avrupa', '🌍 Europe')}) — ${t('İki takımda da oynayan oyuncu kim?', 'Who played for both teams?')}
                 </div>
                 <div style="display:flex; align-items:flex-start; gap: 20px; justify-content:center;">
                     ${teamBlockHtml(data.team1, data.player && data.player.team1Season)}
@@ -6227,11 +6465,11 @@
                     ${teamBlockHtml(data.team2, data.player && data.player.team2Season)}
                 </div>
                 <div id="bbDailyAttemptsList" style="width:100%; max-width:320px; display:flex; flex-direction:column; gap:4px;"></div>
-                <div id="bbDailyGuessCounter" style="font-size:0.7rem; opacity:0.6;">Tahmin: 0/5</div>
+                <div id="bbDailyGuessCounter" style="font-size:0.7rem; opacity:0.6;">${t('Tahmin', 'Guess')}: 0/5</div>
                 <div style="width:100%; max-width:320px; display:flex; flex-wrap:wrap; gap:8px; position:relative;">
-                    <input type="text" id="dailyGuessInput" placeholder="Tahminini yaz..." autocomplete="off" style="flex:1; padding:10px 12px; border-radius:3px; border:1px solid rgba(var(--fg-rgb),0.18); background:rgba(var(--fg-rgb),0.02); color:rgb(var(--fg-rgb)); font-size: 0.9rem; outline: none;">
+                    <input type="text" id="dailyGuessInput" placeholder="${t('Tahminini yaz...', 'Type your guess...')}" autocomplete="off" style="flex:1; padding:10px 12px; border-radius:3px; border:1px solid rgba(var(--fg-rgb),0.18); background:rgba(var(--fg-rgb),0.02); color:rgb(var(--fg-rgb)); font-size: 0.9rem; outline: none;">
                     <div id="dailyGuessDropdown" class="autocomplete-dropdown"></div>
-                    <button id="bbDailyGuessSubmitBtn" class="toolbar-btn" style="padding:8px 14px; font-size:0.72rem;">Tahmin Et</button>
+                    <button id="bbDailyGuessSubmitBtn" class="toolbar-btn" style="padding:8px 14px; font-size:0.72rem;">${t('Tahmin Et', 'Guess')}</button>
                 </div>
                 <div id="dailyQuestionStatus" style="font-size:0.78rem; font-weight: 600; color: rgb(var(--fg-rgb));">${bestTimeText}</div>
             </div>
@@ -6255,7 +6493,7 @@
             if (submitBtn) submitBtn.disabled = true;
             const statusEl = document.getElementById('dailyQuestionStatus');
             if (statusEl && revealAnswer) {
-                statusEl.textContent = `❌ Bugün bilemedin — doğru cevap: ${playerName}. Yarın tekrar dene!`;
+                statusEl.textContent = t(`❌ Bugün bilemedin — doğru cevap: ${playerName}. Yarın tekrar dene!`, `❌ You couldn't guess it today — the answer was: ${playerName}. Try again tomorrow!`);
             }
         }
 
@@ -6270,7 +6508,7 @@
             const isCorrect = guessNormalized === realNormalized || guessNormalized === surnameNormalized;
 
             bbAttempts++;
-            if (counterEl) counterEl.textContent = `Tahmin: ${bbAttempts}/${BB_MAX_ATTEMPTS}`;
+            if (counterEl) counterEl.textContent = `${t('Tahmin', 'Guess')}: ${bbAttempts}/${BB_MAX_ATTEMPTS}`;
 
             // 💡 Basketbolda mevki/uyruk verisi YOK (futboldaki gibi renkli ipucu
             // sütunları yapamıyoruz) — sadece doğru/yanlış olarak gösteriyoruz.
@@ -6305,8 +6543,8 @@
 
                 if (statusEl) {
                     statusEl.textContent = isNewBest
-                        ? `🎉 Doğru! ${elapsedSeconds} saniyede buldun — bugünkü yeni kişisel rekorun!`
-                        : `✅ Doğru! ${elapsedSeconds} saniyede buldun.`;
+                        ? t(`🎉 Doğru! ${elapsedSeconds} saniyede buldun — bugünkü yeni kişisel rekorun!`, `🎉 Correct! You found it in ${elapsedSeconds} seconds — new personal best today!`)
+                        : t(`✅ Doğru! ${elapsedSeconds} saniyede buldun.`, `✅ Correct! You found it in ${elapsedSeconds} seconds.`);
                     renderShareButton('dailyQuestionStatus', elapsedSeconds);
                 }
             } else if (bbAttempts >= BB_MAX_ATTEMPTS) {
@@ -9308,10 +9546,10 @@
         const visibleCount = Array.from(row.children).filter(el => {
             return window.getComputedStyle(el).display !== 'none';
         }).length;
-        row.style.justifyContent = visibleCount <= 1 ? 'center' : 'flex-start';
+        row.style.justifyContent = visibleCount <= 2 ? 'center' : 'flex-start';
         const rightArrow = document.getElementById('homeCardsRightArrow');
         const leftArrow = document.getElementById('homeCardsLeftArrow');
-        if (visibleCount <= 1) {
+        if (visibleCount <= 2) {
             if (rightArrow) rightArrow.style.display = 'none';
             if (leftArrow) leftArrow.style.display = 'none';
         } else {
@@ -9334,6 +9572,8 @@
             loadConnectionGame(); // 🔗 aynı akış, transfer bağlantısı oyunu
             const bbPollSection = document.getElementById('basketballPollSection');
             if (bbPollSection) bbPollSection.style.display = 'none';
+            const bbConnSection = document.getElementById('bbConnectionGameSection');
+            if (bbConnSection) bbConnSection.style.display = 'none';
         } else {
             const pollSection = document.getElementById('championshipPollSection');
             if (pollSection) pollSection.style.display = 'none';
@@ -9342,6 +9582,7 @@
             const connSection = document.getElementById('connectionGameSection');
             if (connSection) connSection.style.display = 'none';
             loadBasketballPoll(); // 🏀 basketbola dönünce göster
+            loadBasketballConnectionGame(); // 🏀 basketbola dönünce köprü oyunu
         }
         loadDailyPlayerBio(); // 📰/🏀 spor değişince doğru içerikle yeniden çiz
 

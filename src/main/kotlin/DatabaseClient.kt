@@ -1606,6 +1606,66 @@ object DatabaseClient {
     // indeksliyor — böylece her arama, bu ağır hesaplamayı tekrar tekrar
     // yapmak yerine hazır veriyi okuyor. Sunucu her başladığında çalışır ama
     // sütun zaten varsa ANINDA çıkar (tekrar tekrar migration yapmaz).
+    // 🏀 KÖPRÜ OYUNCUSU DOĞRULAMA (basketbol) — futboldaki verifyPlayerPlayedForClub
+    // ile AYNI mantık (isim eşleşmesi + en geç sınırdan önce/o anda katılım
+    // kontrolü), ama UYRUK ŞARTI YOK — çünkü bb_players/nba_players tablolarında
+    // uyruk verisi hiç bulunmuyor (kaynak veride yok, uydurmuyoruz).
+    fun verifyBasketballPlayerPlayedForTeam(playerName: String, teamName: String, league: String, startYear: Int? = null, endYear: Int? = null): Boolean {
+        val cleanName = playerName.trim()
+        if (cleanName.isEmpty()) return false
+        val targetNorm = stripAccentsForCompare(cleanName)
+        val teamStd = teamName.toStandardSearch()
+        val isNba = league == "nba"
+        val tableName = if (isNba) "nba_players" else "bb_players"
+        val teamColumn = "team_name_std"
+        val seasonColumn = if (isNba) "season" else "season_code"
+
+        val latestBoundary = listOfNotNull(startYear, endYear).minOrNull()
+        var found = false
+        var joinedInTime = latestBoundary == null
+        var earliestJoinYear: Int? = null
+
+        try {
+            withBbConnection { conn ->
+                val sql = "SELECT name, $teamColumn, $seasonColumn FROM $tableName WHERE ${sqlAccentStripExpr("name")} LIKE ? LIMIT 60"
+                conn.prepareStatement(sql).use { stmt ->
+                    stmt.setString(1, "%$targetNorm%")
+                    stmt.executeQuery().use { rs ->
+                        while (rs.next()) {
+                            val pName = rs.getString("name") ?: continue
+                            val nameNorm = stripAccentsForCompare(pName)
+                            val words = nameNorm.trim().split(Regex("\\s+"))
+                            val surnameNorm = words.lastOrNull() ?: ""
+                            val firstNameNorm = words.firstOrNull() ?: ""
+                            val isNicknameMatch = targetNorm.length >= 4 &&
+                                (firstNameNorm.startsWith(targetNorm) || surnameNorm.startsWith(targetNorm))
+                            if (nameNorm != targetNorm && surnameNorm != targetNorm && !isNicknameMatch) continue
+
+                            val rowTeam = rs.getString(teamColumn) ?: ""
+                            if (!(rowTeam.contains(teamStd) || teamStd.contains(rowTeam))) continue
+
+                            found = true
+                            val rawSeason = rs.getString(seasonColumn)
+                            val seasonYear = Regex("(19|20)\\d{2}").find(rawSeason ?: "")?.value?.toIntOrNull() ?: 0
+                            if (seasonYear > 0) {
+                                if (earliestJoinYear == null || seasonYear < earliestJoinYear!!) {
+                                    earliestJoinYear = seasonYear
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            println("verifyBasketballPlayerPlayedForTeam HATASI: ${e.message}")
+        }
+
+        if (latestBoundary != null && earliestJoinYear != null) {
+            joinedInTime = earliestJoinYear!! <= latestBoundary
+        }
+        return found && joinedInTime
+    }
+
     fun ensureNameStdColumn() {
         try {
             withConnection { conn ->
