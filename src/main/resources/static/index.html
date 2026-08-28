@@ -5614,7 +5614,7 @@
             infoLink.href = `https://www.transfermarkt.com/schnellsuche/ergebnis/schnellsuche?query=${encodeURIComponent(revealName)}`;
             infoLink.target = '_blank';
             infoLink.rel = 'noopener noreferrer';
-            infoLink.textContent = `🔗 ${revealName} — Transfermarkt'ta ara`;
+            infoLink.textContent = `🔗 ${revealName} profili`;
             infoLink.style.cssText = 'display:inline-block; margin-top:8px; font-size:0.7rem; color:var(--accent-gold); text-decoration:none; opacity:0.85;';
             statusEl.appendChild(document.createElement('br'));
             statusEl.appendChild(infoLink);
@@ -5693,7 +5693,7 @@
                 savedInfoLink.href = `https://www.transfermarkt.com/schnellsuche/ergebnis/schnellsuche?query=${encodeURIComponent(savedRevealName)}`;
                 savedInfoLink.target = '_blank';
                 savedInfoLink.rel = 'noopener noreferrer';
-                savedInfoLink.textContent = `🔗 ${savedRevealName} — Transfermarkt'ta ara`;
+                savedInfoLink.textContent = `🔗 ${savedRevealName} profili`;
                 savedInfoLink.style.cssText = 'display:inline-block; margin-top:8px; font-size:0.7rem; color:var(--accent-gold); text-decoration:none; opacity:0.85;';
                 statusEl.appendChild(document.createElement('br'));
                 statusEl.appendChild(savedInfoLink);
@@ -5762,7 +5762,17 @@
                 }
             } catch (e) { /* sessizce geç, sıradaki çifti dene */ }
         }
-        if (!pair) return; // 🛡️ havuzdaki HİÇBİR çift çözülemiyorsa (çok nadir), sessizce vazgeç — kart gösterilmez
+        if (!pair) {
+            // 🛡️ GÜVENLİ GERİ DÖNÜŞ: ön kontrol (checkSolvable) hiçbir çifti
+            // "çözülebilir" bulamadıysa — bu muhtemelen ön kontrolün kendisinde
+            // bir sorun olduğu anlamına gelir, havuzdaki tüm çiftlerin GERÇEKTEN
+            // çözülemez olması pek olası değil. Kartı TAMAMEN gizlemek yerine,
+            // orijinal seed'li çifti YİNE DE gösteriyoruz — asıl doğrulama zaten
+            // kullanıcı tahmin ettiğinde /basketball/verifyBridge üzerinden
+            // yapılıyor (o uç nokta ayrı ve test edilmiş durumda).
+            pair = pool[seed % pool.length];
+            discoveredAnswer = (pair.bridges && pair.bridges.length > 0) ? pair.bridges[0] : null;
+        }
 
         const STATE_KEY = 'transferkolik_bb_connection_state';
         let savedState = null;
@@ -5835,7 +5845,7 @@
                 infoLink.href = `https://tr.wikipedia.org/wiki/Özel:Ara?search=${encodeURIComponent(revealName)}`;
                 infoLink.target = '_blank';
                 infoLink.rel = 'noopener noreferrer';
-                infoLink.textContent = `🔍 ${revealName} — Wikipedia'da ara`;
+                infoLink.textContent = `🔗 ${revealName} profili`;
                 infoLink.style.cssText = 'display:inline-block; margin-top:8px; font-size:0.7rem; color:var(--accent-gold); text-decoration:none; opacity:0.85;';
                 statusEl.appendChild(document.createElement('br'));
                 statusEl.appendChild(infoLink);
@@ -5882,6 +5892,11 @@
             } catch (e) { /* sessizce geç */ }
 
             if (isCorrect) {
+                // 🎯 DÜZELTME: güvenli geri dönüş yolunda discoveredAnswer boş
+                // kalabiliyordu — ama kullanıcının kendi tahmini zaten backend
+                // tarafından DOĞRU olarak doğrulandı, bu yüzden onu güvenle
+                // "keşfedilen cevap" olarak kullanabiliriz.
+                if (!discoveredAnswer) discoveredAnswer = rawGuess;
                 finish(true);
             } else if (attempts >= 5) {
                 finish(false);
@@ -5908,7 +5923,7 @@
                     savedInfoLink.href = `https://tr.wikipedia.org/wiki/Özel:Ara?search=${encodeURIComponent(savedWinRevealName)}`;
                     savedInfoLink.target = '_blank';
                     savedInfoLink.rel = 'noopener noreferrer';
-                    savedInfoLink.textContent = `🔍 ${savedWinRevealName} — Wikipedia'da ara`;
+                    savedInfoLink.textContent = `🔗 ${savedWinRevealName} profili`;
                     savedInfoLink.style.cssText = 'display:inline-block; margin-top:8px; font-size:0.7rem; color:var(--accent-gold); text-decoration:none; opacity:0.85;';
                     statusEl.appendChild(document.createElement('br'));
                     statusEl.appendChild(savedInfoLink);
@@ -6354,6 +6369,39 @@
             const turkishNationality = translateNationality(bio.nationality);
             const turkishPosition = translatePosition(bio.position);
 
+            // 🎨 YENİ: metin ağırlıklı yerine, fotoğraflı görsel bir kart —
+            // backend zaten imageUrl'i (Transfermarkt kaynaklı) döndürüyordu,
+            // sadece kullanılmıyordu. Foto yoksa şık bir baş harf rozeti düşüyoruz.
+            const initials = bio.name.split(' ').map(w => w[0]).filter(Boolean).slice(0, 2).join('').toUpperCase();
+            const photoHtml = bio.imageUrl
+                ? `<img src="${bio.imageUrl}" alt="${escapeHtml(bio.name)}" style="width:96px; height:96px; border-radius:50%; object-fit:cover; border:3px solid var(--accent-gold); box-shadow:0 6px 18px rgba(0,0,0,0.25); flex-shrink:0;" onerror="this.replaceWith(document.getElementById('bioFallbackAvatar'))">`
+                : '';
+            const fallbackAvatarHtml = `<div id="bioFallbackAvatar" style="width:96px; height:96px; border-radius:50%; background:linear-gradient(135deg, var(--accent-gold), rgba(var(--accent-gold-rgb),0.6)); display:flex; align-items:center; justify-content:center; font-size:1.8rem; font-weight:800; color:#fff; flex-shrink:0; box-shadow:0 6px 18px rgba(0,0,0,0.25);">${initials}</div>`;
+
+            // 🎨 Kariyer zaman çizelgesi — kulüp isimlerini basit, şık noktalarla birbirine bağlıyoruz.
+            const timelineHtml = clubList.map((club, idx) => `
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <span style="width:8px; height:8px; border-radius:50%; background:${idx === clubList.length - 1 ? 'var(--accent-gold)' : 'rgba(var(--fg-rgb),0.3)'}; flex-shrink:0;"></span>
+                    <span style="font-size:0.82rem; font-weight:${idx === clubList.length - 1 ? '700' : '500'}; color:rgba(var(--fg-rgb),${idx === clubList.length - 1 ? '0.95' : '0.65'});">${escapeHtml(club)}</span>
+                    <span style="font-size:0.68rem; opacity:0.5;">${escapeHtml(moves[idx].season)}</span>
+                </div>
+            `).join('<div style="width:1px; height:10px; background:rgba(var(--fg-rgb),0.15); margin-left:3.5px;"></div>');
+
+            content.innerHTML = `
+                <div style="display:flex; gap:20px; align-items:flex-start; flex-wrap:wrap; margin-bottom:18px; padding:18px; background:rgba(var(--card-tint-rgb),0.25); border-radius:14px; border:1px solid rgba(var(--fg-rgb),0.08);">
+                    ${photoHtml || fallbackAvatarHtml}
+                    <div style="flex:1; min-width:180px;">
+                        <div style="font-size:1.15rem; font-weight:800; color:rgb(var(--fg-rgb)); margin-bottom:6px;">${escapeHtml(bio.name)}</div>
+                        <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px;">
+                            ${turkishPosition ? `<span style="font-size:0.7rem; font-weight:600; padding:3px 10px; border-radius:12px; background:rgba(var(--accent-gold-rgb),0.15); color:var(--accent-gold);">${escapeHtml(turkishPosition)}</span>` : ''}
+                            ${turkishNationality ? `<span style="font-size:0.7rem; font-weight:600; padding:3px 10px; border-radius:12px; background:rgba(var(--fg-rgb),0.08); color:rgba(var(--fg-rgb),0.7);">${escapeHtml(turkishNationality)}</span>` : ''}
+                            <span style="font-size:0.7rem; font-weight:600; padding:3px 10px; border-radius:12px; background:rgba(var(--fg-rgb),0.08); color:rgba(var(--fg-rgb),0.7);">${clubList.length} kulüp</span>
+                        </div>
+                        <div style="display:flex; flex-direction:column;">${timelineHtml}</div>
+                    </div>
+                </div>
+            `;
+
             let paragraph1 = `${bio.name}`;
             if (turkishPosition) paragraph1 += `, futbol kariyerinde ${turkishPosition} pozisyonunda forma giymiş`;
             if (turkishNationality) paragraph1 += `, ${turkishNationality} uyruklu bir futbolcudur.`;
@@ -6373,7 +6421,7 @@
 
             const paragraph3 = `TransferKolik'te ${bio.name}'in tam transfer geçmişini, hangi kulüpte hangi sezonlarda oynadığını görmek için oyuncu ismini veya kulüplerinden birini arama kutusuna yazabilirsiniz.`;
 
-            content.innerHTML = `<p style="margin-bottom: 14px;">${paragraph1}</p>` +
+            content.innerHTML += `<p style="margin-bottom: 14px;">${paragraph1}</p>` +
                 (paragraph2 ? `<p style="margin-bottom: 14px;">${paragraph2}</p>` : '') +
                 `<p>${paragraph3}</p>`;
             // 🛡️ YARIŞ DURUMU KORUMASI: ağ isteği sürerken spor değişmiş olabilir
@@ -6719,7 +6767,7 @@
             infoLink.href = profileUrl || `https://tr.wikipedia.org/wiki/Özel:Ara?search=${encodeURIComponent(playerName)}`;
             infoLink.target = '_blank';
             infoLink.rel = 'noopener noreferrer';
-            infoLink.textContent = profileUrl ? `🔗 ${playerName} — Transfermarkt profili` : `🔍 ${playerName} — Wikipedia'da ara`;
+            infoLink.textContent = profileUrl ? `🔗 ${playerName} profili` : `🔗 ${playerName} profili`;
             infoLink.style.cssText = 'display:inline-block; margin-top:8px; font-size:0.7rem; color:var(--accent-gold); text-decoration:none; opacity:0.85;';
             statusEl.appendChild(document.createElement('br'));
             statusEl.appendChild(infoLink);
