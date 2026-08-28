@@ -1620,10 +1620,20 @@ object DatabaseClient {
         val teamColumn = "team_name_std"
         val seasonColumn = if (isNba) "season" else "season_code"
 
-        val latestBoundary = listOfNotNull(startYear, endYear).minOrNull()
+        // 🎯 KESİN DÜZELTME: basketbol verisi futboldan FARKLI — her SEZON için
+        // ayrı kayıt var (futbolda sadece TRANSFER olayı vardı). Bu yüzden
+        // "en erken hangi yıl katıldı, o yıldan sonra hep orada kaldı" diye
+        // VARSAYMAK yerine, oyuncunun GERÇEKTEN o takımda olduğu TÜM sezonları
+        // topluyoruz ve hedef aralıkla GERÇEKTEN örtüşüyor mu diye bakıyoruz —
+        // araya bir ayrılık girmiş olsa bile (örn. Teodosić 2017'de CSKA'dan
+        // ayrılmışsa ve soru 2018-2020 arasını soruyorsa), artık YANLIŞLIKLA
+        // kabul edilmiyor.
+        val targetYears = listOfNotNull(startYear, endYear)
+        val minTarget = targetYears.minOrNull()
+        val maxTarget = targetYears.maxOrNull()
+
         var found = false
-        var joinedInTime = latestBoundary == null
-        var earliestJoinYear: Int? = null
+        val playerSeasonYears = mutableSetOf<Int>()
 
         try {
             withBbConnection { conn ->
@@ -1647,11 +1657,7 @@ object DatabaseClient {
                             found = true
                             val rawSeason = rs.getString(seasonColumn)
                             val seasonYear = Regex("(19|20)\\d{2}").find(rawSeason ?: "")?.value?.toIntOrNull() ?: 0
-                            if (seasonYear > 0) {
-                                if (earliestJoinYear == null || seasonYear < earliestJoinYear!!) {
-                                    earliestJoinYear = seasonYear
-                                }
-                            }
+                            if (seasonYear > 0) playerSeasonYears.add(seasonYear)
                         }
                     }
                 }
@@ -1660,9 +1666,15 @@ object DatabaseClient {
             println("verifyBasketballPlayerPlayedForTeam HATASI: ${e.message}")
         }
 
-        if (latestBoundary != null && earliestJoinYear != null) {
-            joinedInTime = earliestJoinYear!! <= latestBoundary
+        // 🎯 Yıl şartı yoksa (nadir), sadece isim+takım eşleşmesi yeterli.
+        if (minTarget == null || maxTarget == null) {
+            return found
         }
+        // 🎯 GERÇEK ÖRTÜŞME KONTROLÜ: oyuncunun kayıtlı sezonlarından EN AZ
+        // biri, hedef aralığın İÇİNDE (ya da 1 yıl toleransla sınırlarında) mı?
+        // Bu, "araya bir ayrılık girmiş" durumları doğru şekilde reddediyor.
+        val hasOverlap = playerSeasonYears.any { year -> year in (minTarget - 1)..(maxTarget + 1) }
+        val joinedInTime = hasOverlap
         return found && joinedInTime
     }
 
