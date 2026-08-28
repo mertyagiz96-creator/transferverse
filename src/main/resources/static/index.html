@@ -7432,7 +7432,7 @@
                     // hâli). Üst üste binmeyi önlemek için, sadece bu kartın
                     // kendi z-index'ini GEÇİCİ olarak çok yükseltiyoruz — böylece
                     // içindeki dropdown, diğer kardeş kartların üzerine çıkıyor.
-                    const parentCard = input.closest('.daily-question-box, #connectionGameSection, #transferFeeQuizSection, #dailyQuestionCard');
+                    const parentCard = input.closest('#dailyQuestionCard, #connectionGameSection, #transferFeeQuizSection');
                     if (parentCard) {
                         parentCard.style.position = 'relative';
                         parentCard.style.zIndex = '600';
