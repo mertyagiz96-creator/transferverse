@@ -4,65 +4,79 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Kullanım Şartları | TransferKolik</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Oswald:wght@500;600;700&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --light-green-rgb: 143, 174, 152;
-            --accent-gold: #c9a961;
-            --fg-rgb: 242, 240, 236;
-            --surface-strong-rgb: 20, 23, 15;
-            --bg-gradient: linear-gradient(180deg, #14190f 0%, #1c2318 100%);
-        }
-        body.theme-sunset {
-            --light-green-rgb: 207, 154, 118;
-            --accent-gold: #dcb373;
-            --bg-gradient: linear-gradient(180deg, #241209 0%, #2e180d 100%);
-        }
-        body.theme-night {
-            --light-green-rgb: 139, 152, 207;
-            --accent-gold: #a3b6e6;
-            --bg-gradient: linear-gradient(180deg, #0e111c 0%, #151a2a 100%);
-        }
-        body.theme-light {
-            --light-green-rgb: 95, 138, 108;
-            --accent-gold: #9c7a35;
-            --fg-rgb: 26, 28, 24;
-            --surface-strong-rgb: 255, 255, 255;
-            --bg-gradient: linear-gradient(180deg, #faf9f6 0%, #f1efe9 100%);
-        }
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
-            background: var(--bg-gradient);
-            color: rgb(var(--fg-rgb));
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: linear-gradient(180deg, #fbfbfd 0%, #f5f5f7 100%);
+            color: #1d1d1f;
             min-height: 100vh;
-            padding: 40px 20px;
+            padding: 40px 20px 70px;
             display: flex;
             flex-direction: column;
             align-items: center;
-            transition: background 0.4s ease, color 0.4s ease;
         }
-        .container { width: 100%; max-width: 800px; background: rgba(var(--fg-rgb), 0.025); border: 1px solid rgba(var(--fg-rgb), 0.09); border-radius: 10px; padding: 40px; }
-        a.back-link { display: inline-block; margin-bottom: 24px; color: var(--accent-gold); text-decoration: none; font-size: 0.85rem; font-weight: 600; }
-        a.back-link:hover { text-decoration: underline; }
-        h1 { font-size: 1.6rem; font-weight: 800; color: var(--accent-gold); margin-bottom: 8px; }
-        .updated { font-size: 0.78rem; color: rgba(var(--fg-rgb), 0.5); margin-bottom: 28px; }
-        h2 { font-size: 1.05rem; font-weight: 700; color: rgb(var(--fg-rgb)); margin-top: 28px; margin-bottom: 10px; }
-        p, li { font-size: 0.92rem; line-height: 1.7; color: rgba(var(--fg-rgb), 0.85); }
+        .container {
+            width: 100%;
+            max-width: 760px;
+            background: rgba(0,0,0,0.02);
+            border: 1px solid rgba(0,0,0,0.06);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+            border-radius: 18px;
+            padding: 40px;
+        }
+        a.back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 14px;
+            border-radius: 20px;
+            background: rgba(0,0,0,0.04);
+            border: 1px solid rgba(0,0,0,0.08);
+            color: rgba(29,29,31,0.75);
+            text-decoration: none;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-bottom: 28px;
+            transition: background 0.2s ease, transform 0.2s ease;
+        }
+        a.back-link:hover { background: rgba(0,0,0,0.07); transform: translateY(-1px); }
+        h1 {
+            font-family: 'Oswald', sans-serif;
+            font-size: 1.7rem;
+            font-weight: 600;
+            letter-spacing: 0.3px;
+            color: #1d1d1f;
+            margin-bottom: 8px;
+        }
+        .updated { font-size: 0.78rem; color: rgba(29,29,31,0.5); margin-bottom: 28px; }
+        h2 {
+            font-family: 'Oswald', sans-serif;
+            font-size: 1.05rem;
+            font-weight: 600;
+            letter-spacing: 0.2px;
+            color: #1d1d1f;
+            margin-top: 30px;
+            margin-bottom: 10px;
+        }
+        p, li { font-size: 0.92rem; line-height: 1.75; color: rgba(29,29,31,0.8); }
         ul { margin: 10px 0 10px 20px; }
         li { margin-bottom: 6px; }
-        strong { color: var(--accent-gold); }
-        .footer-note { margin-top: 36px; padding-top: 20px; border-top: 1px solid rgba(var(--fg-rgb), 0.09); font-size: 0.78rem; color: rgba(var(--fg-rgb), 0.5); }
+        strong { color: #0071e3; }
+        a { color: #0071e3; }
+        .footer-note {
+            margin-top: 36px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(0,0,0,0.08);
+            font-size: 0.78rem;
+            color: rgba(29,29,31,0.5);
+        }
     </style>
 </head>
 <body>
-<script>
-    try {
-        const savedTheme = localStorage.getItem('transferkolik_theme');
-        if (savedTheme && savedTheme !== 'green') {
-            document.body.classList.add('theme-' + savedTheme);
-        }
-    } catch (e) {}
-</script>
 <div class="container">
     <a href="/" class="back-link">← Ana Sayfaya Dön</a>
     <h1>Kullanım Şartları</h1>
@@ -97,7 +111,7 @@
     <p>TransferKolik, site kullanımından doğabilecek doğrudan veya dolaylı zararlardan sorumlu tutulamaz. Site, herhangi bir garanti verilmeksizin, "olduğu gibi" sunulmaktadır.</p>
 
     <h2>6. Reklamlar</h2>
-    <p>Site, Google AdSense aracılığıyla reklam gösterebilir. Reklamlarla ilgili detaylar için <a href="/gizlilik.html" style="color:var(--accent-gold);">Gizlilik Politikası</a> sayfamıza bakabilirsiniz.</p>
+    <p>Site, Google AdSense aracılığıyla reklam gösterebilir. Reklamlarla ilgili detaylar için <a href="/gizlilik.html">Gizlilik Politikası</a> sayfamıza bakabilirsiniz.</p>
 
     <h2>7. Değişiklikler</h2>
     <p>Bu kullanım şartları önceden haber verilmeksizin güncellenebilir. Siteyi kullanmaya devam etmeniz, güncellenmiş şartları kabul ettiğiniz anlamına gelir.</p>

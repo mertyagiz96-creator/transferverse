@@ -1287,13 +1287,13 @@
             right: 0;
             margin-top: 6px;
             background: rgb(var(--surface-strong-rgb));
-            border: 1px solid rgba(var(--light-green-rgb), 0.25);
+            border: 1px solid rgba(var(--light-green-rgb), 0.35);
             border-radius: 10px;
             max-height: 260px;
             overflow-y: auto;
             overscroll-behavior: contain;
-            z-index: 100;
-            box-shadow: 0 12px 28px rgba(0, 0, 0, 0.45), 0 2px 8px rgba(0, 0, 0, 0.25);
+            z-index: 500;
+            box-shadow: 0 16px 36px rgba(0, 0, 0, 0.35), 0 4px 12px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(var(--accent-gold-rgb), 0.15);
             padding: 6px;
         }
 
@@ -3138,7 +3138,9 @@
         'besiktas': 'https://tmssl.akamaized.net//images/wappen/head/114.png?lm=1741019298',
         'trabzonspor': 'https://tmssl.akamaized.net//images/wappen/head/449.png?lm=1727269339',
         'manchester united': 'https://tmssl.akamaized.net//images/wappen/head/985.png?lm=1457975903',
+        'man utd': 'https://tmssl.akamaized.net//images/wappen/head/985.png?lm=1457975903',
         'manchester city': 'https://tmssl.akamaized.net//images/wappen/head/281.png?lm=1467356331',
+        'man city': 'https://tmssl.akamaized.net//images/wappen/head/281.png?lm=1467356331',
         'liverpool': 'https://tmssl.akamaized.net//images/wappen/head/31.png?lm=1727873452',
         'chelsea': 'https://tmssl.akamaized.net//images/wappen/head/631.png?lm=1682435911',
         'arsenal': 'https://tmssl.akamaized.net//images/wappen/head/11.png?lm=1489787850',
@@ -7283,6 +7285,7 @@
         let debounceTimer = null;
         let activeIndex = -1;
         let currentAbortController = null; // 🚀 hızlı yazarken eski (artık gereksiz) istekleri iptal etmek için
+        let desktopScrollHandler = null; // 🎯 masaüstünde sayfa kaydırmasını takip eden dinleyici referansı
 
         function closeDropdown() {
             dropdown.style.display = 'none';
@@ -7295,6 +7298,10 @@
             dropdown.style.left = '';
             dropdown.style.width = '';
             dropdown.style.zIndex = '';
+            if (desktopScrollHandler) {
+                window.removeEventListener('scroll', desktopScrollHandler, true);
+                desktopScrollHandler = null;
+            }
         }
 
         function updateActiveHighlight() {
@@ -7377,6 +7384,22 @@
                     if (dropdown.parentElement !== document.body) {
                         document.body.appendChild(dropdown);
                     }
+                    const repositionForScroll = () => {
+                        if (dropdown.style.display === 'none') return;
+                        const r = input.getBoundingClientRect();
+                        // 🎯 DÜZELTME: girdi ekrandan tamamen çıkarsa (kullanıcı
+                        // yukarı/aşağı çok kaydırdıysa), dropdown'ı AÇIK bırakmak
+                        // yerine kapatıyoruz — bağlamı kaybolmuş bir kutunun
+                        // ekranda asılı kalması kafa karıştırıcı olurdu.
+                        const stillVisible = r.bottom > 0 && r.top < window.innerHeight;
+                        if (!stillVisible) {
+                            closeDropdown();
+                            return;
+                        }
+                        dropdown.style.top = (r.bottom + 4) + 'px';
+                        dropdown.style.left = r.left + 'px';
+                        dropdown.style.width = r.width + 'px';
+                    };
                     const rect = input.getBoundingClientRect();
                     dropdown.style.position = 'fixed';
                     dropdown.style.top = (rect.bottom + 4) + 'px';
@@ -7385,6 +7408,13 @@
                     dropdown.style.right = 'auto';
                     dropdown.style.margin = '0';
                     dropdown.style.zIndex = '2000';
+                    // 🎯 YENİ: sayfa kaydırıldığında dropdown'ı girdiyle birlikte
+                    // hareket ettiriyoruz — masaüstünde mobil klavye zamanlama
+                    // sorunu OLMADIĞI için, basit bir scroll dinleyicisi burada
+                    // güvenle yeterli (karmaşık interval'a gerek yok).
+                    if (desktopScrollHandler) window.removeEventListener('scroll', desktopScrollHandler, true);
+                    desktopScrollHandler = repositionForScroll;
+                    window.addEventListener('scroll', desktopScrollHandler, true);
                 }
             } catch (e) {
                 if (e.name === 'AbortError') return; // 💡 beklenen durum — daha yeni bir istek bunun yerine geçti, bir şey yapma

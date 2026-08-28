@@ -542,6 +542,21 @@ fun main() {
                             border-color: rgba(0,113,227,0.25);
                         }
                         .subtitle { color: rgba(29,29,31,0.55); font-size: 0.9rem; margin-top: -4px; margin-bottom: 28px; }
+                        .sport-filter-bar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+                        .sport-filter-btn {
+                            padding: 8px 16px;
+                            border-radius: 20px;
+                            border: 1px solid rgba(0,0,0,0.1);
+                            background: rgba(0,0,0,0.03);
+                            color: rgba(29,29,31,0.7);
+                            font-size: 0.82rem;
+                            font-weight: 600;
+                            font-family: 'Inter', sans-serif;
+                            cursor: pointer;
+                            transition: background 0.2s ease, color 0.2s ease, transform 0.15s ease;
+                        }
+                        .sport-filter-btn:hover { transform: translateY(-1px); background: rgba(0,0,0,0.06); }
+                        .sport-filter-btn.active { background: #0071e3; color: #fff; border-color: #0071e3; }
                     </style>
                 </head>
                 <body>
@@ -569,12 +584,33 @@ fun main() {
                     """
                     <h1>Bonservissiz Yazarın Kaleminden — Haftanın Blogları</h1>
                     <p class="subtitle">Futbol, basketbol ve Formula 1 tarihinin en dramatik, en şaşırtıcı transfer anları.</p>
-                    <h2>⚽ Futbol</h2>
-                    <div class="article-list">$footballHtml</div>
-                    <h2>🏀 Basketbol</h2>
-                    <div class="article-list">$basketballHtml</div>
-                    <h2>🏎️ Formula 1</h2>
-                    <div class="article-list">$f1Html</div>
+                    <div class="sport-filter-bar">
+                        <button class="sport-filter-btn active" data-filter="all" onclick="filterBlogBySport('all', this)">Tümü</button>
+                        <button class="sport-filter-btn" data-filter="futbol" onclick="filterBlogBySport('futbol', this)">⚽ Futbol</button>
+                        <button class="sport-filter-btn" data-filter="basketbol" onclick="filterBlogBySport('basketbol', this)">🏀 Basketbol</button>
+                        <button class="sport-filter-btn" data-filter="f1" onclick="filterBlogBySport('f1', this)">🏎️ Formula 1</button>
+                    </div>
+                    <div class="sport-section" data-sport="futbol">
+                        <h2>⚽ Futbol</h2>
+                        <div class="article-list">$footballHtml</div>
+                    </div>
+                    <div class="sport-section" data-sport="basketbol">
+                        <h2>🏀 Basketbol</h2>
+                        <div class="article-list">$basketballHtml</div>
+                    </div>
+                    <div class="sport-section" data-sport="f1">
+                        <h2>🏎️ Formula 1</h2>
+                        <div class="article-list">$f1Html</div>
+                    </div>
+                    <script>
+                        function filterBlogBySport(sport, btn) {
+                            document.querySelectorAll('.sport-filter-btn').forEach(b => b.classList.remove('active'));
+                            btn.classList.add('active');
+                            document.querySelectorAll('.sport-section').forEach(sec => {
+                                sec.style.display = (sport === 'all' || sec.dataset.sport === sport) ? '' : 'none';
+                            });
+                        }
+                    </script>
                     """.trimIndent(),
                     "Futbol, basketbol ve Formula 1 dünyasının en dramatik ve şaşırtıcı transfer hikayeleri — TransferKolik Blog."
                 )
