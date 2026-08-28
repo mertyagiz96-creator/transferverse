@@ -5148,6 +5148,7 @@
         document.getElementById('yearFilterWrapper').style.display = '';
         document.getElementById('resultsTableHead').style.display = '';
         document.getElementById('duelModeBtn').style.display = '';
+        document.getElementById('transfermatikModeBtn').style.display = ''; // 🎯 DÜZELTME: girişte gizlendiği için çıkışta da geri açılması lazım
         document.getElementById('resultsTable').innerHTML = ''; // 💡 quiz kartı anında kaybolsun
         showIdleSearchState();
     }
@@ -5689,7 +5690,7 @@
 
     // 🏀 Basketbol köprü oyunu — futboldaki loadConnectionGame ile AYNI ruhta,
     // ama uyruk ipucu YOK ve gün bazında %50 Avrupa / %50 NBA arasında dönüyor.
-    function loadBasketballConnectionGame() {
+    async function loadBasketballConnectionGame() {
         const section = document.getElementById('bbConnectionGameSection');
         const content = document.getElementById('bbConnectionGameContent');
         if (!section || !content) return;
@@ -5709,7 +5710,36 @@
         const league = (leagueSeed % 2 === 0) ? 'europe' : 'nba'; // 🎯 %50/%50 günlük dönüşüm
         const pool = league === 'nba' ? BB_CONNECTION_POOL_NBA : BB_CONNECTION_POOL_EUROPE;
         const seed = seededHash(today + '-bb-connection-game');
-        const pair = pool[seed % pool.length];
+
+        // 🎯 YENİ: soruyu göstermeden ÖNCE, gerçekten çözülebilir olduğunu
+        // doğruluyoruz — havuzdaki her çift için "bridges" listesi boş
+        // bırakılmıştı (spesifik isimlerden emin olmadığım için), yani bir
+        // köprünün GERÇEKTEN var olduğu hiç garanti edilmemişti. Seed'li
+        // çift çözülemezse, havuzdaki DİĞER çiftleri sırayla deniyoruz.
+        let pair = null;
+        let discoveredAnswer = null; // 🎯 YENİ: çözülebilirlik kontrolünün bulduğu ismi saklıyoruz — 5 hak biterse GERÇEK cevabı gösterebilmek için
+        for (let i = 0; i < pool.length; i++) {
+            const candidate = pool[(seed + i) % pool.length];
+            // Eğer bu girişin hazır (doğrulanmış) bir cevabı varsa, sorgusuz güvenebiliriz.
+            if (candidate.bridges && candidate.bridges.length > 0) {
+                pair = candidate;
+                discoveredAnswer = candidate.bridges[0];
+                break;
+            }
+            try {
+                const params = new URLSearchParams({
+                    team: candidate.team, league: league,
+                    startYear: candidate.startYear, endYear: candidate.endYear,
+                    exclude: [candidate.start, candidate.end].join(',')
+                });
+                const res = await fetch(`/basketball/checkSolvable?${params.toString()}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.solvable) { pair = candidate; discoveredAnswer = data.answer; break; }
+                }
+            } catch (e) { /* sessizce geç, sıradaki çifti dene */ }
+        }
+        if (!pair) return; // 🛡️ havuzdaki HİÇBİR çift çözülemiyorsa (çok nadir), sessizce vazgeç — kart gösterilmez
 
         const STATE_KEY = 'transferkolik_bb_connection_state';
         let savedState = null;
@@ -5762,14 +5792,14 @@
             guessInput.disabled = true;
             submitBtn.disabled = true;
             if (won) playCorrectSound();
-            const hasKnownAnswer = pair.bridges && pair.bridges.length > 0;
+            const revealName = (pair.bridges && pair.bridges.length > 0) ? pair.bridges[0] : discoveredAnswer;
             statusEl.textContent = won
                 ? t(`🎉 Doğru! ${attempts} denemede bağlantıyı kurdun.`, `🎉 Correct! You made the connection in ${attempts} tries.`)
-                : hasKnownAnswer
-                    ? t(`Bugünkü bağlantı: ${pair.bridges[0]}. Yarın tekrar dene!`, `Today's connection: ${pair.bridges[0]}. Try again tomorrow!`)
+                : revealName
+                    ? t(`Bugünkü bağlantı: ${revealName}. Yarın tekrar dene!`, `Today's connection: ${revealName}. Try again tomorrow!`)
                     : t('Bugün bulamadın. Yarın tekrar dene!', "Couldn't find it today. Try again tomorrow!");
             try {
-                localStorage.setItem(STATE_KEY, JSON.stringify({ date: today, attempts, solved: won, pair, league }));
+                localStorage.setItem(STATE_KEY, JSON.stringify({ date: today, attempts, solved: won, pair, league, revealName }));
             } catch (e) { /* sessizce geç */ }
         }
 
@@ -5836,8 +5866,9 @@
             } else {
                 guessInput.disabled = true;
                 submitBtn.disabled = true;
-                statusEl.textContent = (pair.bridges && pair.bridges.length > 0)
-                    ? t(`Bugünkü bağlantı: ${pair.bridges[0]}. Yarın tekrar dene!`, `Today's connection: ${pair.bridges[0]}. Try again tomorrow!`)
+                const savedRevealName = savedState.revealName || (pair.bridges && pair.bridges.length > 0 ? pair.bridges[0] : null);
+                statusEl.textContent = savedRevealName
+                    ? t(`Bugünkü bağlantı: ${savedRevealName}. Yarın tekrar dene!`, `Today's connection: ${savedRevealName}. Try again tomorrow!`)
                     : t('Bugün bulamadın. Yarın tekrar dene!', "Couldn't find it today. Try again tomorrow!");
             }
         }
@@ -5944,6 +5975,21 @@
                 });
                 feedback.appendChild(document.createElement('br'));
                 feedback.appendChild(shareBtn);
+
+                // 🔍 YENİ: iki oyuncu için de meraklısına Wikipedia arama linki.
+                const infoWrap = document.createElement('div');
+                infoWrap.style.cssText = 'margin-top:8px; font-size:0.7rem;';
+                [t1.player, t2.player].forEach((pName, idx) => {
+                    const infoLink = document.createElement('a');
+                    infoLink.href = `https://www.google.com/search?q=${encodeURIComponent(pName + ' wikipedia')}`;
+                    infoLink.target = '_blank';
+                    infoLink.rel = 'noopener noreferrer';
+                    infoLink.textContent = `🔍 ${pName}`;
+                    infoLink.style.cssText = 'color:var(--accent-gold); text-decoration:none; opacity:0.85;';
+                    infoWrap.appendChild(infoLink);
+                    if (idx === 0) infoWrap.appendChild(document.createTextNode('   •   '));
+                });
+                feedback.appendChild(infoWrap);
             }
         } else {
             content.querySelectorAll('.fee-quiz-option').forEach(el => {
@@ -6545,7 +6591,7 @@
                     statusEl.textContent = isNewBest
                         ? t(`🎉 Doğru! ${elapsedSeconds} saniyede buldun — bugünkü yeni kişisel rekorun!`, `🎉 Correct! You found it in ${elapsedSeconds} seconds — new personal best today!`)
                         : t(`✅ Doğru! ${elapsedSeconds} saniyede buldun.`, `✅ Correct! You found it in ${elapsedSeconds} seconds.`);
-                    renderShareButton('dailyQuestionStatus', elapsedSeconds);
+                    renderShareButton('dailyQuestionStatus', elapsedSeconds, null, playerName);
                 }
             } else if (bbAttempts >= BB_MAX_ATTEMPTS) {
                 lockBbRound(true);
@@ -6585,7 +6631,7 @@
         }
     }
 
-    function renderShareButton(containerId, elapsedSeconds, guessGrid) {
+    function renderShareButton(containerId, elapsedSeconds, guessGrid, playerName, profileUrl) {
         const statusEl = document.getElementById(containerId);
         if (!statusEl) return;
         const today = getTodayDateString();
@@ -6609,6 +6655,23 @@
         });
         statusEl.appendChild(document.createElement('br'));
         statusEl.appendChild(shareBtn);
+
+        // 🔍 YENİ: cevabı gösterdikten sonra, merak eden kullanıcı için bir
+        // "daha fazla bilgi" linki. GERÇEK Transfermarkt profil linki
+        // (slug+playerId varsa — futbol Günün Sorusu'nda artık mevcut)
+        // ÖNCELİKLİ kullanılıyor; yoksa (basketbol, Pahalı Transfer'in eski
+        // havuzu gibi kesin ID'si olmayan durumlarda), her zaman doğru
+        // sonuca ulaşan Wikipedia arama linkine düşüyoruz.
+        if (playerName) {
+            const infoLink = document.createElement('a');
+            infoLink.href = profileUrl || `https://www.google.com/search?q=${encodeURIComponent(playerName + ' wikipedia')}`;
+            infoLink.target = '_blank';
+            infoLink.rel = 'noopener noreferrer';
+            infoLink.textContent = profileUrl ? `🔗 ${playerName} — Transfermarkt profili` : `🔍 ${playerName} hakkında daha fazla bilgi`;
+            infoLink.style.cssText = 'display:inline-block; margin-top:8px; font-size:0.7rem; color:var(--accent-gold); text-decoration:none; opacity:0.85;';
+            statusEl.appendChild(document.createElement('br'));
+            statusEl.appendChild(infoLink);
+        }
     }
 
     function getDailyBestTimeText(today) {
@@ -7503,7 +7566,7 @@
             const tableWrapper = document.querySelector('.table-wrapper');
             const sections = ['dailyQuestionCard', 'connectionGameSection', 'championshipPollSection',
                 'basketballPollSection', 'transferFeeQuizSection', 'dailyPlayerBioSection',
-                'blogLinkSection', 'aboutContentSection', 'basketballCoverageNote'];
+                'blogLinkSection', 'aboutContentSection', 'basketballCoverageNote', 'bbConnectionGameSection'];
             sections.forEach(id => {
                 const el = document.getElementById(id);
                 if (el) el.style.display = 'none';
@@ -7670,7 +7733,7 @@
                     // hâli). Üst üste binmeyi önlemek için, sadece bu kartın
                     // kendi z-index'ini GEÇİCİ olarak çok yükseltiyoruz — böylece
                     // içindeki dropdown, diğer kardeş kartların üzerine çıkıyor.
-                    const parentCard = input.closest('#dailyQuestionCard, #connectionGameSection, #transferFeeQuizSection');
+                    const parentCard = input.closest('#dailyQuestionCard, #connectionGameSection, #transferFeeQuizSection, #bbConnectionGameSection');
                     if (parentCard) {
                         parentCard.style.position = 'relative';
                         parentCard.style.zIndex = '600';
@@ -7818,6 +7881,9 @@
         const targetAge = computeAgeFromBirthDate(found.birthDate);
         const targetNationality = found.nationality || '';
         const targetPosition = found.position || '';
+        // 🔗 YENİ: kulüp aramasındaki AYNI güvenli desen — slug+playerId'nin
+        // İKİSİ de varsa gerçek Transfermarkt profiline bağlanıyoruz.
+        const profileUrl = (found.slug && found.playerId) ? `https://www.transfermarkt.com/${found.slug}/profil/spieler/${found.playerId}` : null;
 
         function clubBlockHtml(club) {
             const flag = getFlagEmoji(club.club);
@@ -7937,7 +8003,7 @@
                 statusEl.textContent = isNewBest
                     ? `🎉 Doğru! ${guessCount}/5 tahminde buldun — bugünkü yeni kişisel rekorun!`
                     : `✅ Doğru! ${guessCount}/5 tahminde buldun.`;
-                renderShareButton('dailyQuestionStatus', elapsedSeconds, emojiGrid);
+                renderShareButton('dailyQuestionStatus', elapsedSeconds, emojiGrid, cleanFullName, profileUrl);
             }
             try {
                 localStorage.setItem('transferkolik_daily_wordle_state', JSON.stringify({ date: today, solved: true, guessCount, emojiGrid, historyHtmlList, playerName: cleanFullName }));
@@ -8045,7 +8111,7 @@
                 lockRound();
                 if (statusEl) {
                     statusEl.textContent = `✅ Bugün bu soruyu ${guessCount}/5 tahminde bilmiştin!`;
-                    renderShareButton('dailyQuestionStatus', 0, emojiGrid);
+                    renderShareButton('dailyQuestionStatus', 0, emojiGrid, cleanFullName, profileUrl);
                 }
             } else if (savedState.inProgress) {
                 // 💡 Round DEVAM EDİYOR (5 hak dolmamış) — kilitleme, kaldığı yerden sürsün.
@@ -8099,12 +8165,15 @@
         if (feeQuizEnter) feeQuizEnter.style.display = 'none';
         const connEnter = document.getElementById('connectionGameSection');
         if (connEnter) connEnter.style.display = 'none';
+        const bbConnEnter1 = document.getElementById('bbConnectionGameSection');
+        if (bbConnEnter1) bbConnEnter1.style.display = 'none';
         document.getElementById('luckyModeBtn').style.display = 'none';
         document.getElementById('hunterModeWrapper').style.display = 'none';
         document.getElementById('yearFilterWrapper').style.display = 'none';
         document.getElementById('mainGuessRow').style.display = 'none';
         document.getElementById('resultsTableHead').style.display = 'none';
         document.getElementById('playerModeBtn').style.display = 'none';
+        document.getElementById('transfermatikModeBtn').style.display = 'none'; // 🎯 DÜZELTME: tutarlılık için, diğer modlarla aynı
         document.getElementById('homeMenuBtn').style.display = '';
 
         renderDuelSetupScreen();
@@ -8141,6 +8210,7 @@
         document.getElementById('yearFilterWrapper').style.display = '';
         document.getElementById('resultsTableHead').style.display = '';
         document.getElementById('playerModeBtn').style.display = '';
+        document.getElementById('transfermatikModeBtn').style.display = ''; // 🎯 DÜZELTME: girişte gizlendiği için çıkışta da geri açılması lazım
         document.getElementById('homeMenuBtn').style.display = 'none';
 
         showIdleSearchState();
@@ -8727,6 +8797,8 @@
             if (feeQuizPlayerEnter) feeQuizPlayerEnter.style.display = 'none';
             const connPlayerEnter = document.getElementById('connectionGameSection');
             if (connPlayerEnter) connPlayerEnter.style.display = 'none';
+            const bbConnPlayerEnter = document.getElementById('bbConnectionGameSection');
+            if (bbConnPlayerEnter) bbConnPlayerEnter.style.display = 'none';
             luckyBtn.style.display = 'none';
             hunterWrapper.style.display = 'none';
             yearWrapper.style.display = 'none';
@@ -8734,6 +8806,7 @@
             document.getElementById('mainGuessInput').value = '';
             tableHead.style.display = 'none';
             document.getElementById('duelModeBtn').style.display = 'none';
+            document.getElementById('transfermatikModeBtn').style.display = 'none'; // 🎯 DÜZELTME: eskiden gizlenmiyordu, kısa süre görünür kalıp titremeye yol açıyordu
             document.getElementById('resultsTable').innerHTML = ''; // 💡 eski "İki kulüp seçip Ara'ya basın" mesajı anında kaybolsun
             renderQuizModeSelectScreen(); // 🇹🇷 Genel Mod / Türkiye Ligi Modu seçimi
         });

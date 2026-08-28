@@ -22,7 +22,9 @@ data class MultiClubPlayerResult(
     val clubs: List<ClubSeason>,
     val imageUrl: String? = null,
     val nationality: String? = null,
-    val birthDate: String? = null
+    val birthDate: String? = null,
+    val playerId: Int? = null,
+    val slug: String? = null
 )
 
 @Serializable
@@ -1378,10 +1380,16 @@ object DatabaseClient {
             JOIN transfers t ON p.id = t.transfer_id
         """.trimIndent()
 
-        val latestBoundary = listOfNotNull(startYear, endYear).minOrNull()
+        val minTarget = listOfNotNull(startYear, endYear).minOrNull()
+        val maxTarget = listOfNotNull(startYear, endYear).maxOrNull()
         var found = false
-        var joinedInTimeForOverlap = latestBoundary == null
-        var earliestJoinYear: Int? = null
+        // 🎯 KESİN DÜZELTME: eskiden sadece "en erken katılım yılı" bakılıyordu
+        // — oyuncu SONRADAN ayrılmış olsa bile fark edilmiyordu (basketbolda
+        // bulduğumuz AYNI hata). Artık her transfer kaydını "VARIŞ" (to_club
+        // eşleşirse) ya da "AYRILIŞ" (from_club eşleşirse) olarak işaretleyip,
+        // GERÇEK dönemleri (örn. 2010'da geldi, 2014'te ayrıldı) hesaplıyoruz.
+        val arrivals = mutableListOf<Int>()
+        val departures = mutableListOf<Int>()
 
         try {
             fun tryPattern(likePattern: String) {
@@ -1410,17 +1418,15 @@ object DatabaseClient {
 
                                 val fromClub = rs.getString("from_club") ?: ""
                                 val toClub = rs.getString("to_club") ?: ""
-                                val clubMatches = clubVariants.any { variant ->
-                                    matchesOriginalClub(fromClub, variant) || matchesOriginalClub(toClub, variant)
-                                }
-                                if (!clubMatches) continue
+                                val isArrival = clubVariants.any { matchesOriginalClub(toClub, it) }
+                                val isDeparture = clubVariants.any { matchesOriginalClub(fromClub, it) }
+                                if (!isArrival && !isDeparture) continue
 
                                 found = true
                                 val seasonYear = parseSeasonToSortValue(rs.getString("season"))
                                 if (seasonYear > 0) {
-                                    if (earliestJoinYear == null || seasonYear < earliestJoinYear!!) {
-                                        earliestJoinYear = seasonYear
-                                    }
+                                    if (isArrival) arrivals.add(seasonYear)
+                                    if (isDeparture) departures.add(seasonYear)
                                 }
                             }
                         }
@@ -1433,11 +1439,36 @@ object DatabaseClient {
             println("verifyPlayerPlayedForClub HATASI: ${e.message}")
         }
 
-        if (latestBoundary != null && earliestJoinYear != null) {
-            joinedInTimeForOverlap = earliestJoinYear!! <= latestBoundary
+        // 🎯 Yıl şartı yoksa, sadece isim+kulüp eşleşmesi yeterli.
+        if (minTarget == null || maxTarget == null) {
+            return found
         }
+        if (!found) return false
 
-        return found && joinedInTimeForOverlap
+        // 🎯 GERÇEK DÖNEM HESABI: varışları sıralayıp, her biri için bir SONRAKİ
+        // ayrılışı eşleştiriyoruz — böylece "2010'da geldi, 2014'te ayrıldı"
+        // gibi GERÇEK aralıklar oluşuyor. Eşleşecek ayrılış yoksa (hâlâ orada
+        // ya da veri eksik), dönem AÇIK UÇLU kabul ediliyor.
+        val sortedArrivals = arrivals.sorted()
+        val sortedDepartures = departures.sorted().toMutableList()
+        val intervals = mutableListOf<Pair<Int, Int?>>() // (başlangıç, bitiş-veya-null)
+        for (arrival in sortedArrivals) {
+            val matchingDeparture = sortedDepartures.firstOrNull { it >= arrival }
+            if (matchingDeparture != null) sortedDepartures.remove(matchingDeparture)
+            intervals.add(arrival to matchingDeparture)
+        }
+        // 🛡️ Eşleşmemiş ayrılışlar varsa (varış kaydı yoksa — akademiden çıkma
+        // gibi), "en başından beri oradaydı, şu yılda ayrıldı" olarak ekle.
+        sortedDepartures.forEach { dep -> intervals.add(Int.MIN_VALUE to dep) }
+        // 💡 Hiç varış/ayrılış ayrıştırılamadıysa (nadiren, kulüp isim eşleşme
+        // sorunuyla), eski (daha gevşek) davranışa güvenli şekilde düş.
+        if (intervals.isEmpty()) return found
+
+        val hasOverlap = intervals.any { (start, end) ->
+            val effectiveEnd = end ?: Int.MAX_VALUE
+            start <= maxTarget && effectiveEnd >= minTarget
+        }
+        return hasOverlap
     }
 
     private fun stripAccentsForCompare(s: String): String {
@@ -1610,6 +1641,43 @@ object DatabaseClient {
     // ile AYNI mantık (isim eşleşmesi + en geç sınırdan önce/o anda katılım
     // kontrolü), ama UYRUK ŞARTI YOK — çünkü bb_players/nba_players tablolarında
     // uyruk verisi hiç bulunmuyor (kaynak veride yok, uydurmuyoruz).
+    // 🎯 YENİ: soru göstermeden ÖNCE, GERÇEKTEN çözülebilir olduğunu doğrulamak
+    // için — verilen takımda, hedef yıl aralığıyla örtüşen sezonu olan,
+    // start/end OYUNCULARININ KENDİSİ OLMAYAN başka biri var mı diye arıyor.
+    // Varsa, o oyuncunun ismini döndürüyor (soru kesin çözülebilir demektir).
+    fun findAnyBridgeCandidate(teamName: String, league: String, minYear: Int, maxYear: Int, excludeNames: List<String>): String? {
+        val teamStd = teamName.toStandardSearch()
+        val isNba = league == "nba"
+        val tableName = if (isNba) "nba_players" else "bb_players"
+        val teamColumn = "team_name_std"
+        val seasonColumn = if (isNba) "season" else "season_code"
+        val excludeNorm = excludeNames.map { stripAccentsForCompare(it) }.toSet()
+
+        try {
+            withBbConnection { conn ->
+                val sql = "SELECT DISTINCT name, $seasonColumn FROM $tableName WHERE $teamColumn LIKE ? LIMIT 300"
+                conn.prepareStatement(sql).use { stmt ->
+                    stmt.setString(1, "%$teamStd%")
+                    stmt.executeQuery().use { rs ->
+                        while (rs.next()) {
+                            val pName = rs.getString("name") ?: continue
+                            if (stripAccentsForCompare(pName) in excludeNorm) continue
+                            val rawSeason = rs.getString(seasonColumn)
+                            val seasonYear = Regex("(19|20)\\d{2}").find(rawSeason ?: "")?.value?.toIntOrNull() ?: continue
+                            if (seasonYear in (minYear - 1)..(maxYear + 1)) {
+                                return@withBbConnection pName
+                            }
+                        }
+                    }
+                }
+                null
+            }?.let { return it }
+        } catch (e: Exception) {
+            println("findAnyBridgeCandidate HATASI: ${e.message}")
+        }
+        return null
+    }
+
     fun verifyBasketballPlayerPlayedForTeam(playerName: String, teamName: String, league: String, startYear: Int? = null, endYear: Int? = null): Boolean {
         val cleanName = playerName.trim()
         if (cleanName.isEmpty()) return false
@@ -1895,7 +1963,7 @@ object DatabaseClient {
         val sql = buildString {
             append(
                 """
-                SELECT p.id, p.name, p.position, p.nationality, p.birthdate, p.image_url, t.from_club, t.to_club, t.season
+                SELECT p.id, p.name, p.position, p.nationality, p.birthdate, p.image_url, p.slug, t.from_club, t.to_club, t.season
                 FROM players p
                 JOIN transfers t ON p.id = t.transfer_id
                 WHERE 
@@ -1913,6 +1981,7 @@ object DatabaseClient {
         val playerImageUrls = mutableMapOf<Int, String?>()
         val playerNationalities = mutableMapOf<Int, String>()
         val playerBirthDates = mutableMapOf<Int, String?>()
+        val playerSlugs = mutableMapOf<Int, String?>()
 
         try {
             withConnection { conn ->
@@ -1936,6 +2005,7 @@ object DatabaseClient {
                             val imageUrl = rs.getString("image_url")
                             val rawNat = rs.getString("nationality") ?: ""
                             val birthDate = rs.getString("birthdate")
+                            val slug = rs.getString("slug")
                             val fromClub = rs.getString("from_club") ?: ""
                             val toClub = rs.getString("to_club") ?: ""
                             val season = rs.getString("season") ?: continue
@@ -1945,6 +2015,7 @@ object DatabaseClient {
                             playerImageUrls[pId] = imageUrl
                             playerNationalities[pId] = cleanNationalityText(rawNat)
                             playerBirthDates[pId] = birthDate
+                            playerSlugs[pId] = slug
 
                             terms.forEachIndexed { tIdx, (originalTerm, isCountry) ->
                                 if (isCountry) {
@@ -2006,7 +2077,9 @@ object DatabaseClient {
             clubs = terms.map { (term, _) -> ClubSeason(term, termSeasonMap[term] ?: "-") },
             imageUrl = playerImageUrls[chosenId],
             nationality = playerNationalities[chosenId],
-            birthDate = playerBirthDates[chosenId]
+            birthDate = playerBirthDates[chosenId],
+            playerId = chosenId,
+            slug = playerSlugs[chosenId]
         )
     }
 
