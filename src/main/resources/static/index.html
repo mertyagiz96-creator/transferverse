@@ -7317,6 +7317,12 @@
                 window.removeEventListener('scroll', bodyDropdownScrollHandler, true);
                 bodyDropdownScrollHandler = null;
             }
+            // 📱 Mobilde geçici yükseltilmiş z-index'i geri al.
+            const zLockedCard = document.querySelector('[data-dropdown-z-locked="true"]');
+            if (zLockedCard) {
+                zLockedCard.style.zIndex = '';
+                delete zLockedCard.dataset.dropdownZLocked;
+            }
         }
 
         function updateActiveHighlight() {
@@ -7381,15 +7387,14 @@
                 // çok rahat" çalışıyordu — aynı güvenilirliği burada da istiyoruz.
                 dropdown.style.display = 'block';
 
-                // 🎯 GENİŞLETİLDİ: Bu düzeltme artık HEM masaüstü HEM mobilde
-                // çalışıyor. Mobilde kartlar arası "üst üste binme" sorunu
-                // yaşanıyordu (bir kartın dropdown'ı, altındaki farklı bir
-                // kartın içeriğiyle karışıyordu) — bunun kesin çözümü de
-                // dropdown'ı <body>'e taşımak. Önceki mobil denemeler
-                // (sürekli interval + klavye zamanlaması) sorunluydu, ama bu
-                // sürüm çok daha basit (tek seferlik hesap + scroll takibi) —
-                // o eski sorunları tekrarlamaması bekleniyor.
-                {
+                // 🎯 GERİ ALINDI: mobilde <body>'e taşıma, konum hesaplamasını
+                // tekrar bozdu (klavye zamanlaması sorunu geri geldi) — kullanıcı
+                // haklı olarak dünkü ÇALIŞAN basit yönteme dönmemizi istedi.
+                // Üst üste binme sorununu FARKLI bir yöntemle çözüyoruz: masaüstü
+                // hâlâ <body>'e taşınıyor (orada sorun yoktu), mobilde ise kartın
+                // kendi z-index'ini GEÇİCİ yükseltip diğer kartların üzerine
+                // çıkmasını sağlıyoruz — konum hesaplaması hiç değişmiyor.
+                if (window.innerWidth > 650) {
                     if (dropdown.parentElement !== document.body) {
                         document.body.appendChild(dropdown);
                     }
@@ -7418,10 +7423,21 @@
                     dropdown.style.margin = '0';
                     dropdown.style.zIndex = '2000';
                     // 🎯 Sayfa kaydırıldığında dropdown'ı girdiyle birlikte
-                    // hareket ettiriyoruz — hem mobil hem masaüstünde.
+                    // hareket ettiriyoruz — sadece masaüstünde.
                     if (bodyDropdownScrollHandler) window.removeEventListener('scroll', bodyDropdownScrollHandler, true);
                     bodyDropdownScrollHandler = repositionForScroll;
                     window.addEventListener('scroll', bodyDropdownScrollHandler, true);
+                } else {
+                    // 📱 MOBİL: konum hesaplaması hiç değişmiyor (dünkü çalışan
+                    // hâli). Üst üste binmeyi önlemek için, sadece bu kartın
+                    // kendi z-index'ini GEÇİCİ olarak çok yükseltiyoruz — böylece
+                    // içindeki dropdown, diğer kardeş kartların üzerine çıkıyor.
+                    const parentCard = input.closest('.daily-question-box, #connectionGameSection, #transferFeeQuizSection, #dailyQuestionCard');
+                    if (parentCard) {
+                        parentCard.style.position = 'relative';
+                        parentCard.style.zIndex = '600';
+                        parentCard.dataset.dropdownZLocked = 'true';
+                    }
                 }
             } catch (e) {
                 if (e.name === 'AbortError') return; // 💡 beklenen durum — daha yeni bir istek bunun yerine geçti, bir şey yapma
