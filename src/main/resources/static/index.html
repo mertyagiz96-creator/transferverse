@@ -2531,7 +2531,7 @@
 </div>
 
 <div class="footer-signature">
-    Developed with ❤️ by <span>mertyagiz</span> · <a href="/hakkimizda.html" style="color: inherit; opacity: 0.6; text-decoration: none;">Hakkımızda</a> · <a href="/kullanim-sartlari.html" style="color: inherit; opacity: 0.6; text-decoration: none;">Kullanım Şartları</a> · <a href="/gizlilik.html" style="color: inherit; opacity: 0.6; text-decoration: none;">Gizlilik Politikası</a>
+    Developed with ❤️ by <span>mertyagiz</span> · <a href="/hakkimizda.html" style="color: inherit; opacity: 0.6; text-decoration: none;">Hakkımızda</a> · <a href="/kullanim-sartlari.html" style="color: inherit; opacity: 0.6; text-decoration: none;">Kullanım Şartları</a> · <a href="/gizlilik.html" style="color: inherit; opacity: 0.6; text-decoration: none;">Gizlilik Politikası</a> · <a href="mailto:transferkolik.bilgi@gmail.com" style="color: inherit; opacity: 0.6; text-decoration: none;">İletişim</a>
 </div>
 
 <script>
@@ -5582,9 +5582,10 @@
             guessInput.disabled = true;
             submitBtn.disabled = true;
             if (won) playCorrectSound();
+            const revealName = pair.bridges[0]; // 🎯 futbol havuzunda her girişte doldurulmuş bir isim var
             statusEl.textContent = won
-                ? t(`🎉 Doğru! ${attempts} denemede bağlantıyı kurdun.`, `🎉 Correct! You made the connection in ${attempts} tries.`)
-                : t(`Bugünkü bağlantı: ${pair.bridges[0]}. Yarın tekrar dene!`, `Today's connection: ${pair.bridges[0]}. Try again tomorrow!`);
+                ? t(`🎉 Doğru! ${attempts} denemede bağlantıyı kurdun — köprü oyuncu: ${revealName}.`, `🎉 Correct! You made the connection in ${attempts} tries — bridge player: ${revealName}.`)
+                : t(`Bugünkü bağlantı: ${revealName}. Yarın tekrar dene!`, `Today's connection: ${revealName}. Try again tomorrow!`);
             try {
                 localStorage.setItem(STATE_KEY, JSON.stringify({ date: today, attempts, solved: won, pair }));
             } catch (e) { /* sessizce geç */ }
@@ -5604,6 +5605,19 @@
             });
             statusEl.appendChild(document.createElement('br'));
             statusEl.appendChild(shareBtn);
+
+            // 🔍 YENİ: köprü oyuncusu için Transfermarkt ARAMA linki — kesin
+            // profil ID'si olmadan da her zaman doğru sonuca ulaşan güvenilir
+            // bir yöntem (Google araması yerine, doğrudan Transfermarkt'ın
+            // kendi arama motorunu kullanıyoruz).
+            const infoLink = document.createElement('a');
+            infoLink.href = `https://www.transfermarkt.com/schnellsuche/ergebnis/schnellsuche?query=${encodeURIComponent(revealName)}`;
+            infoLink.target = '_blank';
+            infoLink.rel = 'noopener noreferrer';
+            infoLink.textContent = `🔗 ${revealName} — Transfermarkt'ta ara`;
+            infoLink.style.cssText = 'display:inline-block; margin-top:8px; font-size:0.7rem; color:var(--accent-gold); text-decoration:none; opacity:0.85;';
+            statusEl.appendChild(document.createElement('br'));
+            statusEl.appendChild(infoLink);
         }
 
         async function handleSubmit() {
@@ -5673,7 +5687,16 @@
             if (savedState.solved) {
                 guessInput.disabled = true;
                 submitBtn.disabled = true;
-                statusEl.textContent = t(`✅ Bugün bu bağlantıyı ${attempts} denemede kurmuştun!`, `✅ You already solved this connection today in ${attempts} tries!`);
+                const savedRevealName = pair.bridges[0];
+                statusEl.textContent = t(`✅ Bugün bu bağlantıyı ${attempts} denemede kurmuştun! Köprü oyuncu: ${savedRevealName}.`, `✅ You already solved this connection today in ${attempts} tries! Bridge player: ${savedRevealName}.`);
+                const savedInfoLink = document.createElement('a');
+                savedInfoLink.href = `https://www.transfermarkt.com/schnellsuche/ergebnis/schnellsuche?query=${encodeURIComponent(savedRevealName)}`;
+                savedInfoLink.target = '_blank';
+                savedInfoLink.rel = 'noopener noreferrer';
+                savedInfoLink.textContent = `🔗 ${savedRevealName} — Transfermarkt'ta ara`;
+                savedInfoLink.style.cssText = 'display:inline-block; margin-top:8px; font-size:0.7rem; color:var(--accent-gold); text-decoration:none; opacity:0.85;';
+                statusEl.appendChild(document.createElement('br'));
+                statusEl.appendChild(savedInfoLink);
             } else if (savedState.inProgress) {
                 // 💡 Round DEVAM EDİYOR — kilitleme, kaldığı yerden sürsün.
                 submitBtn.disabled = false;
@@ -5794,13 +5817,29 @@
             if (won) playCorrectSound();
             const revealName = (pair.bridges && pair.bridges.length > 0) ? pair.bridges[0] : discoveredAnswer;
             statusEl.textContent = won
-                ? t(`🎉 Doğru! ${attempts} denemede bağlantıyı kurdun.`, `🎉 Correct! You made the connection in ${attempts} tries.`)
+                ? (revealName
+                    ? t(`🎉 Doğru! ${attempts} denemede bağlantıyı kurdun — köprü oyuncu: ${revealName}.`, `🎉 Correct! You made the connection in ${attempts} tries — bridge player: ${revealName}.`)
+                    : t(`🎉 Doğru! ${attempts} denemede bağlantıyı kurdun.`, `🎉 Correct! You made the connection in ${attempts} tries.`))
                 : revealName
                     ? t(`Bugünkü bağlantı: ${revealName}. Yarın tekrar dene!`, `Today's connection: ${revealName}. Try again tomorrow!`)
                     : t('Bugün bulamadın. Yarın tekrar dene!', "Couldn't find it today. Try again tomorrow!");
             try {
                 localStorage.setItem(STATE_KEY, JSON.stringify({ date: today, attempts, solved: won, pair, league, revealName }));
             } catch (e) { /* sessizce geç */ }
+
+            // 🔍 YENİ: köprü oyuncusu için doğrudan Wikipedia arama linki —
+            // Google araması yerine, Wikipedia'nın kendi arama motorunu
+            // kullanarak her zaman güvenilir sonuca ulaşıyoruz.
+            if (revealName) {
+                const infoLink = document.createElement('a');
+                infoLink.href = `https://tr.wikipedia.org/wiki/Özel:Ara?search=${encodeURIComponent(revealName)}`;
+                infoLink.target = '_blank';
+                infoLink.rel = 'noopener noreferrer';
+                infoLink.textContent = `🔍 ${revealName} — Wikipedia'da ara`;
+                infoLink.style.cssText = 'display:inline-block; margin-top:8px; font-size:0.7rem; color:var(--accent-gold); text-decoration:none; opacity:0.85;';
+                statusEl.appendChild(document.createElement('br'));
+                statusEl.appendChild(infoLink);
+            }
         }
 
         async function handleSubmit() {
@@ -5860,7 +5899,20 @@
             if (savedState.solved) {
                 guessInput.disabled = true;
                 submitBtn.disabled = true;
-                statusEl.textContent = t(`✅ Bugün bu bağlantıyı ${attempts} denemede kurmuştun!`, `✅ You already solved this connection today in ${attempts} tries!`);
+                const savedWinRevealName = savedState.revealName;
+                statusEl.textContent = savedWinRevealName
+                    ? t(`✅ Bugün bu bağlantıyı ${attempts} denemede kurmuştun! Köprü oyuncu: ${savedWinRevealName}.`, `✅ You already solved this connection today in ${attempts} tries! Bridge player: ${savedWinRevealName}.`)
+                    : t(`✅ Bugün bu bağlantıyı ${attempts} denemede kurmuştun!`, `✅ You already solved this connection today in ${attempts} tries!`);
+                if (savedWinRevealName) {
+                    const savedInfoLink = document.createElement('a');
+                    savedInfoLink.href = `https://tr.wikipedia.org/wiki/Özel:Ara?search=${encodeURIComponent(savedWinRevealName)}`;
+                    savedInfoLink.target = '_blank';
+                    savedInfoLink.rel = 'noopener noreferrer';
+                    savedInfoLink.textContent = `🔍 ${savedWinRevealName} — Wikipedia'da ara`;
+                    savedInfoLink.style.cssText = 'display:inline-block; margin-top:8px; font-size:0.7rem; color:var(--accent-gold); text-decoration:none; opacity:0.85;';
+                    statusEl.appendChild(document.createElement('br'));
+                    statusEl.appendChild(savedInfoLink);
+                }
             } else if (savedState.inProgress) {
                 submitBtn.disabled = false;
             } else {
@@ -5981,7 +6033,7 @@
                 infoWrap.style.cssText = 'margin-top:8px; font-size:0.7rem;';
                 [t1.player, t2.player].forEach((pName, idx) => {
                     const infoLink = document.createElement('a');
-                    infoLink.href = `https://www.google.com/search?q=${encodeURIComponent(pName + ' wikipedia')}`;
+                    infoLink.href = `https://tr.wikipedia.org/wiki/Özel:Ara?search=${encodeURIComponent(pName)}`;
                     infoLink.target = '_blank';
                     infoLink.rel = 'noopener noreferrer';
                     infoLink.textContent = `🔍 ${pName}`;
@@ -6664,10 +6716,10 @@
         // sonuca ulaşan Wikipedia arama linkine düşüyoruz.
         if (playerName) {
             const infoLink = document.createElement('a');
-            infoLink.href = profileUrl || `https://www.google.com/search?q=${encodeURIComponent(playerName + ' wikipedia')}`;
+            infoLink.href = profileUrl || `https://tr.wikipedia.org/wiki/Özel:Ara?search=${encodeURIComponent(playerName)}`;
             infoLink.target = '_blank';
             infoLink.rel = 'noopener noreferrer';
-            infoLink.textContent = profileUrl ? `🔗 ${playerName} — Transfermarkt profili` : `🔍 ${playerName} hakkında daha fazla bilgi`;
+            infoLink.textContent = profileUrl ? `🔗 ${playerName} — Transfermarkt profili` : `🔍 ${playerName} — Wikipedia'da ara`;
             infoLink.style.cssText = 'display:inline-block; margin-top:8px; font-size:0.7rem; color:var(--accent-gold); text-decoration:none; opacity:0.85;';
             statusEl.appendChild(document.createElement('br'));
             statusEl.appendChild(infoLink);
@@ -7618,12 +7670,12 @@
                 window.removeEventListener('scroll', bodyDropdownScrollHandler, true);
                 bodyDropdownScrollHandler = null;
             }
-            // 📱 Mobilde geçici yükseltilmiş z-index'i geri al.
-            const zLockedCard = document.querySelector('[data-dropdown-z-locked="true"]');
-            if (zLockedCard) {
-                zLockedCard.style.zIndex = '';
-                delete zLockedCard.dataset.dropdownZLocked;
-            }
+            // 📱 Mobilde geçici yükseltilmiş z-index'lerin HEPSİNİ geri al —
+            // artık hem kart hem de satır sarmalayıcısı kilitlenebiliyor.
+            document.querySelectorAll('[data-dropdown-z-locked="true"]').forEach(el => {
+                el.style.zIndex = '';
+                delete el.dataset.dropdownZLocked;
+            });
         }
 
         function updateActiveHighlight() {
@@ -7738,6 +7790,17 @@
                         parentCard.style.position = 'relative';
                         parentCard.style.zIndex = '600';
                         parentCard.dataset.dropdownZLocked = 'true';
+                    }
+                    // 🎯 KESİN DÜZELTME: kartın kendi z-index'i, sadece AYNI
+                    // satırdaki (#homeCardsRow) kardeş kartlarla rekabet
+                    // edebiliyordu — satırın KENDİSİ yükseltilmediği için,
+                    // satırın ALTINDAKİ ayrı bölümlerle (Şampiyon anketi gibi)
+                    // hâlâ çakışıyordu. Satırı da (üst kapsayıcıyı) yükseltiyoruz.
+                    const cardsRow = document.getElementById('homeCardsRow');
+                    if (cardsRow) {
+                        cardsRow.style.position = 'relative';
+                        cardsRow.style.zIndex = '601';
+                        cardsRow.dataset.dropdownZLocked = 'true';
                     }
                 }
             } catch (e) {
