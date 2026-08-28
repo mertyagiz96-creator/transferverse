@@ -3298,6 +3298,15 @@
                 box.innerHTML = `<img src="${logoUrl}" class="club-logo-icon" alt="" onerror="this.remove()">`;
             }
         });
+        // 💰 Pahalı Transfer kartlarındaki logolar için de aynı geç-gelme telafisi.
+        document.querySelectorAll('.fee-quiz-logo-box[data-club-name]').forEach(box => {
+            if (box.children.length > 0) return;
+            const clubName = box.dataset.clubName;
+            const logoUrl = getClubLogo(clubName);
+            if (logoUrl) {
+                box.outerHTML = `<img src="${logoUrl}" alt="" style="width:30px; height:30px; object-fit:contain; margin-bottom:6px;" onerror="this.remove()">`;
+            }
+        });
     }
 
     // 🖼️ Arama kutularının yanında, geçerli bir kulüp yazıldıkça/seçildikçe küçük logo gösteriyor
@@ -5409,21 +5418,21 @@
     // gerçekten HİÇ aynı takımda oynamamış iki oyuncu + onları bağlayan, ikisiyle de
     // gerçekten oynamış bir köprü oyuncu(lar).
     const CONNECTION_POOL = [
-        { start: 'Erling Haaland', end: 'David Silva', club: 'Manchester City', startYear: 2022, endYear: 2020, bridges: ['Kevin De Bruyne'] },
-        { start: 'Jude Bellingham', end: 'Cristiano Ronaldo', club: 'Real Madrid', startYear: 2023, endYear: 2018, bridges: ['Luka Modric', 'Toni Kroos'] },
-        { start: 'Kim Min-jae', end: 'Robert Lewandowski', club: 'Bayern Munich', startYear: 2023, endYear: 2022, bridges: ['Thomas Muller'] },
-        { start: 'Kylian Mbappe', end: 'Zlatan Ibrahimovic', club: 'Paris SG', startYear: 2017, endYear: 2016, bridges: ['Marco Verratti'] },
-        { start: 'Mohamed Salah', end: 'Steven Gerrard', club: 'Liverpool', startYear: 2017, endYear: 2015, bridges: ['Jordan Henderson'] },
-        { start: 'Arda Guler', end: 'Sergio Ramos', club: 'Real Madrid', startYear: 2023, endYear: 2021, bridges: ['Toni Kroos', 'Luka Modric', 'Vinicius Junior', 'Rodrygo'] },
-        { start: 'Harry Kane', end: 'Robert Lewandowski', club: 'Bayern Munich', startYear: 2023, endYear: 2022, bridges: ['Thomas Muller', 'Joshua Kimmich', 'Leon Goretzka'] },
-        { start: 'N\'Golo Kante', end: 'Frank Lampard', club: 'Chelsea', startYear: 2016, endYear: 2014, bridges: ['Cesar Azpilicueta', 'John Terry'] },
-        { start: 'Erling Haaland', end: 'Sergio Aguero', club: 'Manchester City', startYear: 2022, endYear: 2021, bridges: ['Kevin De Bruyne', 'Ilkay Gundogan'] },
-        { start: 'Marcus Rashford', end: 'Ryan Giggs', club: 'Manchester United', startYear: 2016, endYear: 2014, bridges: ['Michael Carrick'] },
-        { start: 'Achraf Hakimi', end: 'Zlatan Ibrahimovic', club: 'Paris SG', startYear: 2021, endYear: 2016, bridges: ['Marquinhos', 'Presnel Kimpembe'] },
-        { start: 'Vinicius Junior', end: 'Iker Casillas', club: 'Real Madrid', startYear: 2018, endYear: 2015, bridges: ['Marcelo'] },
-        { start: 'Federico Chiesa', end: 'Paul Pogba', club: 'Juventus', startYear: 2020, endYear: 2016, bridges: ['Leonardo Bonucci', 'Giorgio Chiellini'] },
-        { start: 'Marcus Thuram', end: 'Romelu Lukaku', club: 'Inter', startYear: 2023, endYear: 2021, bridges: ['Nicolo Barella', 'Alessandro Bastoni'] },
-        { start: 'Vinicius Junior', end: 'Xabi Alonso', club: 'Real Madrid', startYear: 2018, endYear: 2014, bridges: ['Sergio Ramos', 'Karim Benzema', 'Luka Modric'] }
+        { start: 'Erling Haaland', end: 'David Silva', club: 'Manchester City', startYear: 2022, endYear: 2020, bridges: ['Kevin De Bruyne'], nationality: 'Belgium', flag: '🇧🇪' },
+        { start: 'Jude Bellingham', end: 'Cristiano Ronaldo', club: 'Real Madrid', startYear: 2023, endYear: 2018, bridges: ['Toni Kroos'], nationality: 'Germany', flag: '🇩🇪' },
+        { start: 'Kim Min-jae', end: 'Robert Lewandowski', club: 'Bayern Munich', startYear: 2023, endYear: 2022, bridges: ['Thomas Muller'], nationality: 'Germany', flag: '🇩🇪' },
+        { start: 'Kylian Mbappe', end: 'Zlatan Ibrahimovic', club: 'Paris SG', startYear: 2017, endYear: 2016, bridges: ['Marco Verratti'], nationality: 'Italy', flag: '🇮🇹' },
+        { start: 'Mohamed Salah', end: 'Steven Gerrard', club: 'Liverpool', startYear: 2017, endYear: 2015, bridges: ['Jordan Henderson'], nationality: 'England', flag: '🇬🇧' },
+        { start: 'Arda Guler', end: 'Sergio Ramos', club: 'Real Madrid', startYear: 2023, endYear: 2021, bridges: ['Vinicius Junior', 'Rodrygo'], nationality: 'Brazil', flag: '🇧🇷' },
+        { start: 'Harry Kane', end: 'Robert Lewandowski', club: 'Bayern Munich', startYear: 2023, endYear: 2022, bridges: ['Thomas Muller', 'Joshua Kimmich', 'Leon Goretzka'], nationality: 'Germany', flag: '🇩🇪' },
+        { start: 'N\'Golo Kante', end: 'Frank Lampard', club: 'Chelsea', startYear: 2016, endYear: 2014, bridges: ['John Terry'], nationality: 'England', flag: '🇬🇧' },
+        { start: 'Erling Haaland', end: 'Sergio Aguero', club: 'Manchester City', startYear: 2022, endYear: 2021, bridges: ['Kevin De Bruyne'], nationality: 'Belgium', flag: '🇧🇪' },
+        { start: 'Marcus Rashford', end: 'Ryan Giggs', club: 'Manchester United', startYear: 2016, endYear: 2014, bridges: ['Michael Carrick'], nationality: 'England', flag: '🇬🇧' },
+        { start: 'Achraf Hakimi', end: 'Zlatan Ibrahimovic', club: 'Paris SG', startYear: 2021, endYear: 2016, bridges: ['Presnel Kimpembe'], nationality: 'France', flag: '🇫🇷' },
+        { start: 'Vinicius Junior', end: 'Iker Casillas', club: 'Real Madrid', startYear: 2018, endYear: 2015, bridges: ['Marcelo'], nationality: 'Brazil', flag: '🇧🇷' },
+        { start: 'Federico Chiesa', end: 'Paul Pogba', club: 'Juventus', startYear: 2020, endYear: 2016, bridges: ['Leonardo Bonucci', 'Giorgio Chiellini'], nationality: 'Italy', flag: '🇮🇹' },
+        { start: 'Marcus Thuram', end: 'Romelu Lukaku', club: 'Inter', startYear: 2023, endYear: 2021, bridges: ['Nicolo Barella', 'Alessandro Bastoni'], nationality: 'Italy', flag: '🇮🇹' },
+        { start: 'Vinicius Junior', end: 'Xabi Alonso', club: 'Real Madrid', startYear: 2018, endYear: 2014, bridges: ['Karim Benzema'], nationality: 'France', flag: '🇫🇷' }
     ];
 
     function loadConnectionGame() {
@@ -5461,6 +5470,7 @@
                 <span style="opacity:0.5; font-weight:700;">➔ ( ? ) ➔</span>
                 <span style="font-weight:800; font-size:0.92rem;">${escapeHtml(pair.end)}</span>
             </div>
+            ${pair.nationality ? `<div style="text-align:center; font-size:0.78rem; margin-bottom:10px; opacity:0.75;">💡 İpucu: köprü oyuncu <span style="font-size:1.1rem;">${pair.flag}</span> <b>${escapeHtml(pair.nationality)}</b> uyruklu olmalı</div>` : ''}
             <div id="connectionAttemptsBox" style="max-width:380px; margin:0 auto 10px;"></div>
             <div id="connectionCounter" style="font-size:0.7rem; opacity:0.6; text-align:center;">Deneme: 0</div>
             <div style="width:100%; max-width:320px; display:flex; flex-wrap:wrap; gap:8px; margin: 8px auto 0; position:relative;">
@@ -5541,10 +5551,12 @@
             // yanlışlıkla kabul edilmesini önlüyor.
             if (!isCorrect) {
                 try {
-                    const params = new URLSearchParams({
+                    const paramsObj = {
                         name: rawGuess, club: pair.club,
                         startYear: pair.startYear, endYear: pair.endYear
-                    });
+                    };
+                    if (pair.nationality) paramsObj.nationality = pair.nationality; // 🎯 uyruk şartı varsa ekle
+                    const params = new URLSearchParams(paramsObj);
                     const res = await fetch(`/verifyBridge?${params.toString()}`);
                     if (res.ok) {
                         const data = await res.json();
@@ -5613,7 +5625,7 @@
         // transfer alıyoruz — bu, doğal olarak en az birkaç milyon € fark
         // garantiliyor, ama yine de "hangisi daha pahalı" gerçekten düşündürüyor.
         const sortedPool = [...famousTransfersPool].sort((a, b) => b.fee - a.fee);
-        const WINDOW_SIZE = 10;
+        const WINDOW_SIZE = 20;
         const maxWindowStart = sortedPool.length - WINDOW_SIZE;
         const windowStart = seed % (maxWindowStart + 1);
 
@@ -5636,7 +5648,9 @@
 
         function renderCard(t, side, revealed, isWinner) {
             const logoUrl = getClubLogo(t.toClub);
-            const logoHtml = logoUrl ? `<img src="${logoUrl}" alt="" style="width:30px; height:30px; object-fit:contain; margin-bottom:6px;" onerror="this.remove()">` : '<div style="height:36px;"></div>';
+            const logoHtml = logoUrl
+                ? `<img src="${logoUrl}" alt="" style="width:30px; height:30px; object-fit:contain; margin-bottom:6px;" onerror="this.remove()">`
+                : `<div class="fee-quiz-logo-box" data-club-name="${escapeHtml(t.toClub)}" style="height:36px;"></div>`;
             const feeHtml = revealed
                 ? `<div style="font-size:1.05rem; font-weight:900; color:${isWinner ? 'var(--accent-gold)' : 'rgb(var(--fg-rgb))'}; margin-top:8px;">${formatFeeMillions(t.fee)}</div>`
                 : '';
@@ -6057,7 +6071,7 @@
             const [club1, club2] = [pool[idx1], pool[idx2]];
 
             try {
-                const res = await fetch(`/playerMode?clubs=${encodeURIComponent([club1, club2].join(','))}&isCountry=0,0&minYear=2010`);
+                const res = await fetch(`/playerMode?clubs=${encodeURIComponent([club1, club2].join(','))}&isCountry=0,0&minYear=2010&seed=${seed}`);
                 if (res.ok) {
                     const data = await res.json();
                     if (currentSport !== 'football') return; // 🛡️ bu arada basketbola geçilmişse kartı ezme
@@ -6195,56 +6209,100 @@
                     <span style="opacity:0.5; font-weight:800; font-size: 0.95rem; color: rgb(var(--fg-rgb)); margin-top: 16px;">VS</span>
                     ${teamBlockHtml(data.team2, data.player && data.player.team2Season)}
                 </div>
+                <div id="bbDailyAttemptsList" style="width:100%; max-width:320px; display:flex; flex-direction:column; gap:4px;"></div>
+                <div id="bbDailyGuessCounter" style="font-size:0.7rem; opacity:0.6;">Tahmin: 0/5</div>
                 <div style="width:100%; max-width:320px; display:flex; flex-wrap:wrap; gap:8px; position:relative;">
                     <input type="text" id="dailyGuessInput" placeholder="Tahminini yaz..." autocomplete="off" style="flex:1; padding:10px 12px; border-radius:3px; border:1px solid rgba(var(--fg-rgb),0.18); background:rgba(var(--fg-rgb),0.02); color:rgb(var(--fg-rgb)); font-size: 0.9rem; outline: none;">
                     <div id="dailyGuessDropdown" class="autocomplete-dropdown"></div>
-                    <span id="dailyGuessCheck" class="guess-check">✔️</span>
+                    <button id="bbDailyGuessSubmitBtn" class="toolbar-btn" style="padding:8px 14px; font-size:0.72rem;">Tahmin Et</button>
                 </div>
                 <div id="dailyQuestionStatus" style="font-size:0.78rem; font-weight: 600; color: rgb(var(--fg-rgb));">${bestTimeText}</div>
             </div>
         `;
 
         const guessInput = document.getElementById('dailyGuessInput');
+        const submitBtn = document.getElementById('bbDailyGuessSubmitBtn');
+        const attemptsListEl = document.getElementById('bbDailyAttemptsList');
+        const counterEl = document.getElementById('bbDailyGuessCounter');
+        let bbAttempts = 0;
+        const BB_MAX_ATTEMPTS = 5;
+
         // 🏀 Oyuncu ismi önerisi — futboldaki AYNI fonksiyon, sadece basketbola özel
         // uç noktaya ve bağlam takımlarına (data.team1/team2) yönlendiriliyor.
         setupPlayerNameAutocomplete('dailyGuessInput', 'dailyGuessDropdown', () => [data.team1, data.team2],
             (query) => `/basketball/playerNameSuggestions?q=${encodeURIComponent(query)}&league=${encodeURIComponent(currentBasketballLeague)}&teams=${encodeURIComponent([data.team1, data.team2].join(','))}`
         );
-        if (guessInput) {
-            guessInput.addEventListener('input', () => {
-                if (dailyQuestionSolved) return;
-                const guessNormalized = normalizeGuess(guessInput.value);
-                const realNormalized = normalizeGuess(playerName);
-                const words = playerName.trim().split(/\s+/);
-                const surname = words[words.length - 1];
-                const surnameNormalized = normalizeGuess(surname);
 
-                if (guessNormalized.length > 0 && (guessNormalized === realNormalized || guessNormalized === surnameNormalized)) {
-                    dailyQuestionSolved = true;
-                    guessInput.disabled = true;
-                    guessInput.classList.add('correct');
-                    const dailyCheck = document.getElementById('dailyGuessCheck');
-                    if (dailyCheck) dailyCheck.style.display = 'flex';
-                    playCorrectSound();
+        function lockBbRound(revealAnswer) {
+            if (guessInput) guessInput.disabled = true;
+            if (submitBtn) submitBtn.disabled = true;
+            const statusEl = document.getElementById('dailyQuestionStatus');
+            if (statusEl && revealAnswer) {
+                statusEl.textContent = `❌ Bugün bilemedin — doğru cevap: ${playerName}. Yarın tekrar dene!`;
+            }
+        }
 
-                    const elapsedSeconds = Math.max(1, Math.round((Date.now() - dailyQuestionStartTime) / 1000));
-                    const statusEl = document.getElementById('dailyQuestionStatus');
-                    let isNewBest = false;
-                    try {
-                        const raw = localStorage.getItem(bbBestKey);
-                        const parsed = raw ? JSON.parse(raw) : null;
-                        if (!parsed || parsed.date !== today || elapsedSeconds < parsed.seconds) {
-                            isNewBest = true;
-                            localStorage.setItem(bbBestKey, JSON.stringify({ date: today, seconds: elapsedSeconds }));
-                        }
-                    } catch (e) { /* sessizce geç */ }
+        function submitBbGuess() {
+            if (dailyQuestionSolved || !guessInput || guessInput.value.trim().length === 0) return;
+            const rawGuess = guessInput.value.trim();
+            const guessNormalized = normalizeGuess(rawGuess);
+            const realNormalized = normalizeGuess(playerName);
+            const words = playerName.trim().split(/\s+/);
+            const surname = words[words.length - 1];
+            const surnameNormalized = normalizeGuess(surname);
+            const isCorrect = guessNormalized === realNormalized || guessNormalized === surnameNormalized;
 
-                    if (statusEl) {
-                        statusEl.textContent = isNewBest
-                            ? `🎉 Doğru! ${elapsedSeconds} saniyede buldun — bugünkü yeni kişisel rekorun!`
-                            : `✅ Doğru! ${elapsedSeconds} saniyede buldun.`;
-                        renderShareButton('dailyQuestionStatus', elapsedSeconds);
+            bbAttempts++;
+            if (counterEl) counterEl.textContent = `Tahmin: ${bbAttempts}/${BB_MAX_ATTEMPTS}`;
+
+            // 💡 Basketbolda mevki/uyruk verisi YOK (futboldaki gibi renkli ipucu
+            // sütunları yapamıyoruz) — sadece doğru/yanlış olarak gösteriyoruz.
+            if (attemptsListEl) {
+                const row = document.createElement('div');
+                row.style.cssText = 'display:flex; align-items:center; justify-content:space-between; padding:7px 12px; border-radius:6px; font-size:0.82rem; font-weight:600;' +
+                    (isCorrect ? 'background:rgba(46,204,113,0.12); color:#2ecc71;' : 'background:rgba(231,76,60,0.1); color:#e74c3c;');
+                row.innerHTML = `<span>${escapeHtml(rawGuess)}</span><span>${isCorrect ? '✅' : '❌'}</span>`;
+                attemptsListEl.appendChild(row);
+            }
+            guessInput.value = '';
+
+            if (isCorrect) {
+                dailyQuestionSolved = true;
+                lockBbRound(false);
+                guessInput.classList.add('correct');
+                const dailyCheck = document.getElementById('dailyGuessCheck');
+                if (dailyCheck) dailyCheck.style.display = 'flex';
+                playCorrectSound();
+
+                const elapsedSeconds = Math.max(1, Math.round((Date.now() - dailyQuestionStartTime) / 1000));
+                const statusEl = document.getElementById('dailyQuestionStatus');
+                let isNewBest = false;
+                try {
+                    const raw = localStorage.getItem(bbBestKey);
+                    const parsed = raw ? JSON.parse(raw) : null;
+                    if (!parsed || parsed.date !== today || elapsedSeconds < parsed.seconds) {
+                        isNewBest = true;
+                        localStorage.setItem(bbBestKey, JSON.stringify({ date: today, seconds: elapsedSeconds }));
                     }
+                } catch (e) { /* sessizce geç */ }
+
+                if (statusEl) {
+                    statusEl.textContent = isNewBest
+                        ? `🎉 Doğru! ${elapsedSeconds} saniyede buldun — bugünkü yeni kişisel rekorun!`
+                        : `✅ Doğru! ${elapsedSeconds} saniyede buldun.`;
+                    renderShareButton('dailyQuestionStatus', elapsedSeconds);
+                }
+            } else if (bbAttempts >= BB_MAX_ATTEMPTS) {
+                lockBbRound(true);
+            }
+        }
+
+        if (submitBtn) submitBtn.addEventListener('click', submitBbGuess);
+        if (guessInput) {
+            guessInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    submitBbGuess();
                 }
             });
         }
@@ -7225,44 +7283,18 @@
         let debounceTimer = null;
         let activeIndex = -1;
         let currentAbortController = null; // 🚀 hızlı yazarken eski (artık gereksiz) istekleri iptal etmek için
-        let repositionInterval = null; // 🎯 KESİN DÜZELTME: sabit gecikmeler yerine, dropdown açıkken SÜREKLİ çalışan bir kontrol
 
         function closeDropdown() {
             dropdown.style.display = 'none';
             dropdown.innerHTML = '';
             activeIndex = -1;
-            if (repositionInterval) { clearInterval(repositionInterval); repositionInterval = null; }
-        }
-
-        // 🛡️ DÜZELTME: dropdown <body>'e taşındığı (position:fixed) için, sayfa
-        // kaydırılınca ARTIK girdi kutusuyla birlikte hareket etmiyordu — bu
-        // fonksiyon, dropdown açıkken sayfa kayması olursa konumu YENİDEN
-        // hesaplayıp senkron tutuyor. Girdi ekrandan tamamen çıkarsa (örn. çok
-        // hızlı kaydırıldıysa), dropdown'ı kapatıyoruz — havada asılı kalmasın.
-        function repositionDropdown() {
-            if (dropdown.style.display === 'none') return;
-            const rect = input.getBoundingClientRect();
-            // 🎯 BASİTLEŞTİRİLDİ: kullanıcı isteği üzerine, karmaşık "ne kadar yer
-            // var" hesaplamasını tamamen kaldırdık — bazı mobil cihazlarda hâlâ
-            // ara sıra yukarı açılmaya yol açıyordu. Artık KOŞULSUZ olarak her
-            // zaman girdinin ALTINA açılıyor, sabit bir maksimum yükseklikle.
-            // Sayfa/kart kaydırmasını takip eden kısım (aşağıdaki event listener'lar)
-            // AYNEN korundu — o kısım zaten iyi çalışıyordu.
-            const stillVisible = rect.bottom > 0 && rect.top < window.innerHeight;
-            if (!stillVisible) {
-                closeDropdown();
-                return;
-            }
-            dropdown.style.top = (rect.bottom + 6) + 'px';
-            dropdown.style.bottom = 'auto';
-            dropdown.style.maxHeight = '260px';
-            dropdown.style.left = rect.left + 'px';
-            dropdown.style.width = rect.width + 'px';
-        }
-        window.addEventListener('scroll', repositionDropdown, true); // 💡 "true" = yakalama aşaması, iç kart kaydırmasını da yakalar
-        window.addEventListener('resize', repositionDropdown);
-        if (window.visualViewport) {
-            window.visualViewport.addEventListener('resize', repositionDropdown); // 💡 klavye açılıp kapanınca da yeniden konumlandır
+            // 🛡️ Güvenlik: masaüstü-özel position:fixed stilleri varsa temizle —
+            // pencere mobil genişliğe küçülürse eski değerler kalıntı kalmasın.
+            dropdown.style.position = '';
+            dropdown.style.top = '';
+            dropdown.style.left = '';
+            dropdown.style.width = '';
+            dropdown.style.zIndex = '';
         }
 
         function updateActiveHighlight() {
@@ -7270,19 +7302,7 @@
             items.forEach((el, i) => {
                 if (i === activeIndex) {
                     el.classList.add('active');
-                    // 🛡️ DÜZELTME: scrollIntoView() yerine, SADECE dropdown'ın
-                    // kendi içini kaydıran manuel mantık — dropdown artık <body>'e
-                    // taşındığı için scrollIntoView, tüm SAYFAYI kaydırmaya
-                    // çalışıp kullanıcıyı sayfanın en altına fırlatıyordu.
-                    const itemTop = el.offsetTop;
-                    const itemBottom = itemTop + el.offsetHeight;
-                    const viewTop = dropdown.scrollTop;
-                    const viewBottom = viewTop + dropdown.clientHeight;
-                    if (itemTop < viewTop) {
-                        dropdown.scrollTop = itemTop;
-                    } else if (itemBottom > viewBottom) {
-                        dropdown.scrollTop = itemBottom - dropdown.clientHeight;
-                    }
+                    el.scrollIntoView({ block: 'nearest' });
                 } else {
                     el.classList.remove('active');
                 }
@@ -7332,40 +7352,40 @@
                     });
                     dropdown.appendChild(item);
                 });
-                // 🛡️ KÖK SEBEP DÜZELTMESİ (v2): önceki denemede dropdown hâlâ kart
-                // içindeydi — kartın hover'daki "transform" özelliği, position:fixed
-                // çocukların ekrana göre DEĞİL, o transform'lu elemana göre
-                // konumlanmasına yol açıyordu (CSS'in bilinen bir davranışı, kaymanın
-                // sebebi buydu). Şimdi dropdown'ı doğrudan <body>'e taşıyoruz —
-                // hem yatay kaydırmanın kırpmasından HEM transform sorunundan
-                // tamamen kaçıyor, konum artık kesin doğru hesaplanıyor.
-                if (dropdown.parentElement !== document.body) {
-                    document.body.appendChild(dropdown);
-                }
-                dropdown.style.position = 'fixed';
-                dropdown.style.right = 'auto';
-                dropdown.style.margin = '0';
-                dropdown.style.zIndex = '2000';
+                // 🎯 BASİTLEŞTİRİLDİ: kulüp aramasıyla AYNI, kanıtlanmış basit
+                // yöntem — dropdown kendi orijinal yerinde kalıyor (position:absolute,
+                // CSS class'tan gelen top:100%), hiçbir JS konum hesaplaması YOK.
+                // Kullanıcının onayladığı gibi kulüp aramasında bu "çok stabil,
+                // çok rahat" çalışıyordu — aynı güvenilirliği burada da istiyoruz.
                 dropdown.style.display = 'block';
-                repositionDropdown();
-                // 🎯 KESİN DÜZELTME: eskiden ODAKLANMA anından itibaren sabit
-                // gecikmelerle (50ms, 150ms...) deniyordum — ama kullanıcı YAVAŞ
-                // yazarsa, dropdown açılana kadar bu gecikmelerin HEPSİ boşa
-                // gidip bitmiş oluyordu (dropdown henüz yokken çalışıp bir işe
-                // yaramıyorlardı). Artık dropdown GERÇEKTEN açıldığı andan
-                // itibaren, 2.5 saniye boyunca HER 100ms'de bir SÜREKLİ
-                // konumlandırıyoruz — kullanıcının ne zaman yazmaya başladığından
-                // TAMAMEN bağımsız, klavye ne zaman yerleşirse yerleşsin yakalıyor.
-                if (repositionInterval) clearInterval(repositionInterval);
-                let intervalTicks = 0;
-                repositionInterval = setInterval(() => {
-                    repositionDropdown();
-                    intervalTicks++;
-                    if (intervalTicks >= 25) { // 25 × 100ms = 2.5 saniye sonra durdur
-                        clearInterval(repositionInterval);
-                        repositionInterval = null;
+
+                // 🛡️ SADECE MASAÜSTÜ İÇİN düzeltme: kartlar #homeCardsRow içinde
+                // yatay kayabiliyor (overflow-x:auto) — CSS'in bilinen bir
+                // davranışı gereği bu, dikey taşmayı da KIRPIYOR, dropdown sadece
+                // 1-2 öneri sığacak kadar görünüyordu. Mobilde bu satır hiç
+                // ÇALIŞMIYOR (kartlar orada zaten alt alta, kırpma sorunu yok).
+                // Önceki karmaşık denemelerden FARKLI olarak: TEK SEFERLİK hesaplama,
+                // sürekli interval/scroll takibi YOK — daha önceki sorunun asıl
+                // sebebinin, kartın hover'daki "transform" özelliğiyle SÜREKLİ
+                // yeniden hesaplamanın çakışması olduğunu düşünüyoruz.
+                if (window.innerWidth > 650) {
+                    // 🛡️ KESİN ÇÖZÜM: transform'u geçici kapatma denemesi işe
+                    // yaramadı (kartın kendi onmouseover kodu muhtemelen benim
+                    // ayarımı eziyordu). Bunun yerine, dropdown'ı DOĞRUDAN
+                    // <body>'e taşıyoruz — bu, transform'lu HİÇBİR atayla
+                    // ilişkisi kalmadığı için sorunu kökten atlıyor.
+                    if (dropdown.parentElement !== document.body) {
+                        document.body.appendChild(dropdown);
                     }
-                }, 100);
+                    const rect = input.getBoundingClientRect();
+                    dropdown.style.position = 'fixed';
+                    dropdown.style.top = (rect.bottom + 4) + 'px';
+                    dropdown.style.left = rect.left + 'px';
+                    dropdown.style.width = rect.width + 'px';
+                    dropdown.style.right = 'auto';
+                    dropdown.style.margin = '0';
+                    dropdown.style.zIndex = '2000';
+                }
             } catch (e) {
                 if (e.name === 'AbortError') return; // 💡 beklenen durum — daha yeni bir istek bunun yerine geçti, bir şey yapma
                 closeDropdown();

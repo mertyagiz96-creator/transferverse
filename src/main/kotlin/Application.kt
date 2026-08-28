@@ -679,7 +679,8 @@ fun main() {
                 }
                 val startYear = call.request.queryParameters["startYear"]?.toIntOrNull()
                 val endYear = call.request.queryParameters["endYear"]?.toIntOrNull()
-                val valid = DatabaseClient.verifyPlayerPlayedForClub(name, club, startYear, endYear)
+                val nationality = call.request.queryParameters["nationality"]
+                val valid = DatabaseClient.verifyPlayerPlayedForClub(name, club, startYear, endYear, nationality)
                 call.respond(mapOf("valid" to valid))
             }
 
@@ -774,7 +775,8 @@ fun main() {
                 }
 
                 val minYear = call.request.queryParameters["minYear"]?.toIntOrNull()
-                val result = DatabaseClient.fetchPlayerAcrossClubs(terms, minYear)
+                val seed = call.request.queryParameters["seed"]?.toLongOrNull()
+                val result = DatabaseClient.fetchPlayerAcrossClubs(terms, minYear, seed)
                 if (result == null) {
                     call.respond(HttpStatusCode.NotFound)
                 } else {

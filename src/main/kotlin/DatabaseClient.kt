@@ -848,22 +848,43 @@ object DatabaseClient {
         return 0
     }
 
-    fun fetchRandomBasketballQuestion(pool: List<String>, isNba: Boolean): RandomBasketballQuestion {
+    // 🎯 En az bir sezon 4 haneli bir yıl içeriyorsa VE bu yıl 2010+ ise true —
+    // basketbol sezon formatları (Avrupa: "E2024", NBA: "2021-22" gibi) farklı
+    // olabildiği için, biçimden bağımsız, düz metinde 4 haneli yıl arıyoruz.
+    private fun seasonHasRecentYear(season: String?, minYear: Int): Boolean {
+        if (season.isNullOrBlank()) return false
+        val match = Regex("(19|20)\\d{2}").find(season) ?: return false
+        val year = match.value.toIntOrNull() ?: return false
+        return year >= minYear
+    }
+
+    fun fetchRandomBasketballQuestion(pool: List<String>, isNba: Boolean, minYear: Int = 2010): RandomBasketballQuestion {
         if (pool.size < 2) return RandomBasketballQuestion(found = false)
         val overallStart = System.currentTimeMillis()
-        repeat(15) { attemptNum ->
+        // 🎯 DÜZELTME: Günün Sorusu'nda çok eski (örn. 1986-1997 gibi) yıl
+        // aralıkları çıkıp tamamen tanınmaz oyuncular çıkabiliyordu. Artık en az
+        // 20 deneme boyunca, EN AZ BİR takım-sezon eşleşmesi 2010+ olan bir
+        // oyuncu arıyoruz — bulamazsak (nadir takım çiftleri için mümkün),
+        // son çare olarak yıl şartı olmadan devam ediyoruz (soru üretilemeyip
+        // boş ekran çıkmasındansa, eski bile olsa bir soru göstermek daha iyi).
+        var fallbackQuestion: RandomBasketballQuestion? = null
+        repeat(20) { attemptNum ->
             val team1 = pool.random()
             var team2: String
             do { team2 = pool.random() } while (team2 == team1)
 
             val players = if (isNba) fetchCommonNbaPlayers(team1, team2) else fetchCommonBasketballPlayersLean(team1, team2)
             if (players.isNotEmpty()) {
-                val player = players.random()
+                val recentPlayers = players.filter {
+                    seasonHasRecentYear(it.team1Season, minYear) || seasonHasRecentYear(it.team2Season, minYear)
+                }
+                val chosenPool = if (recentPlayers.isNotEmpty()) recentPlayers else players
+                val player = chosenPool.random()
                 val totalElapsed = System.currentTimeMillis() - overallStart
                 if (totalElapsed > 500 || attemptNum >= 3) {
                     println("fetchRandomBasketballQuestion YAVAŞ: ${totalElapsed}ms, ${attemptNum + 1} deneme")
                 }
-                return RandomBasketballQuestion(
+                val question = RandomBasketballQuestion(
                     found = true,
                     team1 = team1,
                     team2 = team2,
@@ -872,9 +893,11 @@ object DatabaseClient {
                     team2Season = player.team2Season,
                     nbaOfficialId = player.nbaOfficialId
                 )
+                if (recentPlayers.isNotEmpty()) return question // 🎯 2010+ bulundu, hemen dön
+                if (fallbackQuestion == null) fallbackQuestion = question // 💡 yedek olarak sakla, aramaya devam et
             }
         }
-        return RandomBasketballQuestion(found = false)
+        return fallbackQuestion ?: RandomBasketballQuestion(found = false)
     }
 
     @Serializable
@@ -1336,20 +1359,19 @@ object DatabaseClient {
     // çünkü veride yeni bir transfer YOKSA oyuncu hâlâ o kulüpte olduğu
     // varsayılıyor. Bu, hem yeni gelenleri hem uzun süredir orada olanları
     // (Rodri gibi) doğru şekilde kabul ediyor.
-    fun verifyPlayerPlayedForClub(playerName: String, clubName: String, startYear: Int? = null, endYear: Int? = null): Boolean {
+    fun verifyPlayerPlayedForClub(playerName: String, clubName: String, startYear: Int? = null, endYear: Int? = null, requiredNationality: String? = null): Boolean {
         val cleanName = playerName.trim()
         if (cleanName.isEmpty()) return false
         val resolvedClub = resolveClubSearchTerm(clubName)
-        // 🎯 KESİN DÜZELTME: bazı kayıtlar kulübü KISALTILMIŞ ("Man City"), bazıları
-        // TAM ("Manchester City") isimle tutuyor — gerçek veri tutarsız olabiliyor.
-        // Tek bir forma güvenmek yerine, HER İKİSİNİ de kabul ediyoruz.
         val originalStdClub = clubName.toStandardSearch()
         val clubVariants = listOf(resolvedClub, originalStdClub).distinct()
         val targetNorm = stripAccentsForCompare(cleanName)
+        // 🎯 YENİ: uyruk şartı — verilmişse, köprü oyuncusunun UYRUĞU da eşleşmeli.
+        val requiredNatStd = requiredNationality?.toStandardSearch()
         val sql = """
-            SELECT p.name, t.from_club, t.to_club, t.season
+            SELECT p.name, p.nationality, t.from_club, t.to_club, t.season
             FROM (
-                SELECT id, name FROM players
+                SELECT id, name, nationality FROM players
                 WHERE name_std LIKE ?
                 LIMIT 30
             ) p
@@ -1374,14 +1396,17 @@ object DatabaseClient {
                                 val words = nameNorm.trim().split(Regex("\\s+"))
                                 val surnameNorm = words.lastOrNull() ?: ""
                                 val firstNameNorm = words.firstOrNull() ?: ""
-                                // 🎯 DÜZELTME: gerçek futbolcular çoğu zaman TAKMA/KISALTILMIŞ
-                                // isimle biliniyor (Rodri = Rodrigo, Cristiano vb.) — veritabanında
-                                // tam ad kayıtlıyken, kullanıcı kısaltılmış hâliyle yazabiliyor. En
-                                // az 4 karakter şartıyla (çok kısa/gevşek eşleşmeleri önlemek için),
-                                // ad veya soyadın kısaltılmış hâli olup olmadığını da kontrol ediyoruz.
                                 val isNicknameMatch = targetNorm.length >= 4 &&
                                     (firstNameNorm.startsWith(targetNorm) || surnameNorm.startsWith(targetNorm))
                                 if (nameNorm != targetNorm && surnameNorm != targetNorm && !isNicknameMatch) continue
+
+                                // 🎯 YENİ: uyruk şartı varsa, oyuncunun ANA uyruğu bununla eşleşmeli.
+                                if (requiredNatStd != null) {
+                                    val rawNat = rs.getString("nationality") ?: ""
+                                    val cleanedNat = cleanNationalityText(rawNat)
+                                    val primaryNat = cleanedNat.toStandardSearch().split(Regex("\\s{2,}")).firstOrNull()?.trim() ?: ""
+                                    if (primaryNat != requiredNatStd) continue
+                                }
 
                                 val fromClub = rs.getString("from_club") ?: ""
                                 val toClub = rs.getString("to_club") ?: ""
@@ -1592,8 +1617,32 @@ object DatabaseClient {
                         }
                     }
                 }
+
                 if (columnExists) {
-                    println("✅ name_std sütunu zaten mevcut, performans migrasyonu atlanıyor.")
+                    // 🛡️ DÜZELTME: sütun VAR diye migrasyonun TAM tamamlandığı anlamına
+                    // gelmiyor — yerel geliştirmede sunucu, migrasyon bitmeden
+                    // durdurulmuşsa, sütun eklenmiş ama İÇİ BOŞ (NULL) kalmış
+                    // olabilir. Bu durumda TÜM aramalar sessizce boş dönerdi
+                    // (hata vermeden). Doldurulup doldurulmadığını kontrol edip,
+                    // gerekirse EKSİK KALAN kısmı tamamlıyoruz.
+                    var nullCount = 0
+                    conn.prepareStatement("SELECT COUNT(*) as cnt FROM players WHERE name_std IS NULL").use { stmt ->
+                        stmt.executeQuery().use { rs ->
+                            if (rs.next()) nullCount = rs.getInt("cnt")
+                        }
+                    }
+                    if (nullCount == 0) {
+                        println("✅ name_std sütunu zaten mevcut ve dolu, performans migrasyonu atlanıyor.")
+                        return@withConnection
+                    }
+                    println("⚠️ name_std sütunu var ama $nullCount satır BOŞ (yarım kalmış migrasyon) — tamamlanıyor...")
+                    conn.createStatement().use { stmt ->
+                        stmt.execute("UPDATE players SET name_std = ${sqlAccentStripExpr("name")} WHERE name_std IS NULL")
+                    }
+                    conn.createStatement().use { stmt ->
+                        stmt.execute("CREATE INDEX IF NOT EXISTS idx_players_name_std ON players(name_std)")
+                    }
+                    println("✅ name_std eksik kısmı tamamlandı.")
                     return@withConnection
                 }
 
@@ -1760,7 +1809,7 @@ object DatabaseClient {
         )
     }
 
-    fun fetchPlayerAcrossClubs(terms: List<Pair<String, Boolean>>, minYear: Int? = null): MultiClubPlayerResult? {
+    fun fetchPlayerAcrossClubs(terms: List<Pair<String, Boolean>>, minYear: Int? = null, seed: Long? = null): MultiClubPlayerResult? {
         if (terms.size < 2) return null
 
         val resolvedClubTerms = terms.map { (term, isCountry) -> if (isCountry) null else resolveClubSearchTerm(term) }
@@ -1862,7 +1911,20 @@ object DatabaseClient {
 
         if (fullMatches.isEmpty()) return null
 
-        val (chosenId, termSeasonMap) = fullMatches.entries.random()
+        // 🎯 KESİN DÜZELTME: Günün Sorusu için aynı gün herkese AYNI iki takım
+        // çıkıyordu (tarihe göre seçildiği için), ama HANGİ OYUNCU olduğu bu
+        // satırda TAMAMEN rastgeleydi — bu yüzden aynı takımlar, farklı
+        // kullanıcılarda (hatta aynı kullanıcının farklı denemelerinde) farklı
+        // oyuncu/yıl olarak çıkabiliyordu. Artık seed verilmişse (Günün Sorusu
+        // bunu gönderiyor), sıralı bir liste üzerinden SEED'E GÖRE SABİT bir
+        // seçim yapıyoruz — herkes gerçekten AYNI soruyu görüyor.
+        val sortedEntries = fullMatches.entries.sortedBy { it.key }
+        val (chosenId, termSeasonMap) = if (seed != null && sortedEntries.isNotEmpty()) {
+            val idx = ((seed % sortedEntries.size) + sortedEntries.size) % sortedEntries.size
+            sortedEntries[idx.toInt()].let { it.key to it.value }
+        } else {
+            fullMatches.entries.random().let { it.key to it.value }
+        }
         val playerName = playerNames[chosenId] ?: return null
         val position = playerPositions[chosenId] ?: ""
 
