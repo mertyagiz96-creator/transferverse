@@ -464,6 +464,12 @@ fun main() {
                 "vettel-alonsonun-ayrildigi-koltuga-oturdu" to "f1"
             )
 
+            // 🎨 Ana sayfadaki modern çizim ikonlarıyla AYNI SVG'ler — blog
+            // sayfasındaki eski emoji ikonların yerine geçiyor.
+            fun svgFootball(): String = """<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" style="vertical-align:-2px; margin-right:5px;"><circle cx="12" cy="12" r="10"/><path d="M12 7l3.5 2.5-1.3 4.1H9.8L8.5 9.5z" fill="currentColor" stroke="none"/><path d="M12 2v5M12 17v5M2.5 9.5l4.5 1.5M17 11l4.5-1.5M6 19.5l1.8-4M16.2 15.5L18 19.5"/></svg>"""
+            fun svgBasketball(): String = """<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" style="vertical-align:-2px; margin-right:5px;"><circle cx="12" cy="12" r="10"/><path d="M12 2v20M2 12h20M4.2 5.5c2.5 2.5 3.8 5.5 3.8 6.5s-1.3 4-3.8 6.5M19.8 5.5c-2.5 2.5-3.8 5.5-3.8 6.5s1.3 4 3.8 6.5"/></svg>"""
+            fun svgF1(): String = """<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" style="vertical-align:-2px; margin-right:5px;"><rect x="3" y="4" width="7" height="7"/><rect x="14" y="4" width="7" height="7"/><rect x="3" y="13" width="7" height="7"/><rect x="14" y="13" width="7" height="7"/></svg>"""
+
             fun blogPageHtml(title: String, bodyHtml: String, description: String): String = """
                 <!DOCTYPE html>
                 <html lang="tr">
@@ -586,20 +592,20 @@ fun main() {
                     <p class="subtitle">Futbol, basketbol ve Formula 1 tarihinin en dramatik, en şaşırtıcı transfer anları.</p>
                     <div class="sport-filter-bar">
                         <button class="sport-filter-btn active" data-filter="all" onclick="filterBlogBySport('all', this)">Tümü</button>
-                        <button class="sport-filter-btn" data-filter="futbol" onclick="filterBlogBySport('futbol', this)">⚽ Futbol</button>
-                        <button class="sport-filter-btn" data-filter="basketbol" onclick="filterBlogBySport('basketbol', this)">🏀 Basketbol</button>
-                        <button class="sport-filter-btn" data-filter="f1" onclick="filterBlogBySport('f1', this)">🏎️ Formula 1</button>
+                        <button class="sport-filter-btn" data-filter="futbol" onclick="filterBlogBySport('futbol', this)">${svgFootball()} Futbol</button>
+                        <button class="sport-filter-btn" data-filter="basketbol" onclick="filterBlogBySport('basketbol', this)">${svgBasketball()} Basketbol</button>
+                        <button class="sport-filter-btn" data-filter="f1" onclick="filterBlogBySport('f1', this)">${svgF1()} Formula 1</button>
                     </div>
                     <div class="sport-section" data-sport="futbol">
-                        <h2>⚽ Futbol</h2>
+                        <h2>${svgFootball()} Futbol</h2>
                         <div class="article-list">$footballHtml</div>
                     </div>
                     <div class="sport-section" data-sport="basketbol">
-                        <h2>🏀 Basketbol</h2>
+                        <h2>${svgBasketball()} Basketbol</h2>
                         <div class="article-list">$basketballHtml</div>
                     </div>
                     <div class="sport-section" data-sport="f1">
-                        <h2>🏎️ Formula 1</h2>
+                        <h2>${svgF1()} Formula 1</h2>
                         <div class="article-list">$f1Html</div>
                     </div>
                     <script>
