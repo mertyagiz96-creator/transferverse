@@ -389,7 +389,7 @@ object DatabaseClient {
 
         try {
             withBbConnection { conn ->
-                val sql = "SELECT name, $teamColumn FROM $tableName WHERE ${sqlAccentStripExpr("name")} LIKE ? LIMIT 200"
+                val sql = "SELECT name, $teamColumn FROM $tableName WHERE name_std LIKE ? LIMIT 200"
                 conn.prepareStatement(sql).use { stmt ->
                     stmt.setString(1, "%$targetNorm%")
                     stmt.executeQuery().use { rs ->
@@ -822,7 +822,7 @@ object DatabaseClient {
         // ama "AC Milan" gibi ÖNEK durumunda hiç temizlenmiyordu — bu da kesin
         // eşleşme kontrolünün gerçek oyuncuları yanlışlıkla reddetmesine yol
         // açıyordu. Artık "ac" önek olarak da tanınıyor.
-        result = result.replace(Regex("^(1\\.\\s*fc|vfb|vfl|tsv|ac)\\s+"), "").trim()
+        result = result.replace(Regex("^(1\\.\\s*fc|vfb|vfl|tsv|ac|as|ad|af|aj|ao)\\s+"), "").trim()
         return result
     }
 
@@ -1723,7 +1723,7 @@ object DatabaseClient {
 
         try {
             withBbConnection { conn ->
-                val sql = "SELECT name, $teamColumn, $seasonColumn FROM $tableName WHERE ${sqlAccentStripExpr("name")} LIKE ? LIMIT 60"
+                val sql = "SELECT name, $teamColumn, $seasonColumn FROM $tableName WHERE name_std LIKE ? LIMIT 60"
                 conn.prepareStatement(sql).use { stmt ->
                     stmt.setString(1, "%$targetNorm%")
                     stmt.executeQuery().use { rs ->
@@ -1825,6 +1825,93 @@ object DatabaseClient {
             // devam ediyoruz, mevcut (daha yavaş ama çalışan) sorgu yolu hâlâ geçerli.
             println("🔥 ensureNameStdColumn HATASI: ${e.message}")
         }
+    }
+
+    // 🏀 KESİN DÜZELTME: futboldaki AYNI, KANITLANMIŞ mimariyi basketbola da
+    // uyguluyoruz — aksan temizleme, HER aramada CANLI olarak (iç içe REPLACE
+    // zinciriyle) hesaplanmak yerine, sunucu başlarken BİR KEZ hesaplanıp
+    // "name_std" sütununa yazılıyor ve indeksleniyor. Bu, hem çok daha hızlı
+    // (her arama artık hazır sütuna bakıyor) hem de güvenli — canlı sorgularda
+    // karmaşık ifade riski tamamen ortadan kalkıyor.
+    private fun ensureBbNameStdColumn(tableName: String) {
+        try {
+            withBbConnection { conn ->
+                var columnExists = false
+                conn.prepareStatement("PRAGMA table_info($tableName)").use { stmt ->
+                    stmt.executeQuery().use { rs ->
+                        while (rs.next()) {
+                            if (rs.getString("name") == "name_std") columnExists = true
+                        }
+                    }
+                }
+
+                if (!columnExists) {
+                    conn.createStatement().use { stmt ->
+                        stmt.execute("ALTER TABLE $tableName ADD COLUMN name_std TEXT")
+                    }
+                }
+
+                var nullCount = 0
+                conn.prepareStatement("SELECT COUNT(*) as cnt FROM $tableName WHERE name_std IS NULL").use { stmt ->
+                    stmt.executeQuery().use { rs ->
+                        if (rs.next()) nullCount = rs.getInt("cnt")
+                    }
+                }
+                if (nullCount == 0) {
+                    println("✅ $tableName.name_std zaten mevcut ve dolu, migrasyon atlanıyor.")
+                    return@withBbConnection
+                }
+
+                // 🎯 KESİN DÜZELTME: SQL'in karmaşık REPLACE() zinciri yerine —
+                // ki bu, "š" gibi Slav harflerini eklemeye çalışınca ayrıştırıcıyı
+                // çökertmişti — hesaplamayı TAMAMEN Kotlin'de yapıyoruz. Kotlin'in
+                // stripAccentsForCompare fonksiyonu, Unicode NFD normalizasyonu
+                // sayesinde İSPANYOLCA, SIRPÇA/HIRVATÇA (š, č, ž DAHİL) ve daha
+                // fazla dildeki aksanlı harfi ZATEN doğru şekilde işliyor — SQL'e
+                // hiçbir karmaşık ifade yazmadan, satır satır güncelliyoruz.
+                // 🛠️ DÜZELTME: bu tablolarda "rowid" erişilebilir değilmiş
+                // (muhtemelen WITHOUT ROWID tablo) — bunun yerine DOĞRUDAN İSİM
+                // ile güncelliyoruz. Aynı isimli birden fazla satır olsa bile,
+                // hepsi zaten AYNI doğru değeri alacağı için bu tamamen güvenli.
+                println("⏳ $tableName.name_std hesaplanıyor (Kotlin tarafında, isme göre)...")
+                val startTime = System.currentTimeMillis()
+                val distinctNames = mutableSetOf<String>()
+                conn.prepareStatement("SELECT DISTINCT name FROM $tableName WHERE name_std IS NULL").use { stmt ->
+                    stmt.executeQuery().use { rs ->
+                        while (rs.next()) {
+                            val name = rs.getString("name")
+                            if (!name.isNullOrBlank()) distinctNames.add(name)
+                        }
+                    }
+                }
+                conn.autoCommit = false
+                try {
+                    conn.prepareStatement("UPDATE $tableName SET name_std = ? WHERE name = ?").use { stmt ->
+                        for (name in distinctNames) {
+                            stmt.setString(1, stripAccentsForCompare(name))
+                            stmt.setString(2, name)
+                            stmt.addBatch()
+                        }
+                        stmt.executeBatch()
+                    }
+                    conn.commit()
+                } finally {
+                    conn.autoCommit = true
+                }
+                conn.createStatement().use { stmt ->
+                    stmt.execute("CREATE INDEX IF NOT EXISTS idx_${tableName}_name_std ON $tableName(name_std)")
+                }
+                val elapsed = System.currentTimeMillis() - startTime
+                println("✅ $tableName.name_std migrasyonu tamamlandı (${distinctNames.size} benzersiz isim, ${elapsed}ms).")
+            }
+        } catch (e: Exception) {
+            println("🔥 ensureBbNameStdColumn($tableName) HATASI: ${e.message}")
+        }
+    }
+
+    fun ensureBasketballNameStdColumns() {
+        ensureBbNameStdColumn("bb_players")
+        ensureBbNameStdColumn("nba_players")
     }
 
     fun fetchPlayerNameSuggestions(query: String, contextClubs: List<String> = emptyList()): List<String> {

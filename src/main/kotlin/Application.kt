@@ -68,6 +68,11 @@ fun main() {
     // (ikinci ve sonraki her deploy'da) bu neredeyse anında biter.
     DatabaseClient.ensureNameStdColumn()
 
+    // 🏀 YENİ: futboldaki AYNI performans/güvenlik mimarisi artık basketbolda
+    // da uygulanıyor — canlı REPLACE() zinciri yerine, sunucu başlarken BİR
+    // KEZ hesaplanmış "name_std" sütunu kullanılıyor.
+    DatabaseClient.ensureBasketballNameStdColumns()
+
     // 🚀 Sunucu ayağa kalkarken, basketbol logolarını arka planda (sunucuyu
     // hiç bekletmeden) önceden yükleyip önbelleğe alıyoruz.
     GlobalScope.launch {
