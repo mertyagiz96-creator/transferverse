@@ -810,6 +810,14 @@ object DatabaseClient {
         if (isYouthClub(cleanClub)) {
             return false
         }
+        // 🎯 KESİN DÜZELTME: "Barcelona" araması, "RCD Espanyol de Barcelona"
+        // (Espanyol'un resmi tam adı, FC Barcelona'dan TAMAMEN FARKLI bir kulüp)
+        // ile yanlışlıkla eşleşiyordu — çünkü isimde "barcelona" kelimesi geçiyor.
+        // Bu, Raúl de Tomás'ın (gerçekte sadece Espanyol'da oynamış, Barça'da hiç
+        // oynamamış) yanlışlıkla "Barcelona" cevabı olarak çıkmasına sebep olmuştu.
+        if (resolvedTarget == "barcelona" && cleanClub.contains("espanyol")) {
+            return false
+        }
         return cleanClub.contains(resolvedTarget)
     }
 

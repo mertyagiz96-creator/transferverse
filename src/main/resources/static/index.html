@@ -5595,8 +5595,10 @@
             <div id="connectionAttemptsBox" style="max-width:380px; margin:0 auto 10px;"></div>
             <div id="connectionCounter" style="font-size:0.7rem; opacity:0.6; text-align:center;">${t('Deneme', 'Attempt')}: 0</div>
             <div style="width:100%; max-width:320px; display:flex; flex-wrap:wrap; gap:8px; margin: 8px auto 0; position:relative;">
-                <input type="text" id="connectionGuessInput" placeholder="${t('Köprü oyuncuyu yaz...', 'Type the bridge player...')}" autocomplete="off" style="flex:1; padding:10px 12px; border-radius:3px; border:1px solid rgba(var(--fg-rgb),0.18); background:rgba(var(--fg-rgb),0.02); color:rgb(var(--fg-rgb)); font-size: 0.9rem; outline: none;">
-                <div id="connectionGuessDropdown" class="autocomplete-dropdown"></div>
+                <div style="flex:1; position:relative; min-width:150px;">
+                    <input type="text" id="connectionGuessInput" placeholder="${t('Köprü oyuncuyu yaz...', 'Type the bridge player...')}" autocomplete="off" style="width:100%; padding:10px 12px; border-radius:3px; border:1px solid rgba(var(--fg-rgb),0.18); background:rgba(var(--fg-rgb),0.02); color:rgb(var(--fg-rgb)); font-size: 0.9rem; outline: none; box-sizing:border-box;">
+                    <div id="connectionGuessDropdown" class="autocomplete-dropdown"></div>
+                </div>
                 <button id="connectionSubmitBtn" class="toolbar-btn" style="padding:8px 14px; font-size:0.72rem;">${t('Dene', 'Try')}</button>
             </div>
             <div id="connectionStatus" style="font-size:0.78rem; font-weight:600; color: rgb(var(--fg-rgb)); text-align:center; margin-top:8px;"></div>
@@ -5836,8 +5838,10 @@
             <div id="bbConnectionAttemptsBox" style="max-width:380px; margin:0 auto 10px;"></div>
             <div id="bbConnectionCounter" style="font-size:0.7rem; opacity:0.6; text-align:center;">${t('Deneme', 'Attempt')}: 0</div>
             <div style="width:100%; max-width:320px; display:flex; flex-wrap:wrap; gap:8px; margin: 8px auto 0; position:relative;">
-                <input type="text" id="bbConnectionGuessInput" placeholder="${t('Köprü oyuncuyu yaz...', 'Type the bridge player...')}" autocomplete="off" style="flex:1; padding:10px 12px; border-radius:3px; border:1px solid rgba(var(--fg-rgb),0.18); background:rgba(var(--fg-rgb),0.02); color:rgb(var(--fg-rgb)); font-size: 0.9rem; outline: none;">
-                <div id="bbConnectionGuessDropdown" class="autocomplete-dropdown"></div>
+                <div style="flex:1; position:relative; min-width:150px;">
+                    <input type="text" id="bbConnectionGuessInput" placeholder="${t('Köprü oyuncuyu yaz...', 'Type the bridge player...')}" autocomplete="off" style="width:100%; padding:10px 12px; border-radius:3px; border:1px solid rgba(var(--fg-rgb),0.18); background:rgba(var(--fg-rgb),0.02); color:rgb(var(--fg-rgb)); font-size: 0.9rem; outline: none; box-sizing:border-box;">
+                    <div id="bbConnectionGuessDropdown" class="autocomplete-dropdown"></div>
+                </div>
                 <button id="bbConnectionSubmitBtn" class="toolbar-btn" style="padding:8px 14px; font-size:0.72rem;">${t('Dene', 'Try')}</button>
             </div>
             <div id="bbConnectionStatus" style="font-size:0.78rem; font-weight:600; color: rgb(var(--fg-rgb)); text-align:center; margin-top:8px;"></div>
@@ -6699,8 +6703,10 @@
                 <div id="bbDailyAttemptsList" style="width:100%; max-width:320px; display:flex; flex-direction:column; gap:4px;"></div>
                 <div id="bbDailyGuessCounter" style="font-size:0.7rem; opacity:0.6;">${t('Tahmin', 'Guess')}: 0/5</div>
                 <div style="width:100%; max-width:320px; display:flex; flex-wrap:wrap; gap:8px; position:relative;">
-                    <input type="text" id="dailyGuessInput" placeholder="${t('Tahminini yaz...', 'Type your guess...')}" autocomplete="off" style="flex:1; padding:10px 12px; border-radius:3px; border:1px solid rgba(var(--fg-rgb),0.18); background:rgba(var(--fg-rgb),0.02); color:rgb(var(--fg-rgb)); font-size: 0.9rem; outline: none;">
-                    <div id="dailyGuessDropdown" class="autocomplete-dropdown"></div>
+                    <div style="flex:1; position:relative; min-width:150px;">
+                        <input type="text" id="dailyGuessInput" placeholder="${t('Tahminini yaz...', 'Type your guess...')}" autocomplete="off" style="width:100%; padding:10px 12px; border-radius:3px; border:1px solid rgba(var(--fg-rgb),0.18); background:rgba(var(--fg-rgb),0.02); color:rgb(var(--fg-rgb)); font-size: 0.9rem; outline: none; box-sizing:border-box;">
+                        <div id="dailyGuessDropdown" class="autocomplete-dropdown"></div>
+                    </div>
                     <button id="bbDailyGuessSubmitBtn" class="toolbar-btn" style="padding:8px 14px; font-size:0.72rem;">${t('Tahmin Et', 'Guess')}</button>
                 </div>
                 <div id="dailyQuestionStatus" style="font-size:0.78rem; font-weight: 600; color: rgb(var(--fg-rgb));">${bestTimeText}</div>
@@ -8144,8 +8150,10 @@
                 </table>
                 <div id="dailyGuessCounter" style="font-size:0.7rem; opacity:0.6;">Tahmin: 0/5</div>
                 <div style="width:100%; max-width:320px; display:flex; flex-wrap:wrap; gap:8px; position:relative;">
-                    <input type="text" id="dailyGuessInput" placeholder="Tahminini yaz..." autocomplete="off" style="flex:1; padding:10px 12px; border-radius:3px; border:1px solid rgba(var(--fg-rgb),0.18); background:rgba(var(--fg-rgb),0.02); color:rgb(var(--fg-rgb)); font-size: 0.9rem; outline: none;">
-                    <div id="dailyGuessDropdown" class="autocomplete-dropdown"></div>
+                    <div style="flex:1; position:relative; min-width:150px;">
+                        <input type="text" id="dailyGuessInput" placeholder="Tahminini yaz..." autocomplete="off" style="width:100%; padding:10px 12px; border-radius:3px; border:1px solid rgba(var(--fg-rgb),0.18); background:rgba(var(--fg-rgb),0.02); color:rgb(var(--fg-rgb)); font-size: 0.9rem; outline: none; box-sizing:border-box;">
+                        <div id="dailyGuessDropdown" class="autocomplete-dropdown"></div>
+                    </div>
                     <button id="dailyGuessSubmitBtn" class="toolbar-btn" style="padding:8px 14px; font-size:0.72rem;">Tahmin Et</button>
                 </div>
                 <div id="dailyQuestionStatus" style="font-size:0.78rem; font-weight: 600; color: rgb(var(--fg-rgb));"></div>
@@ -8208,6 +8216,18 @@
             lockRound();
             if (statusEl) {
                 statusEl.textContent = `❌ Bu seferlik olmadı — doğru cevap: ${cleanFullName}. Yarın tekrar dene!`;
+                // 🎯 DÜZELTME: kazanma durumunda link ekleniyordu, ama 5 hak
+                // bitince (kaybetme durumunda) hiç eklenmiyordu — eksiklik giderildi.
+                if (cleanFullName) {
+                    const lossInfoLink = document.createElement('a');
+                    lossInfoLink.href = profileUrl || `https://www.transfermarkt.com/schnellsuche/ergebnis/schnellsuche?query=${encodeURIComponent(cleanFullName)}`;
+                    lossInfoLink.target = '_blank';
+                    lossInfoLink.rel = 'noopener noreferrer';
+                    lossInfoLink.textContent = `🔗 ${cleanFullName} profili`;
+                    lossInfoLink.style.cssText = 'display:inline-block; margin-top:8px; font-size:0.7rem; color:var(--accent-gold); text-decoration:none; opacity:0.85;';
+                    statusEl.appendChild(document.createElement('br'));
+                    statusEl.appendChild(lossInfoLink);
+                }
             }
             try {
                 localStorage.setItem('transferkolik_daily_wordle_state', JSON.stringify({ date: today, solved: false, guessCount, emojiGrid, historyHtmlList, playerName: cleanFullName }));
