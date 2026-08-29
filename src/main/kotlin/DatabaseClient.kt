@@ -805,7 +805,8 @@ object DatabaseClient {
             // yaratıyordu). "Castilla" (Real Madrid'in alt takımı) ve "jong "
             // (Hollanda'da Ajax/PSV/AZ gibi kulüplerin alt takımları için
             // kullanılan "genç" anlamına gelen standart önek) eklendi.
-            "castilla", "jong ", "next gen", "futuro", "sanse", "atlètic", "atletic"
+            "castilla", "jong ", "next gen", "futuro", "sanse", "atlètic", "atletic",
+            "primavera", "under "
         )
         if (youthKeywords.any { lower.contains(it) }) return true
         if (Regex("\\s[bc]$").containsMatchIn(lower)) return true
