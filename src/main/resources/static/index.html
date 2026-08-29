@@ -5858,22 +5858,31 @@
                 setTimeout(() => { bbPollForSpacing.style.marginTop = '24px'; }, 200);
             });
         }
-        // 🎯 KÖK SEBEP DÜZELTMESİ: ekran görüntüsünde dropdown'ın kartın KENDİ
-        // sınırında kesildiği görüldü — bu, kartın "transform" özelliğinin
-        // (hover efekti), position:absolute dropdown için YENİ bir sınırlama
-        // kutusu (containing block) oluşturmasından kaynaklanıyor. !important
-        // kullanarak, kartın kendi onmouseover kodunun bile EZEMEYECEĞİ şekilde
-        // transform'u geçici olarak sıfırlıyoruz.
+        // 🎯 KULLANICI TEŞHİSİ (doğru!): sadece kartın kendi transform'u değil,
+        // Günün Sorusu ve Köprü kartlarını BİRLİKTE tutan ÜST kapsayıcı
+        // (#homeCardsRow, webde yan yana gösteren sıra) da dropdown'ı kendi
+        // sınırına hapsediyor olabilir. Tüm olası kapsayıcılara BİRDEN,
+        // !important ile overflow:visible zorluyoruz — hangisi asıl suçluysa
+        // fark etmez, hepsi garantiye alınmış olur.
         const bbConnCardForTransform = document.getElementById('bbConnectionGameSection');
-        if (guessInput && bbConnCardForTransform) {
+        const bbHomeCardsRow = document.getElementById('homeCardsRow');
+        const bbHomeCardsWrapper = document.getElementById('homeCardsWrapper');
+        const ancestorsToFree = [bbConnCardForTransform, bbHomeCardsRow, bbHomeCardsWrapper].filter(Boolean);
+        if (guessInput && ancestorsToFree.length > 0) {
             guessInput.addEventListener('focus', () => {
-                bbConnCardForTransform.style.setProperty('transform', 'none', 'important');
-                bbConnCardForTransform.style.setProperty('transition', 'none', 'important');
+                ancestorsToFree.forEach(el => {
+                    el.style.setProperty('overflow', 'visible', 'important');
+                    el.style.setProperty('transform', 'none', 'important');
+                    el.style.setProperty('transition', 'none', 'important');
+                });
             });
             guessInput.addEventListener('blur', () => {
                 setTimeout(() => {
-                    bbConnCardForTransform.style.removeProperty('transform');
-                    bbConnCardForTransform.style.removeProperty('transition');
+                    ancestorsToFree.forEach(el => {
+                        el.style.removeProperty('overflow');
+                        el.style.removeProperty('transform');
+                        el.style.removeProperty('transition');
+                    });
                 }, 200);
             });
         }
