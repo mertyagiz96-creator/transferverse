@@ -797,7 +797,15 @@ object DatabaseClient {
             "u15", "u16", "u17", "u18", "u19", "u20", "u21", "u23",
             "u-15", "u-16", "u-17", "u-18", "u-19", "u-20", "u-21", "u-23",
             "yth", "youth", "academy", "akademi", "reserves", "amateur", "ii",
-            "res.", "sva"
+            "res.", "sva",
+            // 🎯 KESİN DÜZELTME: bu kulüpler, standart "X B" / "X II" kalıbına
+            // UYMAYAN, KENDİNE ÖZGÜ isimli alt takımlara sahip — bu yüzden eski
+            // liste bunları hiç yakalayamıyordu (örn. "Real Madrid Castilla",
+            // A takımıyla aynı oyuncu havuzunda gösterilip yanlışlıkla eşleşme
+            // yaratıyordu). "Castilla" (Real Madrid'in alt takımı) ve "jong "
+            // (Hollanda'da Ajax/PSV/AZ gibi kulüplerin alt takımları için
+            // kullanılan "genç" anlamına gelen standart önek) eklendi.
+            "castilla", "jong ", "next gen", "futuro", "sanse", "atlètic", "atletic"
         )
         if (youthKeywords.any { lower.contains(it) }) return true
         if (Regex("\\s[bc]$").containsMatchIn(lower)) return true
