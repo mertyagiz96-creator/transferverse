@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TransferKolik | Player Finder</title>
+    <meta name="google-site-verification" content="f5YRn_kULMRg2MCE2itmD71D29bWoDfOxj_E34KLLBY" />
 
     <!-- 🎯 DÜZELTME: sayfa açılırken kısa bir an eski (koyu) tema görünüyordu.
          Kök sebep: tema uygulayan kod <body> içindeki mevcut kod bloğunun
@@ -5857,6 +5858,25 @@
                 setTimeout(() => { bbPollForSpacing.style.marginTop = '24px'; }, 200);
             });
         }
+        // 🎯 KÖK SEBEP DÜZELTMESİ: ekran görüntüsünde dropdown'ın kartın KENDİ
+        // sınırında kesildiği görüldü — bu, kartın "transform" özelliğinin
+        // (hover efekti), position:absolute dropdown için YENİ bir sınırlama
+        // kutusu (containing block) oluşturmasından kaynaklanıyor. !important
+        // kullanarak, kartın kendi onmouseover kodunun bile EZEMEYECEĞİ şekilde
+        // transform'u geçici olarak sıfırlıyoruz.
+        const bbConnCardForTransform = document.getElementById('bbConnectionGameSection');
+        if (guessInput && bbConnCardForTransform) {
+            guessInput.addEventListener('focus', () => {
+                bbConnCardForTransform.style.setProperty('transform', 'none', 'important');
+                bbConnCardForTransform.style.setProperty('transition', 'none', 'important');
+            });
+            guessInput.addEventListener('blur', () => {
+                setTimeout(() => {
+                    bbConnCardForTransform.style.removeProperty('transform');
+                    bbConnCardForTransform.style.removeProperty('transition');
+                }, 200);
+            });
+        }
 
         let attempts = 0;
         let solved = false;
@@ -6364,6 +6384,9 @@
         const player = basketballBioPool[idx];
 
         content.innerHTML = `
+            <p style="margin-bottom: 6px;">
+                <a href="https://tr.wikipedia.org/wiki/Özel:Ara?search=${encodeURIComponent(player.name)}" target="_blank" rel="noopener noreferrer" style="font-size:1.1rem; font-weight:800; color:rgb(var(--fg-rgb)); text-decoration:none; border-bottom:1px dashed rgba(var(--fg-rgb),0.3);">${escapeHtml(player.name)}</a>
+            </p>
             <p style="margin-bottom: 10px;">
                 <span style="font-size:0.85rem; font-weight:800; color:var(--accent-gold); text-transform:uppercase; letter-spacing:0.5px;">${currentLang === 'en' ? (player.league === 'NBA' ? 'NBA' : 'Europe') : player.league}</span>
             </p>
@@ -6439,7 +6462,7 @@
                 <div style="display:flex; gap:20px; align-items:flex-start; flex-wrap:wrap; margin-bottom:18px; padding:18px; background:rgba(var(--card-tint-rgb),0.25); border-radius:14px; border:1px solid rgba(var(--fg-rgb),0.08);">
                     ${photoHtml || fallbackAvatarHtml}
                     <div style="flex:1; min-width:180px;">
-                        <div style="font-size:1.15rem; font-weight:800; color:rgb(var(--fg-rgb)); margin-bottom:6px;">${escapeHtml(bio.name)}</div>
+                        <div style="font-size:1.15rem; font-weight:800; color:rgb(var(--fg-rgb)); margin-bottom:6px;"><a href="https://www.transfermarkt.com/schnellsuche/ergebnis/schnellsuche?query=${encodeURIComponent(bio.name)}" target="_blank" rel="noopener noreferrer" style="color:inherit; text-decoration:none; border-bottom:1px dashed rgba(var(--fg-rgb),0.3);">${escapeHtml(bio.name)}</a></div>
                         <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px;">
                             ${turkishPosition ? `<span style="font-size:0.7rem; font-weight:600; padding:3px 10px; border-radius:12px; background:rgba(var(--accent-gold-rgb),0.15); color:var(--accent-gold);">${escapeHtml(turkishPosition)}</span>` : ''}
                             ${turkishNationality ? `<span style="font-size:0.7rem; font-weight:600; padding:3px 10px; border-radius:12px; background:rgba(var(--fg-rgb),0.08); color:rgba(var(--fg-rgb),0.7);">${escapeHtml(turkishNationality)}</span>` : ''}
@@ -6467,7 +6490,7 @@
                 paragraph2 += `kariyerinin bilinen son durağı olarak ${lastClub} forması giydi.`;
             }
 
-            const paragraph3 = `TransferKolik'te ${bio.name}'in tam transfer geçmişini, hangi kulüpte hangi sezonlarda oynadığını görmek için oyuncu ismini veya kulüplerinden birini arama kutusuna yazabilirsiniz.`;
+            const paragraph3 = `${bio.name}'in tam transfer geçmişine (isme tıklayarak) ulaşabilir, kariyerinde forma giydiği kulüplerden birini TransferKolik'in arama kutusuna yazarak, o kulüpte oynamış diğer oyuncuları da keşfedebilirsiniz.`;
 
             content.innerHTML += `<p style="margin-bottom: 14px;">${paragraph1}</p>` +
                 (paragraph2 ? `<p style="margin-bottom: 14px;">${paragraph2}</p>` : '') +

@@ -815,7 +815,14 @@ object DatabaseClient {
 
     private fun stripClubSuffix(s: String): String {
         var result = s.replace(Regex("\\s+(bc|fc|cf|sk|ac|sc|afc|kk|fk|cp|sd|cd|if|bk|ff|bsc)$"), "").trim()
-        result = result.replace(Regex("^(1\\.\\s*fc|vfb|vfl|tsv)\\s+"), "").trim()
+        // 🎯 KESİN DÜZELTME: veritabanında AYNI kulüp için iki farklı kayıt
+        // türü olduğu doğrulandı — bazı kayıtlarda yalın "Milan", bazılarında
+        // (örn. Zlatan Ibrahimović'in transferlerinde) "AC Milan" kullanılmış.
+        // "ac" öneki eskiden sadece SONEK olarak temizleniyordu ("Something AC"),
+        // ama "AC Milan" gibi ÖNEK durumunda hiç temizlenmiyordu — bu da kesin
+        // eşleşme kontrolünün gerçek oyuncuları yanlışlıkla reddetmesine yol
+        // açıyordu. Artık "ac" önek olarak da tanınıyor.
+        result = result.replace(Regex("^(1\\.\\s*fc|vfb|vfl|tsv|ac)\\s+"), "").trim()
         return result
     }
 
@@ -830,9 +837,20 @@ object DatabaseClient {
         val stdNat = playerNationality.toStandardSearch()
         val stdSearch = searchParam.toStandardSearch()
         val stdMapped = mappedCountry.toStandardSearch()
-        val primaryNationality = stdNat.split(Regex("\\s{2,}")).firstOrNull()?.trim()
-            ?: return false
-        return primaryNationality == stdSearch || primaryNationality == stdMapped
+        if (stdNat.isBlank()) return false
+
+        // 🎯 DÜZELTME (v2 — daha güvenli): ilk denemem tek tek KELİMELERE
+        // bölüyordu, bu da "South Africa" gibi çok kelimeli ülke isimlerinde
+        // yanlış pozitif riski taşıyordu (örn. sadece "Africa" araması yanlışlıkla
+        // eşleşebilirdi). Artık aranan İFADENİN TAMAMINI (tek parça olarak),
+        // kelime sınırlarıyla (\b) uyruk alanının içinde arıyoruz — çok kelimeli
+        // ülke isimleri bozulmadan korunuyor, ama biçim tutarsızlıklarına
+        // (fazladan boşluk, farklı sıralama) karşı hâlâ toleranslı.
+        fun containsAsWholeTerm(term: String): Boolean {
+            if (term.isBlank()) return false
+            return Regex("\\b${Regex.escape(term)}\\b").containsMatchIn(stdNat)
+        }
+        return containsAsWholeTerm(stdSearch) || containsAsWholeTerm(stdMapped)
     }
 
     private fun isCountryParam(param: String): Boolean {
