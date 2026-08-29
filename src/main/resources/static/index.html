@@ -1982,9 +1982,11 @@
                "içeriği kadar yer kapla" (flex: 0 0 auto) kullanıyoruz — masaüstündeki
                gibi kompakt kalıyor, yanındaki mod butonu kalan alanı dolduruyor. */
             #homeMenuBtn {
-                font-size: 0.57rem;
-                padding: 9px 10px;
-                flex: 0 0 auto;
+                font-size: 0.57rem !important;
+                padding: 9px 12px !important;
+                flex: 0 0 auto !important;
+                width: auto !important;
+                max-width: fit-content !important;
             }
             #playerModeBtn {
                 flex: 1;
@@ -9020,15 +9022,21 @@
                     <div class="player-mode-card">
                         <div class="quiz-win-title" style="font-size: 1.3rem; margin-bottom: 22px;">Hangi modda oynamak istersin?</div>
                         <div style="max-width: 420px; margin: 0 auto;">
-                            <div style="font-size: 0.68rem; font-weight: 800; letter-spacing: 0.6px; text-transform: uppercase; color: var(--accent-gold); text-align: left; margin-bottom: 6px;">⚽ Futbol</div>
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 18px;">
-                                <button id="selectGenelModeBtn" class="toolbar-btn" style="${modeBtnStyle}">${svgFootballBall}Tüm Dünya</button>
-                                <button id="selectTurkiyeModeBtn" class="toolbar-btn" style="${modeBtnStyle}">${svgFootballBall}Süper Lig</button>
-                            </div>
-                            <div style="font-size: 0.68rem; font-weight: 800; letter-spacing: 0.6px; text-transform: uppercase; color: var(--accent-gold); text-align: left; margin-bottom: 6px;">🏀 Basketbol</div>
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-                                <button id="selectNbaModeBtn" class="toolbar-btn" style="${modeBtnStyle}">${svgBasketballBall}NBA</button>
-                                <button id="selectEuroBasketModeBtn" class="toolbar-btn" style="${modeBtnStyle}">${svgBasketballBall}EuroLeague / Avrupa</button>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                                <div>
+                                    <div style="font-size: 0.68rem; font-weight: 800; letter-spacing: 0.6px; text-transform: uppercase; color: var(--accent-gold); text-align: left; margin-bottom: 6px;">⚽ Futbol</div>
+                                    <div style="display: grid; grid-template-rows: 1fr 1fr; gap: 12px;">
+                                        <button id="selectGenelModeBtn" class="toolbar-btn" style="${modeBtnStyle}">${svgFootballBall}Tüm Dünya</button>
+                                        <button id="selectTurkiyeModeBtn" class="toolbar-btn" style="${modeBtnStyle}">${svgFootballBall}Süper Lig</button>
+                                    </div>
+                                </div>
+                                <div>
+                                    <div style="font-size: 0.68rem; font-weight: 800; letter-spacing: 0.6px; text-transform: uppercase; color: var(--accent-gold); text-align: left; margin-bottom: 6px;">🏀 Basketbol</div>
+                                    <div style="display: grid; grid-template-rows: 1fr 1fr; gap: 12px;">
+                                        <button id="selectNbaModeBtn" class="toolbar-btn" style="${modeBtnStyle}">${svgBasketballBall}NBA</button>
+                                        <button id="selectEuroBasketModeBtn" class="toolbar-btn" style="${modeBtnStyle}">${svgBasketballBall}Avrupa</button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                         <div style="font-size: 0.72rem; color: rgba(var(--fg-rgb), 0.5); margin-top: 18px;">
