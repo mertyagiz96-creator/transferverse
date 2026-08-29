@@ -1639,16 +1639,7 @@ object DatabaseClient {
             "Á" to "a", "á" to "a", "É" to "e", "é" to "e",
             "Í" to "i", "í" to "i", "Ó" to "o", "ó" to "o",
             "Ú" to "u", "ú" to "u", "Ñ" to "n", "ñ" to "n",
-            "Ć" to "c", "ć" to "c",
-            // 🎯 KESİN DÜZELTME: bu üç Balkan/Slav harfi (Sırpça, Hırvatça,
-            // Sloven vb. oyuncu isimlerinde sık görülüyor — özellikle Avrupa
-            // basketbolunda) eksikti. "š" (Miloš gibi) eksik olduğu için,
-            // SQL sorgusu bazen bu oyuncuları BULAMIYORDU — ama Kotlin
-            // tarafındaki (NFD normalizasyonlu) kontrol bulabiliyordu, bu da
-            // "bazen çalışıyor bazen çalışmıyor" tutarsızlığına yol açıyordu.
-            "Š" to "s", "š" to "s",
-            "Č" to "c", "č" to "c",
-            "Ž" to "z", "ž" to "z"
+            "Ć" to "c", "ć" to "c"
         )
         for ((from, to) in replacements) {
             expr = "REPLACE($expr, '$from', '$to')"
