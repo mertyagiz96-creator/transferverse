@@ -2266,7 +2266,7 @@
                     <span><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-6px; margin-right:14px;"><path d="m18 14 4 4-4 4"/><path d="m18 2 4 4-4 4"/><path d="M2 18h1.973a4 4 0 0 0 3.3-1.7l5.454-8.6a4 4 0 0 1 3.3-1.7H22"/><path d="M2 6h1.973a4 4 0 0 1 3.3 1.7l5.454 8.6a4 4 0 0 0 3.3 1.7H22"/></svg>Transfermatik</span>
                 </button>
                 <button id="bonservisAviModeBtn" class="hamburger-menu-item" title="10 soruluk hızlı tur — hangi transfer daha pahalıydı, hepsini bilebilecek misin?" disabled>
-                    <span><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-6px; margin-right:14px;"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>Bonservis Avı</span>
+                    <span><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-6px; margin-right:14px;"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg><span id="i18n-bavi-menu">Bonservis Avı</span></span>
                 </button>
             </div>
         </div>
@@ -2382,15 +2382,15 @@
          Pahalıydı?" veri havuzunu (famousTransfersPool) kullanır, ona hiç
          dokunmadan. -->
     <div id="bonservisAviSection" style="display:none; width: 100%; max-width: 620px; margin: 20px auto; text-align:center;">
-        <h2 style="font-size: 1.15rem; font-weight: 800; color: rgba(var(--fg-rgb), 0.85); margin-bottom: 6px;">💰 Bonservis Avı</h2>
-        <p style="font-size:0.8rem; opacity:0.7; margin-bottom:10px;">10 soruda hangi transferin daha pahalı olduğunu bilebilecek misin?</p>
+        <h2 id="i18n-bavi-title" style="font-size: 1.15rem; font-weight: 800; color: rgba(var(--fg-rgb), 0.85); margin-bottom: 6px;">💰 Bonservis Avı</h2>
+        <p id="i18n-bavi-subtitle" style="font-size:0.8rem; opacity:0.7; margin-bottom:10px;">10 soruda hangi transferin daha pahalı olduğunu bilebilecek misin?</p>
         <div id="baviProgressBadge" style="display:inline-block; padding:5px 14px; border-radius:20px; background:rgba(var(--light-green-rgb),0.18); border:1px solid rgba(var(--light-green-rgb),0.5); color:var(--light-green); font-weight:800; font-size:0.75rem; margin-bottom:14px;">
             Soru 1/10 • Puan: 0
         </div>
         <div id="baviContent"></div>
         <div id="baviStatus" style="margin-top:14px; font-size:0.9rem; font-weight:700; min-height:24px;"></div>
         <div style="margin-top:14px; margin-bottom:30px; display:flex; gap:10px; justify-content:center;">
-            <button id="baviResetBtn" class="toolbar-btn" style="font-size:0.72rem;">🔄 Yeniden Başla</button>
+            <button id="baviResetBtn" class="toolbar-btn" style="font-size:0.72rem;"><span id="i18n-bavi-reset">🔄 Yeniden Başla</span></button>
         </div>
     </div>
 
@@ -3520,6 +3520,10 @@
         'i18n-p-feequiz': { en: `Two of football history's biggest-fee transfers are shown side by side, and you guess which one cost more. Based on real, verified transfer fees, this mode offers a fun look into transfer market history.` },
         'i18n-h3-transfermatik': { en: '🃏 Transfermatik' },
         'i18n-p-transfermatik': { en: `Inspired by Blackjack (21), in this mode you draw cards from a curated pool of footballers and try to reach exactly 40 in total "well-travelled" value (or beat your opponent). Cards are scored by how many different clubs the player represented during their career — combining luck with football knowledge for a unique game experience.` },
+        'i18n-bavi-menu': { en: 'Transfer Fee Hunt' },
+        'i18n-bavi-title': { en: '💰 Transfer Fee Hunt' },
+        'i18n-bavi-subtitle': { en: 'Can you guess which transfer cost more in 10 questions?' },
+        'i18n-bavi-reset': { en: '🔄 Restart' },
         'i18n-h3-duel': { en: '🏆 Race a Friend' },
         'i18n-p-duel': { en: `Designed for those who don't want to play alone, this mode offers a real-time, head-to-head competition with a friend. When you create a room, you get a 4-digit code; send it to your friend, who joins the same room via "Join Room". Both of you see the same question at the same time — whoever answers correctly first wins the round. Options include racing to 5 or 10 points first, an optional masking hint, and choosing the General or Turkish League pool. No account or app download needed — you can start playing the moment you share the link.` },
         'i18n-h3-daily': { en: '📅 Question of the Day' },
@@ -5602,7 +5606,7 @@
         const section = document.getElementById('connectionGameSection');
         const content = document.getElementById('connectionGameContent');
         if (!section || !content) return;
-        if (playerModeActive || duelActive || transfermatikActive || currentSport !== 'football') return; // 🛡️ sadece futbol ana ekranı
+        if (playerModeActive || duelActive || transfermatikActive || (typeof bonservisAviActive !== 'undefined' && bonservisAviActive) || currentSport !== 'football') return; // 🛡️ sadece futbol ana ekranı
 
         const howToBtn = document.getElementById('connectionHowToPlayBtn');
         const howToBox = document.getElementById('connectionHowToPlayBox');
@@ -5793,6 +5797,7 @@
             }
         }
 
+        if (playerModeActive || duelActive || transfermatikActive || (typeof bonservisAviActive !== 'undefined' && bonservisAviActive)) return; // 🛡️ YARIŞ DURUMU KORUMASI: ağ isteği sürerken başka moda geçilmiş olabilir
         section.style.display = 'block';
         if (typeof updateHomeCardsRowAlignment === 'function') updateHomeCardsRowAlignment(); // 🛡️ bölüm geç yüklendiyse ok görünürlüğünü tazele
     }
@@ -6069,6 +6074,7 @@
             }
         }
 
+        if (playerModeActive || duelActive || transfermatikActive || (typeof bonservisAviActive !== 'undefined' && bonservisAviActive)) return; // 🛡️ YARIŞ DURUMU KORUMASI: ağ isteği sürerken başka moda geçilmiş olabilir
         section.style.display = 'block';
         if (typeof updateHomeCardsRowAlignment === 'function') updateHomeCardsRowAlignment();
     }
@@ -6077,7 +6083,7 @@
         const section = document.getElementById('transferFeeQuizSection');
         const content = document.getElementById('transferFeeQuizContent');
         if (!section || !content) return;
-        if (playerModeActive || duelActive || transfermatikActive || currentSport !== 'football') return; // 🛡️ sadece futbol ana ekranı
+        if (playerModeActive || duelActive || transfermatikActive || (typeof bonservisAviActive !== 'undefined' && bonservisAviActive) || currentSport !== 'football') return; // 🛡️ sadece futbol ana ekranı
 
         const today = getTodayDateString();
         const seed = seededHash(today + '-fee-quiz');
@@ -6198,6 +6204,7 @@
             });
         }
 
+        if (playerModeActive || duelActive || transfermatikActive || (typeof bonservisAviActive !== 'undefined' && bonservisAviActive)) return; // 🛡️ YARIŞ DURUMU KORUMASI: ağ isteği sürerken başka moda geçilmiş olabilir
         section.style.display = 'block';
         if (typeof updateHomeCardsRowAlignment === 'function') updateHomeCardsRowAlignment();
     }
@@ -6300,7 +6307,7 @@
 
             // 🛡️ YARIŞ DURUMU KORUMASI: ağ isteği sürerken kullanıcı başka bir
             // moda geçmiş olabilir — göstermeden HEMEN önce tekrar kontrol ediyoruz.
-            if (playerModeActive || duelActive || transfermatikActive || currentSport !== 'basketball') return;
+            if (playerModeActive || duelActive || transfermatikActive || (typeof bonservisAviActive !== 'undefined' && bonservisAviActive) || currentSport !== 'basketball') return;
             section.style.display = 'block';
         } catch (e) {
             // sessizce geç, bölüm gizli kalır
@@ -6311,7 +6318,7 @@
         const section = document.getElementById('championshipPollSection');
         const grid = document.getElementById('championshipPollGrid');
         if (!section || !grid) return;
-        if (playerModeActive || duelActive || transfermatikActive || currentSport !== 'football') return; // 🛡️ sadece futbol ana ekranı
+        if (playerModeActive || duelActive || transfermatikActive || (typeof bonservisAviActive !== 'undefined' && bonservisAviActive) || currentSport !== 'football') return; // 🛡️ sadece futbol ana ekranı
 
         try {
             const res = await fetch('/poll/results');
@@ -6405,7 +6412,7 @@
 
             // 🛡️ YARIŞ DURUMU KORUMASI: ağ isteği sürerken kullanıcı başka bir
             // moda geçmiş olabilir — göstermeden HEMEN önce tekrar kontrol ediyoruz.
-            if (playerModeActive || duelActive || transfermatikActive || currentSport !== 'football') return;
+            if (playerModeActive || duelActive || transfermatikActive || (typeof bonservisAviActive !== 'undefined' && bonservisAviActive) || currentSport !== 'football') return;
             section.style.display = 'block';
         } catch (e) {
             // sessizce geç, bölüm gizli kalır
@@ -6512,6 +6519,7 @@
             : `TransferKolik'te ${bio.name}'in tam takım geçmişini görmek için, oynadığı kulüplerden birini "1. Takım" ya da "2. Takım" kutusuna yazıp arayabilirsiniz.`;
 
         content.innerHTML += `<p style="margin-bottom: 14px;">${paragraph1}</p><p>${paragraph2}</p>`;
+        if (playerModeActive || duelActive || transfermatikActive || (typeof bonservisAviActive !== 'undefined' && bonservisAviActive)) return; // 🛡️ YARIŞ DURUMU KORUMASI: ağ isteği sürerken başka moda geçilmiş olabilir
         section.style.display = 'block';
         section.dataset.hasContent = 'true';
     }
@@ -6613,7 +6621,7 @@
                 `<p>${paragraph3}</p>`;
             // 🛡️ YARIŞ DURUMU KORUMASI: ağ isteği sürerken spor değişmiş olabilir
             // (örn. basketbola geçilmiş) — göstermeden HEMEN önce tekrar kontrol.
-            if (currentSport !== 'football') return;
+            if (playerModeActive || duelActive || transfermatikActive || (typeof bonservisAviActive !== 'undefined' && bonservisAviActive) || currentSport !== 'football') return;
             section.style.display = 'block';
             section.dataset.hasContent = 'true';
         } catch (e) {
@@ -7929,7 +7937,9 @@
 
     function baviUpdateProgressBadge() {
         const badge = document.getElementById('baviProgressBadge');
-        if (badge) badge.textContent = `Soru ${Math.min(baviQuestionIndex + 1, 10)}/10 • Puan: ${baviScore}`;
+        if (badge) badge.textContent = currentLang === 'en'
+            ? `Question ${Math.min(baviQuestionIndex + 1, 10)}/10 • Score: ${baviScore}`
+            : `Soru ${Math.min(baviQuestionIndex + 1, 10)}/10 • Puan: ${baviScore}`;
     }
 
     function baviPickPair() {
@@ -8016,7 +8026,7 @@
         `;
         const status = document.getElementById('baviStatus');
         if (status) {
-            status.textContent = isCorrect ? '✅ Doğru!' : '❌ Yanlış!';
+            status.textContent = isCorrect ? t('✅ Doğru!', '✅ Correct!') : t('❌ Yanlış!', '❌ Wrong!');
             status.style.color = isCorrect ? 'var(--accent-gold)' : 'rgba(var(--fg-rgb), 0.6)';
         }
         baviUpdateProgressBadge();
@@ -8045,18 +8055,22 @@
         if (content) content.innerHTML = '';
         baviUpdateProgressBadge();
         if (status) {
-            status.innerHTML = `🏁 Tur bitti! 10 sorudan <b>${baviScore}</b> tanesini bildin.`;
+            status.innerHTML = currentLang === 'en'
+                ? `🏁 Round over! You got <b>${baviScore}</b> out of 10 questions right.`
+                : `🏁 Tur bitti! 10 sorudan <b>${baviScore}</b> tanesini bildin.`;
             status.style.color = 'rgb(var(--fg-rgb))';
 
             const shareBtn = document.createElement('button');
-            shareBtn.textContent = '📤 Sonucu Paylaş';
+            shareBtn.textContent = t('📤 Sonucu Paylaş', '📤 Share Result');
             shareBtn.style.cssText = 'display:block; margin:14px auto 0; padding:6px 14px; background:rgba(var(--fg-rgb),0.08); border:1px solid rgba(var(--fg-rgb),0.15); border-radius:6px; color:rgb(var(--fg-rgb)); font-size:0.72rem; font-weight:700; cursor:pointer;';
             shareBtn.addEventListener('click', () => {
-                const shareText = `💰 TransferKolik Bonservis Avı\n${baviScore}/10 doğru bildim!\ntransferkolik.com`;
+                const shareText = currentLang === 'en'
+                    ? `💰 TransferKolik Transfer Fee Hunt\n${baviScore}/10 correct!\ntransferkolik.com`
+                    : `💰 TransferKolik Bonservis Avı\n${baviScore}/10 doğru bildim!\ntransferkolik.com`;
                 if (navigator.clipboard) {
                     navigator.clipboard.writeText(shareText).then(() => {
-                        shareBtn.textContent = '✅ Kopyalandı!';
-                        setTimeout(() => { shareBtn.textContent = '📤 Sonucu Paylaş'; }, 2000);
+                        shareBtn.textContent = t('✅ Kopyalandı!', '✅ Copied!');
+                        setTimeout(() => { shareBtn.textContent = t('📤 Sonucu Paylaş', '📤 Share Result'); }, 2000);
                     }).catch(() => { /* sessizce geç */ });
                 }
             });
@@ -8406,7 +8420,7 @@
         if (!container || !found || !found.clubs || found.clubs.length !== 2) return;
         // 🛡️ Basketboldaki aynı yarış durumu düzeltmesi — bu veri gelene kadar
         // kullanıcı başka bir moda geçmiş olabilir, kartı zorla göstermiyoruz.
-        if (playerModeActive || duelActive || transfermatikActive || currentSport !== 'football') return;
+        if (playerModeActive || duelActive || transfermatikActive || (typeof bonservisAviActive !== 'undefined' && bonservisAviActive) || currentSport !== 'football') return;
 
         dailyQuestionSolved = false;
         dailyQuestionStartTime = Date.now();
