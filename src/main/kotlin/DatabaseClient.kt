@@ -996,6 +996,124 @@ object DatabaseClient {
         "Rustu Recber", "Tuncay Sanli", "Burak Yilmaz", "Wesley Sneijder"
     ).distinct()
 
+    // 🏀 KESİN DÜZELTME: eskiden bu isimlerin kariyer geçmişi ELLE YAZILMIŞTI —
+    // bu, Mike James gibi örneklerde EKSİK/YANLIŞ bilgiye yol açtı (kullanıcı
+    // haklı olarak fark etti). Futboldaki DOĞRU mimariyi buraya da taşıyoruz:
+    // sadece İSİM havuzu sabit, kariyer verisi HER ZAMAN gerçek veritabanından
+    // (bb_players/nba_players) çekiliyor — hiç uydurma yok.
+    // 🎯 İKİNCİ DÜZELTME: eskiden oyuncuya SABİT bir "lig" (NBA ya da Avrupa)
+    // atanıyordu ve SADECE o tabloya bakılıyordu — ama Mike James gibi birçok
+    // oyuncu kariyeri boyunca HER İKİ ligde de oynamış. Artık HER İKİ tabloyu
+    // da sorguluyoruz, sonuçları birleştirip KRONOLOJİK sıraya koyuyoruz.
+    private val dailyBasketballPlayerPool = listOf(
+        "LeBron James", "Kevin Durant", "Chris Paul", "James Harden", "Russell Westbrook",
+        "Kawhi Leonard", "Kyrie Irving", "Nikola Mirotic", "Vasilije Micic", "Nando de Colo",
+        "Facundo Campazzo", "Mike James", "Kostas Sloukas", "Bogdan Bogdanovic"
+    )
+
+    // 🎯 KESİN DÜZELTME: bazı isimler, veritabanında BİRDEN FAZLA gerçek kişiye
+    // ait — örn. "Mike James" için hem eski/emekli bir NBA oyuncusu (jamesmi01,
+    // 2002-2014) hem de bizim aradığımız, Avrupa'da da oynayan güncel oyuncu
+    // (jamesmi02, 2018+) var. İsim bazlı arama ikisini YANLIŞLIKLA birleştirip
+    // tek bir (hatalı) kariyer gösteriyordu. Bilinen çakışmalar için doğru
+    // player_id'yi burada sabitliyoruz.
+    private val nbaPlayerIdOverrides = mapOf(
+        "Mike James" to "jamesmi02"
+    )
+
+    // 🎯 NBA veritabanında bazı satırlarda takım adı yerine SADECE kısaltma
+    // ("NOH", "PHO", "BRK" gibi) yazılmış — bunları okunaklı tam isimlere
+    // çeviriyoruz.
+    private val nbaTeamAbbrToFullName = mapOf(
+        "NOH" to "New Orleans Hornets", "PHO" to "Phoenix Suns", "BRK" to "Brooklyn Nets",
+        "NOP" to "New Orleans Pelicans", "CHO" to "Charlotte Hornets", "GSW" to "Golden State Warriors"
+    )
+
+    private fun cleanBasketballTeamName(raw: String): String {
+        nbaTeamAbbrToFullName[raw.trim()]?.let { return it }
+        // 🎯 Avrupa kulüplerindeki uzun sponsor isimlerini kısaltıyoruz —
+        // "Kosner Baskonia Vitoria-Gasteiz" → "Baskonia" gibi. Bilinen kulüp
+        // kök isimlerinden birini içeriyorsa, sade hâlini kullanıyoruz.
+        val knownRoots = listOf("Baskonia", "Panathinaikos", "Real Madrid", "Barcelona", "Fenerbahce",
+            "Fenerbahçe", "Galatasaray", "Anadolu Efes", "CSKA", "Olympiacos", "Maccabi", "Zalgiris",
+            "Milan", "Monaco", "Partizan", "Zvezda", "ASVEL", "Bayern", "Alba Berlin", "Virtus Bologna")
+        for (root in knownRoots) {
+            if (raw.contains(root, ignoreCase = true)) return root
+        }
+        return raw
+    }
+
+    @Serializable
+    data class DailyBasketballPlayerBio(
+        val name: String,
+        val league: String,
+        val moves: List<ClubSeason>
+    )
+
+    private data class SortableMove(val club: String, val season: String, val sortYear: Int, val fromNba: Boolean)
+
+    fun fetchDailyBasketballPlayerBio(dateSeed: Int): DailyBasketballPlayerBio? {
+        val playerName = dailyBasketballPlayerPool[((dateSeed % dailyBasketballPlayerPool.size) + dailyBasketballPlayerPool.size) % dailyBasketballPlayerPool.size]
+        val targetNorm = stripAccentsForCompare(playerName)
+
+        val allMoves = mutableListOf<SortableMove>()
+        var resolvedName = playerName
+        var hasNbaStint = false
+        var hasEuropeStint = false
+
+        fun queryTable(tableName: String, seasonColumn: String, isNba: Boolean) {
+            try {
+                withBbConnection { conn ->
+                    // 🎯 DÜZELTME: bilinen bir isim çakışması varsa (örn. Mike
+                    // James), isim yerine KESİN player_id ile arıyoruz — böylece
+                    // veritabanındaki FARKLI gerçek kişiler yanlışlıkla birleşmiyor.
+                    val overrideId = if (isNba) nbaPlayerIdOverrides[playerName] else null
+                    val sql = if (overrideId != null) {
+                        "SELECT name, team_name, $seasonColumn FROM $tableName WHERE player_id = ? ORDER BY $seasonColumn ASC"
+                    } else {
+                        "SELECT name, team_name, $seasonColumn FROM $tableName WHERE name_std LIKE ? ORDER BY $seasonColumn ASC"
+                    }
+                    conn.prepareStatement(sql).use { stmt ->
+                        if (overrideId != null) stmt.setString(1, overrideId) else stmt.setString(1, "%$targetNorm%")
+                        stmt.executeQuery().use { rs ->
+                            while (rs.next()) {
+                                resolvedName = rs.getString("name") ?: resolvedName
+                                val rawTeamName = rs.getString("team_name") ?: continue
+                                val teamName = cleanBasketballTeamName(rawTeamName)
+                                val rawSeason = rs.getString(seasonColumn) ?: ""
+                                val year = Regex("(19|20)\\d{2}").find(rawSeason)?.value?.toIntOrNull() ?: continue
+                                allMoves.add(SortableMove(teamName, rawSeason, year, isNba))
+                                if (isNba) hasNbaStint = true else hasEuropeStint = true
+                            }
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                println("fetchDailyBasketballPlayerBio ($tableName) HATASI: ${e.message}")
+            }
+        }
+
+        queryTable("nba_players", "season", isNba = true)
+        queryTable("bb_players", "season_code", isNba = false)
+
+        if (allMoves.isEmpty()) return null
+
+        // 🎯 Kronolojik sıraya koyup, aynı takımda art arda geçen sezonları
+        // TEK bir satıra indiriyoruz (futboldaki "her yeni takım" mantığı).
+        val sortedMoves = allMoves.sortedBy { it.sortYear }
+        val moves = mutableListOf<ClubSeason>()
+        var lastTeam: String? = null
+        for (m in sortedMoves) {
+            if (m.club != lastTeam) {
+                moves.add(ClubSeason(m.club, m.season))
+                lastTeam = m.club
+            }
+        }
+
+        val league = if (hasNbaStint && hasEuropeStint) "both" else if (hasNbaStint) "nba" else "europe"
+        return DailyBasketballPlayerBio(name = resolvedName, league = league, moves = moves)
+    }
+
     @Serializable
     data class DailyPlayerBio(
         val name: String,

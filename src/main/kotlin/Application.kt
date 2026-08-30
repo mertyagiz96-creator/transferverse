@@ -1539,6 +1539,18 @@ fun main() {
                 }
             }
 
+            // 🏀 Basketbol Günün Oyuncusu — futboldakiyle AYNI mimari: sadece
+            // isim havuzu sabit, kariyer verisi gerçek veritabanından geliyor.
+            get("/basketball/dailyPlayerBio") {
+                val dateSeed = call.request.queryParameters["seed"]?.toIntOrNull() ?: 0
+                val bio = DatabaseClient.fetchDailyBasketballPlayerBio(dateSeed)
+                if (bio == null) {
+                    call.respond(HttpStatusCode.NotFound)
+                } else {
+                    call.respond(bio)
+                }
+            }
+
             get("/basketball/allLogos") {
                 val logos = DatabaseClient.fetchAllBasketballLogos()
                 call.respond(logos)
