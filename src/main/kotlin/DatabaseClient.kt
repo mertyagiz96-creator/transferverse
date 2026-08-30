@@ -856,18 +856,14 @@ object DatabaseClient {
         val stdMapped = mappedCountry.toStandardSearch()
         if (stdNat.isBlank()) return false
 
-        // 🎯 DÜZELTME (v2 — daha güvenli): ilk denemem tek tek KELİMELERE
-        // bölüyordu, bu da "South Africa" gibi çok kelimeli ülke isimlerinde
-        // yanlış pozitif riski taşıyordu (örn. sadece "Africa" araması yanlışlıkla
-        // eşleşebilirdi). Artık aranan İFADENİN TAMAMINI (tek parça olarak),
-        // kelime sınırlarıyla (\b) uyruk alanının içinde arıyoruz — çok kelimeli
-        // ülke isimleri bozulmadan korunuyor, ama biçim tutarsızlıklarına
-        // (fazladan boşluk, farklı sıralama) karşı hâlâ toleranslı.
-        fun containsAsWholeTerm(term: String): Boolean {
-            if (term.isBlank()) return false
-            return Regex("\\b${Regex.escape(term)}\\b").containsMatchIn(stdNat)
-        }
-        return containsAsWholeTerm(stdSearch) || containsAsWholeTerm(stdMapped)
+        // 🎯 KESİN DÜZELTME: bir futbolcu SADECE BİR milli takımı temsil edebilir
+        // — ikinci bir ülkenin vatandaşlığına (örn. Felipe Melo'nun İspanyol
+        // vatandaşlığı gibi) sahip olması, o ülkenin milli takımını temsil ettiği
+        // anlamına GELMEZ. Bu yüzden SADECE İLK (birincil/gerçek milli takım)
+        // uyruğa bakıyoruz — "herhangi bir uyruk" eşleştirmesi yanlış pozitiflere
+        // yol açıyordu (Felipe Melo/İspanya gibi).
+        val primaryNationality = stdNat.split(Regex("\\s{2,}")).firstOrNull()?.trim() ?: return false
+        return primaryNationality == stdSearch || primaryNationality == stdMapped
     }
 
     private fun isCountryParam(param: String): Boolean {
