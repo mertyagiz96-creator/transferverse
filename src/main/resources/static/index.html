@@ -296,6 +296,15 @@
             border-color: rgba(0, 0, 0, 0.2);
         }
 
+        /* 🎯 DÜZELTME: "Ana Menü" butonu, yanındaki mod göstergesinden 1-2px
+           daha kısa duruyordu — masaüstünde dikey dolguyu hafifçe artırıp
+           eşitliyoruz (mobildeki eşdeğer düzeltme ilgili medya sorgusunda). */
+        #homeMenuBtn {
+            padding-top: 11px !important;
+            padding-bottom: 11px !important;
+            box-sizing: border-box;
+        }
+
         .toolbar-btn {
             display: flex;
             align-items: center;
@@ -365,6 +374,7 @@
         #hamburgerOverlay.open #playerModeBtn { transition-delay: 0.08s; }
         #hamburgerOverlay.open #duelModeBtn { transition-delay: 0.16s; }
         #hamburgerOverlay.open #transfermatikModeBtn { transition-delay: 0.24s; }
+        #hamburgerOverlay.open #bonservisAviModeBtn { transition-delay: 0.28s; }
 
         /* 🛡️ Eski mobil kurallarla (gameModeButtonGroup için) çakışmayı önlemek
            için, daha spesifik bir seçiciyle dikey menü yapısını garanti ediyoruz. */
@@ -522,6 +532,16 @@
 
         @keyframes avatarFadeIn {
             to { opacity: 1; }
+        }
+
+        /* 💰 Bonservis Avı — yumuşak geçiş animasyonları */
+        @keyframes baviFadeIn {
+            from { opacity: 0; transform: translateY(4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes baviNextBarFill {
+            from { transform: scaleX(0); }
+            to { transform: scaleX(1); }
         }
 
         /* 💡 Fotoğraf gösterilecekse, kulüpler/soru/tahmin kutusu fotoğrafla
@@ -1983,7 +2003,7 @@
                gibi kompakt kalıyor, yanındaki mod butonu kalan alanı dolduruyor. */
             #homeMenuBtn {
                 font-size: 0.57rem !important;
-                padding: 9px 12px !important;
+                padding: 11px 12px !important;
                 flex: 0 0 auto !important;
                 width: auto !important;
                 max-width: fit-content !important;
@@ -2245,6 +2265,9 @@
                 <button id="transfermatikModeBtn" class="hamburger-menu-item" title="En çok transfer yapan gezgin oyuncuları toplayıp 40'a en yakın (ama geçmeden) durmaya çalışın" disabled>
                     <span><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-6px; margin-right:14px;"><path d="m18 14 4 4-4 4"/><path d="m18 2 4 4-4 4"/><path d="M2 18h1.973a4 4 0 0 0 3.3-1.7l5.454-8.6a4 4 0 0 1 3.3-1.7H22"/><path d="M2 6h1.973a4 4 0 0 1 3.3 1.7l5.454 8.6a4 4 0 0 0 3.3 1.7H22"/></svg>Transfermatik</span>
                 </button>
+                <button id="bonservisAviModeBtn" class="hamburger-menu-item" title="10 soruluk hızlı tur — hangi transfer daha pahalıydı, hepsini bilebilecek misin?" disabled>
+                    <span><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-6px; margin-right:14px;"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>Bonservis Avı</span>
+                </button>
             </div>
         </div>
     </div>
@@ -2352,6 +2375,22 @@
 
         <div style="margin-top:14px; margin-bottom:30px; display:flex; gap:10px; justify-content:center;">
             <button id="tmResetBtn" class="toolbar-btn" style="font-size:0.72rem;">🔄 Yeniden Başla</button>
+        </div>
+    </div>
+
+    <!-- 💰 Bonservis Avı — 10 soruluk hızlı tur, mevcut "Hangi Transfer Daha
+         Pahalıydı?" veri havuzunu (famousTransfersPool) kullanır, ona hiç
+         dokunmadan. -->
+    <div id="bonservisAviSection" style="display:none; width: 100%; max-width: 620px; margin: 20px auto; text-align:center;">
+        <h2 style="font-size: 1.15rem; font-weight: 800; color: rgba(var(--fg-rgb), 0.85); margin-bottom: 6px;">💰 Bonservis Avı</h2>
+        <p style="font-size:0.8rem; opacity:0.7; margin-bottom:10px;">10 soruda hangi transferin daha pahalı olduğunu bilebilecek misin?</p>
+        <div id="baviProgressBadge" style="display:inline-block; padding:5px 14px; border-radius:20px; background:rgba(var(--light-green-rgb),0.18); border:1px solid rgba(var(--light-green-rgb),0.5); color:var(--light-green); font-weight:800; font-size:0.75rem; margin-bottom:14px;">
+            Soru 1/10 • Puan: 0
+        </div>
+        <div id="baviContent"></div>
+        <div id="baviStatus" style="margin-top:14px; font-size:0.9rem; font-weight:700; min-height:24px;"></div>
+        <div style="margin-top:14px; margin-bottom:30px; display:flex; gap:10px; justify-content:center;">
+            <button id="baviResetBtn" class="toolbar-btn" style="font-size:0.72rem;">🔄 Yeniden Başla</button>
         </div>
     </div>
 
@@ -3013,7 +3052,12 @@
             overlay.classList.remove('open');
             btn.classList.remove('open');
             document.body.style.overflow = '';
-            setTimeout(() => { overlay.style.display = 'none'; }, 450); // 💡 animasyon bitene kadar bekle
+            // 🎯 KESİN DÜZELTME: eskiden burada 450ms'lik bir gecikme vardı
+            // ("animasyon bitene kadar bekle") — ama bu süre boyunca, overlay'in
+            // yarı saydam arka planı (blur efekti dahil) HÂLÂ görünür kalıyordu,
+            // bu da mod geçişlerinde "iki mod ismi aynı anda görünüyor" flaşına
+            // sebep oluyordu. Artık anında gizleniyor.
+            overlay.style.display = 'none';
         }
 
         btn.addEventListener('click', () => {
@@ -3033,21 +3077,10 @@
             }
         });
 
-        // 🎨 Hamburger ikonunun X/çizgi görünümünü, "Ana Menü" butonunun
-        // görünürlüğüyle senkron tutuyoruz — bir moddaysak ikon HER ZAMAN X
-        // gösterir (kapatma niyetini netleştirir), menü panelinden bağımsız olarak.
-        const homeBtnForSync = document.getElementById('homeMenuBtn');
-        if (homeBtnForSync) {
-            const syncObserver = new MutationObserver(() => {
-                const inMode = homeBtnForSync.style.display !== 'none';
-                if (inMode) {
-                    btn.classList.add('open');
-                } else if (!overlay.classList.contains('open')) {
-                    btn.classList.remove('open');
-                }
-            });
-            syncObserver.observe(homeBtnForSync, { attributes: true, attributeFilter: ['style'] });
-        }
+        // 🛑 KALDIRILDI: bu MutationObserver, bir moddayken hamburger ikonunu
+        // BİLEREK X'e zorluyordu — ama bu, kullanıcının tercih ettiği (Transfermatik/
+        // Bonservis Avı'nda görülen) tutarlı "çizgi" görünümüyle çelişiyordu.
+        // Kesin kaynak buydu.
 
         // 🛡️ Panel dışına (karartılmış arka plana) tıklayınca da kapansın
         overlay.addEventListener('click', (e) => {
@@ -3056,9 +3089,9 @@
 
         // 💡 Bir mod seçilince menü otomatik kapansın — kullanıcı tekrar
         // hamburger'a basmak zorunda kalmasın.
-        ['playerModeBtn', 'duelModeBtn', 'transfermatikModeBtn'].forEach(id => {
+        ['playerModeBtn', 'duelModeBtn', 'transfermatikModeBtn', 'bonservisAviModeBtn'].forEach(id => {
             const modeBtn = document.getElementById(id);
-            if (modeBtn) modeBtn.addEventListener('click', () => setTimeout(closeMenu, 150));
+            if (modeBtn) modeBtn.addEventListener('click', () => closeMenu());
         });
     }
 
@@ -5206,6 +5239,8 @@
         document.getElementById('homeMenuBtn').addEventListener('click', () => {
             if (transfermatikActive) {
                 exitTransfermatikMode();
+            } else if (typeof bonservisAviActive !== 'undefined' && bonservisAviActive) {
+                exitBonservisAviMode();
             } else if (duelActive) {
                 exitDuelMode();
             } else {
@@ -7815,6 +7850,14 @@
             // onlardan ÇIKIYORUZ, sadece varsaymıyoruz.
             if (playerModeActive) exitPlayerMode();
             if (duelActive) exitDuelMode();
+            // 🎯 DÜZELTME: exitBonservisAviMode() ana sayfa içeriğini geri
+            // yüklüyor (anket, ücret sorusu vb.) — hemen ardından hepsi tekrar
+            // gizlendiği için kısa bir "flaş" oluşuyordu. Hafif versiyon kullanıyoruz.
+            if (typeof bonservisAviActive !== 'undefined' && bonservisAviActive) {
+                bonservisAviActive = false;
+                document.getElementById('bonservisAviSection').style.display = 'none';
+                document.getElementById('bonservisAviModeBtn').classList.remove('active');
+            }
 
             const searchCard = document.querySelector('.search-card');
             const tableWrapper = document.querySelector('.table-wrapper');
@@ -7841,6 +7884,237 @@
             btn.classList.add('active');
             transfermatikActive = true;
             tmResetGame();
+        });
+    }
+
+    // 💰 Bonservis Avı — 10 soruluk hızlı tur, Transfermatik'in AYNI giriş/çıkış
+    // desenini takip eder, ama tamamen bağımsız kendi durum değişkenleriyle
+    // çalışır. Mevcut famousTransfersPool verisini SADECE OKUYARAK kullanır,
+    // hiçbir mevcut fonksiyona/değişkene dokunmaz.
+    let bonservisAviActive = false;
+    let baviQuestionIndex = 0;
+    let baviScore = 0;
+    let baviUsedPairKeys = new Set();
+    let baviCurrentPair = null;
+    let baviAnswered = false;
+
+    function exitBonservisAviMode() {
+        bonservisAviActive = false;
+        document.getElementById('bonservisAviSection').style.display = 'none';
+        document.getElementById('homeMenuBtn').style.display = 'none';
+        document.getElementById('playerModeBtn').style.display = '';
+        document.getElementById('duelModeBtn').style.display = '';
+        document.getElementById('bonservisAviModeBtn').classList.remove('active');
+        const searchCard = document.querySelector('.search-card');
+        const tableWrapper = document.querySelector('.table-wrapper');
+        if (searchCard) searchCard.style.display = '';
+        if (tableWrapper) tableWrapper.style.display = '';
+        const sportToggle = document.getElementById('sportToggleWrapper');
+        if (sportToggle) sportToggle.style.display = 'flex';
+        const heroExitBavi = document.getElementById('heroSection');
+        if (heroExitBavi) heroExitBavi.style.display = 'block';
+        const dq = document.getElementById('dailyQuestionCard');
+        if (dq) dq.style.display = 'flex';
+        const conn = document.getElementById('connectionGameSection');
+        if (conn) conn.style.display = 'block';
+        const blog = document.getElementById('blogLinkSection');
+        if (blog) blog.style.display = '';
+        const about = document.getElementById('aboutContentSection');
+        if (about) about.style.display = '';
+        loadChampionshipPoll();
+        loadBasketballPoll();
+        loadTransferFeeQuiz();
+        loadDailyPlayerBio();
+    }
+
+    function baviUpdateProgressBadge() {
+        const badge = document.getElementById('baviProgressBadge');
+        if (badge) badge.textContent = `Soru ${Math.min(baviQuestionIndex + 1, 10)}/10 • Puan: ${baviScore}`;
+    }
+
+    function baviPickPair() {
+        // 🎲 famousTransfersPool'dan RASTGELE, bu turda daha önce kullanılmamış
+        // ve makul bir ücret farkı olan bir çift seçiyoruz — tek soruluk
+        // moddaki AYNI "20'lik pencere" mantığını kullanıyoruz.
+        const sortedPool = [...famousTransfersPool].sort((a, b) => b.fee - a.fee);
+        const WINDOW_SIZE = 20;
+        const maxWindowStart = sortedPool.length - WINDOW_SIZE;
+        let attempts = 0;
+        let t1, t2, key;
+        do {
+            const windowStart = Math.floor(Math.random() * (maxWindowStart + 1));
+            const offset1 = Math.floor(Math.random() * WINDOW_SIZE);
+            let offset2 = Math.floor(Math.random() * WINDOW_SIZE);
+            if (offset2 === offset1) offset2 = (offset2 + 1) % WINDOW_SIZE;
+            t1 = sortedPool[windowStart + offset1];
+            t2 = sortedPool[windowStart + offset2];
+            key = [t1.player, t2.player].sort().join('|');
+            attempts++;
+        } while ((t1.fee === t2.fee || baviUsedPairKeys.has(key)) && attempts < 30);
+        baviUsedPairKeys.add(key);
+        return { t1, t2 };
+    }
+
+    function baviRenderCard(t, side, revealed, isWinner) {
+        const logoUrl = getClubLogo(t.toClub);
+        const logoHtml = logoUrl
+            ? `<img src="${logoUrl}" alt="" style="width:30px; height:30px; object-fit:contain; margin-bottom:6px;" onerror="this.remove()">`
+            : `<div class="fee-quiz-logo-box" data-club-name="${escapeHtml(t.toClub)}" style="height:36px;"></div>`;
+        const feeHtml = revealed
+            ? `<div style="font-size:1.05rem; font-weight:900; color:${isWinner ? 'var(--accent-gold)' : 'rgb(var(--fg-rgb))'}; margin-top:8px;">${formatFeeMillions(t.fee)}</div>`
+            : '';
+        const winnerGlow = isWinner ? 'box-shadow: 0 0 0 2px var(--accent-gold); background:rgba(255,215,0,0.06);' : '';
+        const clickableAttrs = revealed ? '' : `class="bavi-option" data-side="${side}" role="button" tabindex="0"`;
+        const clickableStyle = revealed ? '' : 'cursor:pointer;';
+        return `
+            <div ${clickableAttrs} style="flex:1; min-width:130px; max-width:160px; text-align:center; padding:12px 10px; background:rgba(var(--fg-rgb),0.04); border:1px solid rgba(var(--fg-rgb),0.1); border-radius:10px; ${winnerGlow} ${clickableStyle} display:flex; flex-direction:column; align-items:center; transition: transform 0.15s ease, border-color 0.15s ease, background 0.15s ease;">
+                ${logoHtml}
+                <div style="font-weight:700; font-size:0.78rem; margin-bottom:4px;">${escapeHtml(t.player)}</div>
+                <div style="font-size:0.64rem; opacity:0.6; line-height:1.3;">${escapeHtml(t.fromClub)}<br>→ ${escapeHtml(t.toClub)}</div>
+                <div style="font-size:0.6rem; opacity:0.45; margin-top:2px;">${t.season}</div>
+                ${feeHtml}
+            </div>`;
+    }
+
+    function baviRenderQuestion() {
+        baviAnswered = false;
+        const pair = baviPickPair();
+        baviCurrentPair = pair;
+        const content = document.getElementById('baviContent');
+        const status = document.getElementById('baviStatus');
+        if (!content) return;
+        content.innerHTML = `
+            <div style="display:flex; gap:16px; flex-wrap:wrap; align-items:center; justify-content:center; animation: baviFadeIn 0.35s ease;">
+                ${baviRenderCard(pair.t1, 'left', false, false)}
+                <div style="display:flex; align-items:center; justify-content:center; width:36px; height:36px; border-radius:50%; background:rgba(var(--fg-rgb),0.08); font-weight:900; opacity:0.55; font-size:0.8rem; flex-shrink:0;">VS</div>
+                ${baviRenderCard(pair.t2, 'right', false, false)}
+            </div>
+        `;
+        if (status) status.textContent = '';
+        baviUpdateProgressBadge();
+
+        content.querySelectorAll('.bavi-option').forEach(el => {
+            el.addEventListener('click', () => baviCheckAnswer(el.dataset.side));
+        });
+    }
+
+    function baviCheckAnswer(side) {
+        if (baviAnswered) return;
+        baviAnswered = true;
+        const { t1, t2 } = baviCurrentPair;
+        const winnerSide = t1.fee >= t2.fee ? 'left' : 'right';
+        const isCorrect = side === winnerSide;
+        if (isCorrect) baviScore++;
+
+        const content = document.getElementById('baviContent');
+        content.innerHTML = `
+            <div style="display:flex; gap:16px; flex-wrap:wrap; align-items:center; justify-content:center;">
+                ${baviRenderCard(t1, 'left', true, winnerSide === 'left')}
+                <div style="display:flex; align-items:center; justify-content:center; width:36px; height:36px; border-radius:50%; background:rgba(var(--fg-rgb),0.08); font-weight:900; opacity:0.55; font-size:0.8rem; flex-shrink:0;">VS</div>
+                ${baviRenderCard(t2, 'right', true, winnerSide === 'right')}
+            </div>
+        `;
+        const status = document.getElementById('baviStatus');
+        if (status) {
+            status.textContent = isCorrect ? '✅ Doğru!' : '❌ Yanlış!';
+            status.style.color = isCorrect ? 'var(--accent-gold)' : 'rgba(var(--fg-rgb), 0.6)';
+        }
+        baviUpdateProgressBadge();
+
+        // 🎯 YENİ: "donma" hissi vermemesi için, sonraki soruya geçerken
+        // küçük bir görsel geri sayım çubuğu gösteriyoruz — bekleme artık
+        // "kasmış" değil, "bilerek bekliyor" gibi hissettiriyor.
+        const nextIndicator = document.createElement('div');
+        nextIndicator.style.cssText = 'margin-top:12px; height:3px; width:100%; max-width:200px; margin-left:auto; margin-right:auto; background:rgba(var(--fg-rgb),0.1); border-radius:2px; overflow:hidden;';
+        nextIndicator.innerHTML = `<div style="height:100%; width:100%; background:var(--accent-gold); transform-origin:left; animation: baviNextBarFill 1.4s linear forwards;"></div>`;
+        if (status) status.appendChild(nextIndicator);
+
+        setTimeout(() => {
+            baviQuestionIndex++;
+            if (baviQuestionIndex >= 10) {
+                baviFinish();
+            } else {
+                baviRenderQuestion();
+            }
+        }, 1400);
+    }
+
+    function baviFinish() {
+        const content = document.getElementById('baviContent');
+        const status = document.getElementById('baviStatus');
+        if (content) content.innerHTML = '';
+        baviUpdateProgressBadge();
+        if (status) {
+            status.innerHTML = `🏁 Tur bitti! 10 sorudan <b>${baviScore}</b> tanesini bildin.`;
+            status.style.color = 'rgb(var(--fg-rgb))';
+
+            const shareBtn = document.createElement('button');
+            shareBtn.textContent = '📤 Sonucu Paylaş';
+            shareBtn.style.cssText = 'display:block; margin:14px auto 0; padding:6px 14px; background:rgba(var(--fg-rgb),0.08); border:1px solid rgba(var(--fg-rgb),0.15); border-radius:6px; color:rgb(var(--fg-rgb)); font-size:0.72rem; font-weight:700; cursor:pointer;';
+            shareBtn.addEventListener('click', () => {
+                const shareText = `💰 TransferKolik Bonservis Avı\n${baviScore}/10 doğru bildim!\ntransferkolik.com`;
+                if (navigator.clipboard) {
+                    navigator.clipboard.writeText(shareText).then(() => {
+                        shareBtn.textContent = '✅ Kopyalandı!';
+                        setTimeout(() => { shareBtn.textContent = '📤 Sonucu Paylaş'; }, 2000);
+                    }).catch(() => { /* sessizce geç */ });
+                }
+            });
+            status.appendChild(shareBtn);
+        }
+    }
+
+    function baviResetGame() {
+        baviQuestionIndex = 0;
+        baviScore = 0;
+        baviUsedPairKeys = new Set();
+        baviRenderQuestion();
+    }
+
+    function setupBonservisAviMode() {
+        const btn = document.getElementById('bonservisAviModeBtn');
+        if (!btn) return;
+
+        document.getElementById('baviResetBtn').addEventListener('click', baviResetGame);
+
+        btn.addEventListener('click', () => {
+            if (playerModeActive) exitPlayerMode();
+            if (duelActive) exitDuelMode();
+            // 🎯 DÜZELTME: exitTransfermatikMode() ana sayfa içeriğini geri
+            // yüklüyor (anket, ücret sorusu vb.) — bizim kod hemen ardından
+            // hepsini tekrar gizlediği için, arada kısa bir "flaş" oluşuyordu.
+            // Burada SADECE Transfermatik'i kapatan hafif bir versiyon kullanıyoruz.
+            if (transfermatikActive) {
+                transfermatikActive = false;
+                document.getElementById('transfermatikSection').style.display = 'none';
+                document.getElementById('transfermatikModeBtn').classList.remove('active');
+            }
+
+            const searchCard = document.querySelector('.search-card');
+            const tableWrapper = document.querySelector('.table-wrapper');
+            const sections = ['dailyQuestionCard', 'connectionGameSection', 'championshipPollSection',
+                'basketballPollSection', 'transferFeeQuizSection', 'dailyPlayerBioSection',
+                'blogLinkSection', 'aboutContentSection', 'basketballCoverageNote', 'bbConnectionGameSection'];
+            sections.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.style.display = 'none';
+            });
+            if (searchCard) searchCard.style.display = 'none';
+            if (tableWrapper) tableWrapper.style.display = 'none';
+            const mainGuessRow = document.getElementById('mainGuessRow');
+            if (mainGuessRow) mainGuessRow.style.display = 'none';
+            const sportToggle = document.getElementById('sportToggleWrapper');
+            if (sportToggle) sportToggle.style.display = 'none';
+            const heroEnterBavi = document.getElementById('heroSection');
+            if (heroEnterBavi) heroEnterBavi.style.display = 'none';
+
+            document.getElementById('bonservisAviSection').style.display = 'block';
+            document.getElementById('homeMenuBtn').style.display = '';
+            document.getElementById('playerModeBtn').style.display = 'none';
+            document.getElementById('duelModeBtn').style.display = 'none';
+            btn.classList.add('active');
+            bonservisAviActive = true;
+            baviResetGame();
         });
     }
 
@@ -8418,6 +8692,12 @@
             transfermatikActive = false;
             document.getElementById('transfermatikSection').style.display = 'none';
             document.getElementById('transfermatikModeBtn').classList.remove('active');
+        }
+        // 🛡️ Bonservis Avı açıksa önce onu kapat.
+        if (typeof bonservisAviActive !== 'undefined' && bonservisAviActive) {
+            bonservisAviActive = false;
+            document.getElementById('bonservisAviSection').style.display = 'none';
+            document.getElementById('bonservisAviModeBtn').classList.remove('active');
         }
         document.getElementById('duelModeBtn').classList.add('active');
         document.querySelector('.search-card').style.display = 'none';
@@ -9047,6 +9327,12 @@
                 transfermatikActive = false;
                 document.getElementById('transfermatikSection').style.display = 'none';
                 document.getElementById('transfermatikModeBtn').classList.remove('active');
+            }
+            // 🛡️ Bonservis Avı açıksa önce onu kapat.
+            if (typeof bonservisAviActive !== 'undefined' && bonservisAviActive) {
+                bonservisAviActive = false;
+                document.getElementById('bonservisAviSection').style.display = 'none';
+                document.getElementById('bonservisAviModeBtn').classList.remove('active');
             }
 
             playerModeActive = true;
@@ -10139,6 +10425,7 @@
         const playerBtnLock = document.getElementById('playerModeBtn');
         const duelBtnLock = document.getElementById('duelModeBtn');
         const tmBtnLock = document.getElementById('transfermatikModeBtn');
+        const baviBtnLock = document.getElementById('bonservisAviModeBtn');
         if (playerBtnLock) playerBtnLock.disabled = true;
         if (duelBtnLock) duelBtnLock.disabled = true;
         if (tmBtnLock) tmBtnLock.disabled = true;
@@ -10171,6 +10458,7 @@
             if (playerBtnLock) playerBtnLock.disabled = false;
             if (duelBtnLock) duelBtnLock.disabled = false;
             if (tmBtnLock) tmBtnLock.disabled = false;
+            if (baviBtnLock) baviBtnLock.disabled = false;
         }
     }
 
@@ -10203,6 +10491,7 @@
         } catch (e) { /* desteklenmiyorsa sessizce geç, kritik değil */ }
         initLanguage();
         setupTransfermatikMode();
+        setupBonservisAviMode();
         applyQueryParamsToInputs();
         setupClubLogoIcons();
         setupInstallBanner();
@@ -10258,6 +10547,7 @@
         document.getElementById('playerModeBtn').disabled = false;
         document.getElementById('duelModeBtn').disabled = false;
         document.getElementById('transfermatikModeBtn').disabled = false;
+        document.getElementById('bonservisAviModeBtn').disabled = false;
 
         // 🎯 Meydan okuma linkiyle gelindiyse (arkadaş paylaştıysa), davetkar
         // bir bildirim gösteriyoruz — link ile hiçbir otomatik yönlendirme
