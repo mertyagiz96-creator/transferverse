@@ -6449,10 +6449,9 @@
         const lastClub = bio.moves[bio.moves.length - 1]?.club || '';
 
         const timelineHtml = bio.moves.map((m, idx) => `
-            <div style="display:flex; align-items:center; gap:8px;">
-                <span style="width:8px; height:8px; border-radius:50%; background:${idx === bio.moves.length - 1 ? 'var(--accent-gold)' : 'rgba(var(--fg-rgb),0.3)'}; flex-shrink:0;"></span>
-                <span style="font-size:0.82rem; font-weight:${idx === bio.moves.length - 1 ? '700' : '500'}; color:rgba(var(--fg-rgb),${idx === bio.moves.length - 1 ? '0.95' : '0.65'});">${escapeHtml(m.club)}</span>
-                <span style="font-size:0.68rem; opacity:0.5;">${escapeHtml(cleanSeasonYear(m.season))}</span>
+            <div style="display:flex; align-items:flex-start; gap:8px;">
+                <span style="width:8px; height:8px; border-radius:50%; background:${idx === bio.moves.length - 1 ? 'var(--accent-gold)' : 'rgba(var(--fg-rgb),0.3)'}; flex-shrink:0; margin-top:6px;"></span>
+                <span style="font-size:0.82rem;"><span style="font-weight:${idx === bio.moves.length - 1 ? '700' : '500'}; color:rgba(var(--fg-rgb),${idx === bio.moves.length - 1 ? '0.95' : '0.65'});">${escapeHtml(m.club)}</span> <span style="font-size:0.68rem; opacity:0.5;">${escapeHtml(cleanSeasonYear(m.season))}</span></span>
             </div>
         `).join('<div style="width:1px; height:10px; background:rgba(var(--fg-rgb),0.15); margin-left:3.5px;"></div>');
 
@@ -6534,10 +6533,9 @@
 
             // 🎨 Kariyer zaman çizelgesi — kulüp isimlerini basit, şık noktalarla birbirine bağlıyoruz.
             const timelineHtml = clubList.map((club, idx) => `
-                <div style="display:flex; align-items:center; gap:8px;">
-                    <span style="width:8px; height:8px; border-radius:50%; background:${idx === clubList.length - 1 ? 'var(--accent-gold)' : 'rgba(var(--fg-rgb),0.3)'}; flex-shrink:0;"></span>
-                    <span style="font-size:0.82rem; font-weight:${idx === clubList.length - 1 ? '700' : '500'}; color:rgba(var(--fg-rgb),${idx === clubList.length - 1 ? '0.95' : '0.65'});">${escapeHtml(club)}</span>
-                    <span style="font-size:0.68rem; opacity:0.5;">${escapeHtml(moves[idx].season)}</span>
+                <div style="display:flex; align-items:flex-start; gap:8px;">
+                    <span style="width:8px; height:8px; border-radius:50%; background:${idx === clubList.length - 1 ? 'var(--accent-gold)' : 'rgba(var(--fg-rgb),0.3)'}; flex-shrink:0; margin-top:6px;"></span>
+                    <span style="font-size:0.82rem;"><span style="font-weight:${idx === clubList.length - 1 ? '700' : '500'}; color:rgba(var(--fg-rgb),${idx === clubList.length - 1 ? '0.95' : '0.65'});">${escapeHtml(club)}</span> <span style="font-size:0.68rem; opacity:0.5;">${escapeHtml(moves[idx].season)}</span></span>
                 </div>
             `).join('<div style="width:1px; height:10px; background:rgba(var(--fg-rgb),0.15); margin-left:3.5px;"></div>');
 
