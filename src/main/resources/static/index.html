@@ -8026,7 +8026,7 @@
         // "kasmış" değil, "bilerek bekliyor" gibi hissettiriyor.
         const nextIndicator = document.createElement('div');
         nextIndicator.style.cssText = 'margin-top:12px; height:3px; width:100%; max-width:200px; margin-left:auto; margin-right:auto; background:rgba(var(--fg-rgb),0.1); border-radius:2px; overflow:hidden;';
-        nextIndicator.innerHTML = `<div style="height:100%; width:100%; background:var(--accent-gold); transform-origin:left; animation: baviNextBarFill 1.4s linear forwards;"></div>`;
+        nextIndicator.innerHTML = `<div style="height:100%; width:100%; background:var(--accent-gold); transform-origin:left; animation: baviNextBarFill 2s linear forwards;"></div>`;
         if (status) status.appendChild(nextIndicator);
 
         setTimeout(() => {
@@ -8036,7 +8036,7 @@
             } else {
                 baviRenderQuestion();
             }
-        }, 1400);
+        }, 2000);
     }
 
     function baviFinish() {
