@@ -425,6 +425,131 @@ object DatabaseClient {
             .map { it.name }
     }
 
+    // 🌍🏀 YENİ: NBA + Avrupa KARIŞIK arama — bu ikisi eskiden tamamen ayrı
+    // sistemlerdi, birbirini hiç görmüyordu ("Fenerbahçe" + "Boston" gibi
+    // karışık aramalar hiç sonuç vermiyordu). İsim eşleştirmesiyle çalışıyor,
+    // ama Mike James örneğindeki gibi AYNI isimli FARKLI gerçek kişilere karşı
+    // dikkatli: bir isim birden fazla player_id'ye sahipse, kariyer yıllarının
+    // MANTIKLI bir şekilde örtüşüp örtüşmediğini kontrol ediyoruz — rastgele
+    // birleştirmiyoruz.
+    private data class CrossLeagueCandidate(val playerId: String, val name: String, val minYear: Int, val maxYear: Int, val season: String)
+
+    fun fetchCommonPlayersCrossLeague(inputA: String, inputB: String): List<BasketballPlayerResult> {
+        // 🎯 Hangi girdinin Avrupa, hangisinin NBA olduğunu ÖNCEDEN bilmiyoruz —
+        // bu yüzden iki olası eşleşmeyi de (A=Avrupa/B=NBA ve A=NBA/B=Avrupa)
+        // deneyip birleştiriyoruz. Kullanıcı hangi sırayla yazdığı önemli değil.
+        val attempt1 = fetchCommonPlayersCrossLeagueOrdered(inputA, inputB)
+        val attempt2 = fetchCommonPlayersCrossLeagueOrdered(inputB, inputA)
+        return (attempt1 + attempt2).distinctBy { it.name }
+    }
+
+    private fun fetchCommonPlayersCrossLeagueOrdered(europeTeam: String, nbaTeam: String): List<BasketballPlayerResult> {
+        val stdEurope = europeTeam.toStandardSearch()
+        val stdNba = nbaTeam.toStandardSearch()
+
+        val europeCandidates = mutableMapOf<String, MutableList<CrossLeagueCandidate>>() // isim(normalize) -> adaylar
+        val nbaCandidates = mutableMapOf<String, MutableList<CrossLeagueCandidate>>()
+
+        try {
+            withBbConnection { conn ->
+                // Avrupa tarafı
+                conn.prepareStatement("SELECT player_id, name, season_code FROM bb_players WHERE team_name_std LIKE ?").use { stmt ->
+                    stmt.setString(1, "%$stdEurope%")
+                    stmt.executeQuery().use { rs ->
+                        while (rs.next()) {
+                            val pId = rs.getString("player_id") ?: continue
+                            val name = rs.getString("name") ?: continue
+                            val season = rs.getString("season_code") ?: continue
+                            val year = Regex("(19|20)\\d{2}").find(season)?.value?.toIntOrNull() ?: continue
+                            val nameNorm = stripAccentsForCompare(name)
+                            val list = europeCandidates.getOrPut(nameNorm) { mutableListOf() }
+                            val existing = list.find { it.playerId == pId }
+                            if (existing != null) {
+                                list.remove(existing)
+                                list.add(existing.copy(minYear = minOf(existing.minYear, year), maxYear = maxOf(existing.maxYear, year)))
+                            } else {
+                                list.add(CrossLeagueCandidate(pId, name, year, year, season))
+                            }
+                        }
+                    }
+                }
+                // NBA tarafı
+                conn.prepareStatement("SELECT player_id, name, season FROM nba_players WHERE (team_name_std LIKE ? OR team_abbr_std LIKE ?)").use { stmt ->
+                    stmt.setString(1, "%$stdNba%")
+                    stmt.setString(2, "%$stdNba%")
+                    stmt.executeQuery().use { rs ->
+                        while (rs.next()) {
+                            val pId = rs.getString("player_id") ?: continue
+                            val name = rs.getString("name") ?: continue
+                            val season = rs.getString("season") ?: continue
+                            val year = Regex("(19|20)\\d{2}").find(season)?.value?.toIntOrNull() ?: continue
+                            val nameNorm = stripAccentsForCompare(name)
+                            val list = nbaCandidates.getOrPut(nameNorm) { mutableListOf() }
+                            val existing = list.find { it.playerId == pId }
+                            if (existing != null) {
+                                list.remove(existing)
+                                list.add(existing.copy(minYear = minOf(existing.minYear, year), maxYear = maxOf(existing.maxYear, year)))
+                            } else {
+                                list.add(CrossLeagueCandidate(pId, name, year, year, season))
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            println("fetchCommonPlayersCrossLeague HATASI: ${e.message}")
+            return emptyList()
+        }
+
+        val results = mutableListOf<BasketballPlayerResult>()
+        for ((nameKey, europeList) in europeCandidates) {
+            val nbaList = nbaCandidates[nameKey] ?: continue
+            // 🛡️ GÜVENLİ EŞLEŞTİRME: birden fazla aday varsa (isim çakışması),
+            // sadece kariyer yılları MANTIKLI şekilde örtüşen/yakın olan
+            // çiftleri kabul ediyoruz — 15 yıldan fazla ayrıksa muhtemelen
+            // FARKLI kişilerdir (Mike James örneğindeki gibi), atlıyoruz.
+            var bestPair: Pair<CrossLeagueCandidate, CrossLeagueCandidate>? = null
+            for (eu in europeList) {
+                for (nba in nbaList) {
+                    val gap = when {
+                        eu.maxYear < nba.minYear -> nba.minYear - eu.maxYear
+                        nba.maxYear < eu.minYear -> eu.minYear - nba.maxYear
+                        else -> 0 // yıllar zaten örtüşüyor
+                    }
+                    if (gap <= 15) {
+                        if (bestPair == null || gap < 15) bestPair = eu to nba
+                    }
+                }
+            }
+            if (bestPair != null) {
+                val (eu, nba) = bestPair
+                results.add(
+                    BasketballPlayerResult(
+                        name = eu.name,
+                        team1Season = eu.season,
+                        team2Season = nba.season,
+                        competition = "Avrupa + NBA"
+                    )
+                )
+            } else if (europeList.size == 1 && nbaList.size == 1) {
+                // 🛡️ Tek adayı varsa (isim çakışması riski yok), yıl farkı
+                // büyük olsa bile göstermekte sakınca yok — nadir ama gerçek
+                // bir kariyer olabilir (örn. çok erken NBA, çok geç Avrupa).
+                val eu = europeList[0]
+                val nba = nbaList[0]
+                results.add(
+                    BasketballPlayerResult(
+                        name = eu.name,
+                        team1Season = eu.season,
+                        team2Season = nba.season,
+                        competition = "Avrupa + NBA"
+                    )
+                )
+            }
+        }
+        return results
+    }
+
     fun fetchCommonNbaPlayers(team1: String, team2: String): List<BasketballPlayerResult> {
         val startTime = System.currentTimeMillis()
         val std1 = team1.toStandardSearch()

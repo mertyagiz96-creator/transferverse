@@ -135,6 +135,19 @@ fun main() {
                 call.respond(common)
             }
 
+            // 🌍🏀 YENİ: NBA + Avrupa karışık arama — bir Avrupa kulübü ile bir
+            // NBA kulübü birlikte arandığında kullanılır.
+            get("/basketball/commonPlayersCrossLeague") {
+                val team1 = call.request.queryParameters["team1"]
+                val team2 = call.request.queryParameters["team2"]
+                if (team1.isNullOrBlank() || team2.isNullOrBlank()) {
+                    call.respond(emptyList<DatabaseClient.BasketballPlayerResult>())
+                    return@get
+                }
+                val common = DatabaseClient.fetchCommonPlayersCrossLeague(team1, team2)
+                call.respond(common)
+            }
+
             // 🎲 Bil Bakalım rastgele soru — TÜM deneme mantığı tek istekte,
             // sunucu içinde. İstemci sadece hangi ligi istediğini söylüyor.
             get("/basketball/randomQuestion") {

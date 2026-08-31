@@ -10396,13 +10396,17 @@
         try {
             // 🏀 Manuel arama artık hem Avrupa hem NBA'i AYNI ANDA dener,
             // kullanıcı hangi ligde olduğunu seçmek zorunda kalmıyor.
-            const [euRes, nbaRes] = await Promise.all([
+            // 🌍🏀 YENİ: üçüncü bir istek, KARIŞIK (bir Avrupa + bir NBA takımı)
+            // aramaları da kapsıyor — eskiden bu tür aramalar hiç sonuç vermiyordu.
+            const [euRes, nbaRes, crossRes] = await Promise.all([
                 fetch(`/basketball/commonPlayers?team1=${encodeURIComponent(input1)}&team2=${encodeURIComponent(input2)}`),
-                fetch(`/nba/commonPlayers?team1=${encodeURIComponent(input1)}&team2=${encodeURIComponent(input2)}`)
+                fetch(`/nba/commonPlayers?team1=${encodeURIComponent(input1)}&team2=${encodeURIComponent(input2)}`),
+                fetch(`/basketball/commonPlayersCrossLeague?team1=${encodeURIComponent(input1)}&team2=${encodeURIComponent(input2)}`)
             ]);
             const euPlayers = euRes.ok ? await euRes.json() : [];
             const nbaPlayers = nbaRes.ok ? await nbaRes.json() : [];
-            const players = [...euPlayers, ...nbaPlayers];
+            const crossPlayers = crossRes.ok ? await crossRes.json() : [];
+            const players = [...euPlayers, ...nbaPlayers, ...crossPlayers];
             if (currentSport !== 'basketball') return; // 🛡️ bu arada futbola geçilmişse gösterme
 
             if (tableHead) tableHead.style.display = '';
