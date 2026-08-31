@@ -141,6 +141,12 @@ object DuelManager {
     private val turkiyeChampions = listOf("Galatasaray", "Fenerbahce", "Besiktas", "Trabzonspor", "Bursaspor")
     private const val TURKIYE_CHAMPIONS_ROUND_COUNT = 3
 
+    // 🎯 YENİ: Süper Lig kulüplerinin (havuzda oransal olarak azınlıkta olsa
+    // da) soru olarak orantısız sık çıktığı fark edildi — bir soruda Türk
+    // kulübü varsa bu soruyu SADECE %70 ihtimalle kabul edip, %30'unda
+    // yeniden çekiyoruz. Bu, gözlemlenen oranı kabaca %10 bandına indiriyor.
+    private val turkishSuperLigClubs = setOf("Galatasaray", "Fenerbahce", "Besiktas", "Trabzonspor", "Kocaelispor")
+
     private val countryPool = listOf(
         "Turkiye", "England", "Germany", "France", "Spain", "Italy", "Netherlands", "Portugal",
         "Brazil", "Argentina", "Croatia", "Serbia", "Belgium", "Sweden", "Norway",
@@ -424,8 +430,35 @@ object DuelManager {
                 pool.shuffled().take(2).map { it to false }
             }
 
-            val candidate = DatabaseClient.fetchPlayerAcrossClubs(terms)
+            // 🎯 YENİ: Süper Lig kulübü içeren soruları eleyip yeniden çekerek
+            // oranı HER FAZDA ~%10'a sabitliyoruz. Isınma fazındaki (ilk 3 tur)
+            // easyClubPool'da Türk kulüp payı doğal olarak çok daha yüksek
+            // (4/17 ≈ %23.5, ana havuzda 5/55 ≈ %9) — bu yüzden ısınma fazında
+            // çok daha agresif elemek (kabul oranı ~%15) gerekiyor, tam fazda
+            // ise daha hafif bir eleme (kabul oranı ~%59) yetiyor. İkisi de
+            // matematiksel olarak nihai oranı ~%10'a getirecek şekilde hesaplandı.
+            val hasTurkishClub = terms.any { (term, isCountry) -> !isCountry && turkishSuperLigClubs.contains(term) }
+            val turkishAcceptProbability = if (inEasyPhase) 0.15 else 0.59
+            if (hasTurkishClub && kotlin.random.Random.nextDouble() > turkishAcceptProbability) {
+                attempts++
+                continue
+            }
+
+            // 🎯 YENİ: en az bir taraf 2010 sonrası bir sezonda örtüşsün diye
+            // minYear filtresi eklendi (bulunamazsa fetchPlayerAcrossClubs
+            // otomatik olarak filtresiz devam ediyor, boş ekran çıkmaz).
+            val candidate = DatabaseClient.fetchPlayerAcrossClubs(terms, minYear = 2010)
             attempts++
+
+            // 🎯 YENİ: bazı kayıtlarda oyuncu ismi bozuk/eksik geliyor (sadece
+            // "-" gibi) — bu durumda soru asla çözülemez hale geliyordu.
+            // Böyle bir isim gelirse adayı reddedip yeniden çekiyoruz.
+            val cleanCandidateName = candidate?.playerName
+                ?.replace(Regex("\\s*\\(\\d+\\)\\s*$"), "")
+                ?.trim()
+            if (candidate != null && (cleanCandidateName.isNullOrBlank() || cleanCandidateName == "-")) {
+                continue
+            }
 
             if (candidate != null) {
                 val cleanName = candidate.playerName.replace(Regex("\\s*\\(\\d+\\)\\s*$"), "").trim()
