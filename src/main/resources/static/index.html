@@ -8963,10 +8963,17 @@
         clearInterval(duelPollInterval);
         duelPollInterval = setInterval(async () => {
             if (!duelRoomCode) return;
+            const requestRoomCode = duelRoomCode; // 🛡️ isteği anlık odaya sabitliyoruz
             try {
-                const res = await fetch(`/duel/state?roomCode=${duelRoomCode}&playerName=${encodeURIComponent(duelPlayerName || '')}`);
+                const res = await fetch(`/duel/state?roomCode=${requestRoomCode}&playerName=${encodeURIComponent(duelPlayerName || '')}`);
                 if (!res.ok) return;
+                // 🛡️ BUG DÜZELTMESİ: cevap gelene kadar geçen sürede kullanıcı
+                // zaten moddan çıkmış (duelActive=false) ya da farklı bir odaya
+                // geçmiş olabilir (roomCode değişmiş) — bu durumda ESKİ cevabı
+                // hiç işlemiyoruz, az önce temizlenmiş ekranı geri bozmasın diye.
+                if (!duelActive || duelRoomCode !== requestRoomCode) return;
                 const state = await res.json();
+                if (!duelActive || duelRoomCode !== requestRoomCode) return;
                 renderDuelStateScreen(state);
             } catch (e) {
                 // sessizce bir sonraki denemeye geç

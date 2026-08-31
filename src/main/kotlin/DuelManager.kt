@@ -9,7 +9,7 @@ private const val ROUND_DURATION_MS = 30_000L
 private const val ROOM_STALE_MS = 2 * 60 * 60 * 1000L // 2 saat hareketsizlik = terk edilmiş say
 private const val CLEANUP_INTERVAL_MS = 30 * 60 * 1000L // 30 dakikada bir kontrol et
 private const val OPPONENT_LEFT_THRESHOLD_SECONDS = 8 // ~5-6 kaçırılmış polling turu
-private const val EASY_PHASE_ROUND_COUNT = 3 // 🟢 ısınma turu sayısı
+private const val EASY_PHASE_ROUND_COUNT = 5 // 🟢 ısınma turu sayısı
 
 @Serializable
 data class DuelClubInfo(val club: String, val season: String)
