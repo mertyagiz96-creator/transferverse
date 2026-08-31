@@ -420,29 +420,34 @@ object DuelManager {
         var attempts = 0
         var isCountryMix = false
         while (attempts < 12) {
-            val useCountryMix = !inEasyPhase && kotlin.random.Random.nextDouble() < 0.2
-            val terms: List<Pair<String, Boolean>> = if (useCountryMix) {
-                val club = clubPool.random()
-                val country = countryPool.random()
-                listOf(club to false, country to true)
-            } else {
-                val pool = if (inEasyPhase) easyClubPool else clubPool
-                pool.shuffled().take(2).map { it to false }
-            }
-
-            // 🎯 YENİ: Süper Lig kulübü içeren soruları eleyip yeniden çekerek
-            // oranı HER FAZDA ~%10'a sabitliyoruz. Isınma fazındaki (ilk 3 tur)
-            // easyClubPool'da Türk kulüp payı doğal olarak çok daha yüksek
-            // (4/17 ≈ %23.5, ana havuzda 5/55 ≈ %9) — bu yüzden ısınma fazında
-            // çok daha agresif elemek (kabul oranı ~%15) gerekiyor, tam fazda
-            // ise daha hafif bir eleme (kabul oranı ~%59) yetiyor. İkisi de
-            // matematiksel olarak nihai oranı ~%10'a getirecek şekilde hesaplandı.
-            val hasTurkishClub = terms.any { (term, isCountry) -> !isCountry && turkishSuperLigClubs.contains(term) }
+            // 🎯 YENİ: kulüp SEÇİMİ (bedava, veritabanına gitmiyor) ile GERÇEK
+            // veritabanı arama denemesi (pahalı, 12 hakkımız var) artık BİRBİRİNDEN
+            // AYRI — Süper Lig oranı kontrolü burada, ayrı ve ucuz bir iç döngüde
+            // yapılıyor. Böylece "elenen" bir kulüp çifti, asıl 12 arama hakkımızdan
+            // HİÇBİRİNİ tüketmiyor — sadece "daha iyi bir çift seç" diyor, arama
+            // şansımızı asla azaltmıyor.
+            var terms: List<Pair<String, Boolean>>
+            var useCountryMix: Boolean
+            var pickAttempts = 0
             val turkishAcceptProbability = if (inEasyPhase) 0.15 else 0.59
-            if (hasTurkishClub && kotlin.random.Random.nextDouble() > turkishAcceptProbability) {
-                attempts++
-                continue
-            }
+            do {
+                useCountryMix = !inEasyPhase && kotlin.random.Random.nextDouble() < 0.2
+                terms = if (useCountryMix) {
+                    val club = clubPool.random()
+                    val country = countryPool.random()
+                    listOf(club to false, country to true)
+                } else {
+                    val pool = if (inEasyPhase) easyClubPool else clubPool
+                    pool.shuffled().take(2).map { it to false }
+                }
+                pickAttempts++
+                val hasTurkishClub = terms.any { (term, isCountry) -> !isCountry && turkishSuperLigClubs.contains(term) }
+                val rejectedForRatio = hasTurkishClub && kotlin.random.Random.nextDouble() > turkishAcceptProbability
+                if (!rejectedForRatio) break
+                // 🛡️ 20 denemede uygun (Süper Lig'siz ya da kabul edilen) bir
+                // çift çıkmazsa, elimizdeki son çifti kabul edip devam ediyoruz —
+                // asıl arama şansımızı asla bu yüzden kaybetmiyoruz.
+            } while (pickAttempts < 20)
 
             // 🎯 YENİ: en az bir taraf 2010 sonrası bir sezonda örtüşsün diye
             // minYear filtresi eklendi (bulunamazsa fetchPlayerAcrossClubs
