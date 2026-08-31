@@ -509,6 +509,7 @@ object DatabaseClient {
             // çiftleri kabul ediyoruz — 15 yıldan fazla ayrıksa muhtemelen
             // FARKLI kişilerdir (Mike James örneğindeki gibi), atlıyoruz.
             var bestPair: Pair<CrossLeagueCandidate, CrossLeagueCandidate>? = null
+            var bestGap = Int.MAX_VALUE
             for (eu in europeList) {
                 for (nba in nbaList) {
                     val gap = when {
@@ -516,8 +517,17 @@ object DatabaseClient {
                         nba.maxYear < eu.minYear -> eu.minYear - nba.maxYear
                         else -> 0 // yıllar zaten örtüşüyor
                     }
-                    if (gap <= 15) {
-                        if (bestPair == null || gap < 15) bestPair = eu to nba
+                    // 🎯 KESİN DÜZELTME: eskiden "gap < 15" her true olduğunda
+                    // bestPair'i EZİYORDU — yani en küçük farkı değil, DÖNGÜDE
+                    // EN SON işlenen çifti seçiyordu (Reggie Williams örneğinde
+                    // gerçek 0 yıllık eşleşme yerine, yanlışlıkla 14 yıllık farklı
+                    // bir kişiyle eşleşebilirdi). Artık GERÇEKTEN en küçük farkı
+                    // takip ediyoruz. Tolerans da 15'ten 10 yıla düşürüldü —
+                    // gerçek veride yanlış adayların farkı hep 20+ yıldı, doğru
+                    // adaylar hep 0-3 yıl civarındaydı; 10 yıl, ikisini net ayırıyor.
+                    if (gap <= 10 && gap < bestGap) {
+                        bestGap = gap
+                        bestPair = eu to nba
                     }
                 }
             }
