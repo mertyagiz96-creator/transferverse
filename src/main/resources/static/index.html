@@ -4713,7 +4713,7 @@
                     pick = fisherYatesShuffle(turkiyeLigiPool).slice(0, 2);
                 }
                 try {
-                    const res = await fetch(`/playerMode?clubs=${encodeURIComponent(pick.join(','))}&isCountry=0,0`);
+                    const res = await fetch(`/playerMode?clubs=${encodeURIComponent(pick.join(','))}&isCountry=0,0&minYear=2010`);
                     if (res.ok) {
                         const candidate = await res.json();
                         const cleanCandidateName = candidate.playerName.replace(/\s*\(\d+\)\s*/g, "").trim();
@@ -4764,7 +4764,7 @@
             }
 
             try {
-                const res = await fetch(`/playerMode?clubs=${encodeURIComponent(pick.join(','))}&isCountry=${isCountryFlags.map(f => f ? '1' : '0').join(',')}`);
+                const res = await fetch(`/playerMode?clubs=${encodeURIComponent(pick.join(','))}&isCountry=${isCountryFlags.map(f => f ? '1' : '0').join(',')}&minYear=2010`);
                 if (res.ok) {
                     const candidate = await res.json();
                     const cleanCandidateName = candidate.playerName.replace(/\s*\(\d+\)\s*/g, "").trim();
