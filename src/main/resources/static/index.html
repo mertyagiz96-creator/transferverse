@@ -6026,11 +6026,12 @@
             } catch (e) { /* sessizce geç */ }
 
             if (isCorrect) {
-                // 🎯 DÜZELTME: güvenli geri dönüş yolunda discoveredAnswer boş
-                // kalabiliyordu — ama kullanıcının kendi tahmini zaten backend
-                // tarafından DOĞRU olarak doğrulandı, bu yüzden onu güvenle
-                // "keşfedilen cevap" olarak kullanabiliriz.
-                if (!discoveredAnswer) discoveredAnswer = rawGuess;
+                // 🎯 DÜZELTME: discoveredAnswer, kullanıcı tahmin etmeden ÖNCE
+                // (çözülebilirlik ön kontrolünde) zaten dolmuş olabiliyordu —
+                // bu yüzden kullanıcının GERÇEKTEN doğru bildiği isim asla
+                // ekrana yansımıyordu. Doğru tahminde HER ZAMAN kullanıcının
+                // kendi (doğrulanmış) cevabını gösteriyoruz.
+                discoveredAnswer = rawGuess;
                 finish(true);
             } else if (attempts >= 5) {
                 finish(false);
@@ -8682,7 +8683,22 @@
                 submitBtn.disabled = false;
             } else {
                 lockRound();
-                if (statusEl) statusEl.textContent = `❌ Bugün bilemedin — doğru cevap: ${cleanFullName}. Yarın tekrar dene!`;
+                if (statusEl) {
+                    statusEl.textContent = `❌ Bugün bilemedin — doğru cevap: ${cleanFullName}. Yarın tekrar dene!`;
+                    // 🎯 DÜZELTME: canlı kaybetme anında (finishLoss) link
+                    // ekleniyordu, ama sayfa yenilenip "bugün zaten kaybettin"
+                    // durumu geri yüklenirken (bu blok) link hiç eklenmiyordu.
+                    if (cleanFullName) {
+                        const restoredLossLink = document.createElement('a');
+                        restoredLossLink.href = profileUrl || `https://www.transfermarkt.com/schnellsuche/ergebnis/schnellsuche?query=${encodeURIComponent(cleanFullName)}`;
+                        restoredLossLink.target = '_blank';
+                        restoredLossLink.rel = 'noopener noreferrer';
+                        restoredLossLink.textContent = `🔗 ${cleanFullName} profili`;
+                        restoredLossLink.style.cssText = 'display:inline-block; margin-top:8px; font-size:0.7rem; color:var(--accent-gold); text-decoration:none; opacity:0.85;';
+                        statusEl.appendChild(document.createElement('br'));
+                        statusEl.appendChild(restoredLossLink);
+                    }
+                }
             }
         }
         if (typeof updateHomeCardsRowAlignment === 'function') updateHomeCardsRowAlignment();
@@ -10343,9 +10359,12 @@
                 ? `https://cdn.nba.com/headshots/nba/latest/1040x760/${player.nbaOfficialId}.png`
                 : getBasketballPlayerPhoto(player.name);
             const photoInner = photoUrl ? `<img src="${photoUrl}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" onerror="if(this.parentElement) this.parentElement.innerHTML='👤'">` : '👤';
+            // 🎯 DÜZELTME: Avrupalı oyuncular için Google araması kullanılıyordu,
+            // sitenin geri kalanıyla (Günün Sorusu, Transfer Bağlantısı) tutarsız
+            // duruyordu — hepsi Wikipedia kullanıyor, burayı da eşitliyoruz.
             const profileUrl = player.nbaOfficialId
                 ? `https://www.nba.com/player/${player.nbaOfficialId}`
-                : `https://www.google.com/search?q=${encodeURIComponent(player.name + ' basketball player')}`;
+                : `https://tr.wikipedia.org/wiki/Özel:Ara?search=${encodeURIComponent(player.name)}`;
             nameCell.innerHTML = `
                 <div style="display:flex; align-items:center; gap:10px;">
                     <div class="bb-player-photo-box" data-player-name="${escapeHtml(player.name)}" style="width:32px;height:32px;border-radius:50%;background:rgba(var(--fg-rgb),0.08);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:1rem;overflow:hidden;">${photoInner}</div>
