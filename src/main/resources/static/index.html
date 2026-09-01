@@ -2456,6 +2456,11 @@
 
     </div><!-- /#homeCardsWrapper -->
 
+    <div id="newsPreviewSection" style="margin-top: 24px; padding: 30px 26px; background: rgba(var(--card-tint-rgb), 0.3); border-radius: 18px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18); transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease; display: none;" onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 16px 40px rgba(0,0,0,0.22), 0 0 0 2px rgba(var(--accent-gold-rgb),0.35)';" onmouseout="this.style.transform=''; this.style.boxShadow='0 10px 30px rgba(0,0,0,0.18)';">
+        <h2 id="i18n-newsTitle" style="font-size: 1.05rem; font-weight: 700; color: rgba(var(--fg-rgb), 0.85); margin-bottom: 14px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px; margin-right:6px;"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>Öne Çıkan Haberler</h2>
+        <div id="newsPreviewRow" style="display: flex; gap: 14px; overflow-x: auto; padding-bottom: 6px; -webkit-overflow-scrolling: touch; scroll-snap-type: x proximity; justify-content: center;"></div>
+    </div>
+
     <div id="championshipPollSection" style="margin-top: 24px; padding: 30px 26px; background: rgba(var(--card-tint-rgb), 0.3); border-radius: 18px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18); transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease; display: none;" onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 16px 40px rgba(0,0,0,0.22), 0 0 0 2px rgba(var(--accent-gold-rgb),0.35)';" onmouseout="this.style.transform=''; this.style.boxShadow='0 10px 30px rgba(0,0,0,0.18)';">
         <h2 id="i18n-pollTitle" style="font-size: 1.05rem; font-weight: 700; color: rgba(var(--fg-rgb), 0.85); margin-bottom: 14px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="vertical-align:-3px; margin-right:6px;"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>Bu Sezon Kim Şampiyon Olur?</h2>
         <div id="championshipPollGrid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px;"></div>
@@ -3539,6 +3544,7 @@
         'i18n-feeQuizTitle': { en: '💰 Which Transfer Was More Expensive?' },
         'i18n-pollTitle': { en: '🗳️ Who Will Win the Title This Season?' },
         'i18n-bbPollTitle': { en: '🏀 Who Will Win the Title This Season?' },
+        'i18n-newsTitle': { en: '🔥 Featured News' },
         'i18n-bioTitle': { en: '📰 Player of the Day' }
     };
     const TR_ORIGINALS = {}; // 💡 Türkçeye geri dönmek için orijinal metinleri saklıyoruz
@@ -3571,6 +3577,7 @@
             'i18n-bbConnectionTitle': '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="vertical-align:-3px; margin-right:6px;"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>',
             'i18n-feeQuizTitle': '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="vertical-align:-3px; margin-right:6px;"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>',
             'i18n-pollTitle': '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="vertical-align:-3px; margin-right:6px;"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>',
+            'i18n-newsTitle': '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px; margin-right:6px;"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>',
             'i18n-h3-daily': '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="vertical-align:-2px; margin-right:5px;"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',
             'i18n-h3-duel': '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="vertical-align:-2px; margin-right:5px;"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>'
         };
@@ -5229,6 +5236,7 @@
         loadBasketballPoll(); // 🏀 ana ekrana dönünce güncel oylarla göster
         loadTransferFeeQuiz(); // 💰 ana ekrana dönünce göster
         loadConnectionGame(); // 🔗 aynı akış, transfer bağlantısı oyunu
+        loadNewsPreview(); // 📰 ana ekrana dönünce haber kartını göster
         document.getElementById('luckyModeBtn').style.display = '';
         document.getElementById('hunterModeWrapper').style.display = '';
         document.getElementById('yearFilterWrapper').style.display = '';
@@ -5282,6 +5290,7 @@
         loadBasketballPoll();
         loadTransferFeeQuiz();
         loadDailyPlayerBio();
+        loadNewsPreview();
     }
 
     // 🏆 Arkadaşla Yarış (Duel) Modu — polling tabanlı, tamamen ayrı bir mod.
@@ -6342,6 +6351,53 @@
             section.style.display = 'block';
         } catch (e) {
             // sessizce geç, bölüm gizli kalır
+        }
+    }
+
+    // 📰 Güncel Haberler — RSS + Gemini ile arka planda periyodik güncellenen
+    // gerçek verilerden geliyor. Sunucu henüz ilk turu tamamlamadıysa boş
+    // liste dönebilir, o durumda kartı hiç göstermiyoruz.
+    async function loadNewsPreview() {
+        const section = document.getElementById('newsPreviewSection');
+        const row = document.getElementById('newsPreviewRow');
+        if (!section || !row) return;
+        // 🛡️ Diğer modlardayken hiç istek atmaya gerek yok.
+        if (playerModeActive || duelActive || transfermatikActive || (typeof bonservisAviActive !== 'undefined' && bonservisAviActive)) return;
+        // 🏀⚽ İsteği anlık spora sabitliyoruz — istek sürerken kullanıcı
+        // futbol/basketbol arasında geçiş yaparsa, cevap geldiğinde hâlâ o
+        // sporda mıyız diye tekrar kontrol edeceğiz.
+        const requestedSport = currentSport;
+        try {
+            const res = await fetch(`/news?sport=${requestedSport}`);
+            if (!res.ok) return;
+            const items = await res.json();
+            if (!items || items.length === 0) return; // 💡 henüz ilk tur tamamlanmadıysa sessizce geç
+            // 🛡️ YARIŞ DURUMU KORUMASI: cevap gelene kadar spor değişmiş olabilir.
+            if (currentSport !== requestedSport) return;
+
+            row.innerHTML = items.map(item => `
+                <a href="${item.url ? item.url.replace(/"/g, '&quot;') : '#'}" target="_blank" rel="noopener noreferrer" style="flex: 0 0 260px; scroll-snap-align: start; background: rgba(var(--fg-rgb), 0.04); border: 1px solid rgba(var(--fg-rgb), 0.1); border-radius: 10px; padding: 16px; text-decoration: none; color: inherit; display: block; transition: transform 0.15s ease, border-color 0.15s ease;" onmouseover="this.style.transform='translateY(-2px)'; this.style.borderColor='rgba(var(--accent-gold-rgb),0.4)';" onmouseout="this.style.transform=''; this.style.borderColor='rgba(var(--fg-rgb),0.1)';">
+                    <div style="font-size: 0.66rem; font-weight: 700; color: var(--accent-gold); letter-spacing: 0.4px; margin-bottom: 8px;">${escapeHtml(item.tag || '⚽ HABER')}</div>
+                    <div style="font-weight: 700; font-size: 0.86rem; line-height: 1.35; margin-bottom: 8px; color: rgb(var(--fg-rgb));">${escapeHtml(item.title)}</div>
+                    <div style="font-size: 0.78rem; opacity: 0.7; line-height: 1.45; margin-bottom: 10px;">${escapeHtml(item.summary)}</div>
+                    <div style="font-size: 0.64rem; opacity: 0.45;">${escapeHtml(item.source || '')}</div>
+                </a>
+            `).join('');
+
+            // 🎯 Kartlar konteynerin genişliğine sığıyorsa (kaydırmaya gerek
+            // yoksa) ORTALIYORUZ — sığmazsa sola yaslı bırakıyoruz, kaydırma
+            // doğal hissettirsin diye. homeCardsRow'daki mantıkla aynı.
+            requestAnimationFrame(() => {
+                row.style.justifyContent = row.scrollWidth <= row.clientWidth + 1 ? 'center' : 'flex-start';
+            });
+
+            // 🛡️ YARIŞ DURUMU KORUMASI: ağ isteği sürerken (yukarıdaki await'ler
+            // boyunca) kullanıcı başka bir moda ya da farklı bir spora geçmiş
+            // olabilir — göstermeden hemen önce tekrar kontrol ediyoruz.
+            if (playerModeActive || duelActive || transfermatikActive || (typeof bonservisAviActive !== 'undefined' && bonservisAviActive) || currentSport !== requestedSport) return;
+            section.style.display = 'block';
+        } catch (e) {
+            // sessizce geç, kart gizli kalır
         }
     }
 
@@ -7905,7 +7961,8 @@
             const tableWrapper = document.querySelector('.table-wrapper');
             const sections = ['dailyQuestionCard', 'connectionGameSection', 'championshipPollSection',
                 'basketballPollSection', 'transferFeeQuizSection', 'dailyPlayerBioSection',
-                'blogLinkSection', 'aboutContentSection', 'basketballCoverageNote', 'bbConnectionGameSection'];
+                'blogLinkSection', 'aboutContentSection', 'basketballCoverageNote', 'bbConnectionGameSection',
+                'newsPreviewSection'];
             sections.forEach(id => {
                 const el = document.getElementById(id);
                 if (el) el.style.display = 'none';
@@ -7967,6 +8024,7 @@
         loadBasketballPoll();
         loadTransferFeeQuiz();
         loadDailyPlayerBio();
+        loadNewsPreview();
     }
 
     function baviUpdateProgressBadge() {
@@ -8142,7 +8200,8 @@
             const tableWrapper = document.querySelector('.table-wrapper');
             const sections = ['dailyQuestionCard', 'connectionGameSection', 'championshipPollSection',
                 'basketballPollSection', 'transferFeeQuizSection', 'dailyPlayerBioSection',
-                'blogLinkSection', 'aboutContentSection', 'basketballCoverageNote', 'bbConnectionGameSection'];
+                'blogLinkSection', 'aboutContentSection', 'basketballCoverageNote', 'bbConnectionGameSection',
+                'newsPreviewSection'];
             sections.forEach(id => {
                 const el = document.getElementById(id);
                 if (el) el.style.display = 'none';
@@ -8786,6 +8845,8 @@
         if (connEnter) connEnter.style.display = 'none';
         const bbConnEnter1 = document.getElementById('bbConnectionGameSection');
         if (bbConnEnter1) bbConnEnter1.style.display = 'none';
+        const newsEnter1 = document.getElementById('newsPreviewSection');
+        if (newsEnter1) newsEnter1.style.display = 'none';
         document.getElementById('luckyModeBtn').style.display = 'none';
         document.getElementById('hunterModeWrapper').style.display = 'none';
         document.getElementById('yearFilterWrapper').style.display = 'none';
@@ -8824,6 +8885,7 @@
         loadBasketballPoll(); // 🏀 ana ekrana dönünce güncel oylarla göster
         loadTransferFeeQuiz(); // 💰 ana ekrana dönünce göster
         loadConnectionGame(); // 🔗 aynı akış, transfer bağlantısı oyunu
+        loadNewsPreview(); // 📰 ana ekrana dönünce haber kartını göster
         document.getElementById('luckyModeBtn').style.display = '';
         document.getElementById('hunterModeWrapper').style.display = '';
         document.getElementById('yearFilterWrapper').style.display = '';
@@ -9438,6 +9500,8 @@
             if (connPlayerEnter) connPlayerEnter.style.display = 'none';
             const bbConnPlayerEnter = document.getElementById('bbConnectionGameSection');
             if (bbConnPlayerEnter) bbConnPlayerEnter.style.display = 'none';
+            const newsPlayerEnter = document.getElementById('newsPreviewSection');
+            if (newsPlayerEnter) newsPlayerEnter.style.display = 'none';
             luckyBtn.style.display = 'none';
             hunterWrapper.style.display = 'none';
             yearWrapper.style.display = 'none';
@@ -10316,7 +10380,13 @@
             loadBasketballPoll(); // 🏀 basketbola dönünce göster
             loadBasketballConnectionGame(); // 🏀 basketbola dönünce köprü oyunu
         }
+        // 🛡️ Yeni sporun haberleri gelene kadar, eski sporun haberleri bir an
+        // görünüp kaybolmasın diye kartı hemen gizliyoruz — loadNewsPreview
+        // veri gelince kendi tekrar gösterecek.
+        const newsSectionForHide = document.getElementById('newsPreviewSection');
+        if (newsSectionForHide) newsSectionForHide.style.display = 'none';
         loadDailyPlayerBio(); // 📰/🏀 spor değişince doğru içerikle yeniden çiz
+        loadNewsPreview(); // 📰 spor değişince doğru sporun haberlerini göster
 
         const colMevki = document.getElementById('colMevki');
         const colUyruk = document.getElementById('colUyruk');
@@ -10596,6 +10666,7 @@
         // Sorusu'nu hesaplıyoruz — böylece cihazın kendi saati yanlış/farklı
         // saat diliminde olsa bile herkes aynı günü görür. Sayfanın geri kalanı
         // bunu beklemiyor, paralel yükleniyor.
+        loadNewsPreview(); // 📰 Güncel Haberler — gerçek RSS+Gemini verisi
         (async () => {
             await syncServerDate();
             loadDailyQuestion();
