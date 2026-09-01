@@ -393,7 +393,10 @@ object DuelManager {
             var attempts = 0
             while (attempts < 12) {
                 val terms: List<Pair<String, Boolean>> = pool.shuffled().take(2).map { it to false }
-                val candidate = DatabaseClient.fetchPlayerAcrossClubs(terms)
+                // 🎯 YENİ: en az bir taraf 2007 sonrası bir sezonda örtüşsün diye
+                // minYear filtresi eklendi (bulunamazsa fetchPlayerAcrossClubs
+                // otomatik olarak filtresiz devam ediyor, boş ekran çıkmaz).
+                val candidate = DatabaseClient.fetchPlayerAcrossClubs(terms, minYear = 2007)
                 attempts++
                 if (candidate != null) {
                     val cleanName = candidate.playerName.replace(Regex("\\s*\\(\\d+\\)\\s*$"), "").trim()

@@ -5294,6 +5294,13 @@
     let duelLocalTimerInterval = null;
     let duelLastState = null;
     let duelGuessLocked = false;
+    // 🎯 BUG DÜZELTMESİ: eskiden yerel geri sayım (buildDuelQuestionScreen
+    // içindeki bir iç değişken) ile sunucu senkronizasyonu (resyncDuelTimer)
+    // AYNI ekran yazısına, birbirinden HABERSİZ yazıyordu — biri düzeltince,
+    // bir sonraki yerel tik onu kendi (farklı) sayısıyla eziyordu, bu da
+    // "7, 6, 9, 6" gibi karışık zıplamalara yol açıyordu. Artık ikisi de
+    // AYNI paylaşılan değişkeni okuyup yazıyor.
+    let duelLocalSecondsLeft = 0;
 
     // 📱 Mobilde Bil Bakalım/Arkadaşla Yarış'a girince kullanıcı elle aşağı
     // kaydırmak zorunda kalmasın diye, soru alanına otomatik kaydırıyoruz.
@@ -5667,17 +5674,23 @@
             attemptsBox.appendChild(row);
         }
 
-        function finish(won) {
+        function finish(won, guessedName) {
             solved = won;
             guessInput.disabled = true;
             submitBtn.disabled = true;
             if (won) playCorrectSound();
-            const revealName = pair.bridges[0]; // 🎯 futbol havuzunda her girişte doldurulmuş bir isim var
+            // 🎯 DÜZELTME: eskiden HER ZAMAN pair.bridges[0] (sabit, önceden
+            // tanımlı isim) gösteriliyordu — kullanıcı doğru bilse bile, eğer
+            // o çift birden fazla geçerli köprüye sahipse (örn. Vinicius/Rodrygo
+            // gibi), kullanıcının GERÇEKTEN yazdığı isim değil, listedeki İLK
+            // isim gösteriliyordu. Artık doğru bilince kullanıcının kendi
+            // (doğrulanmış) cevabını gösteriyoruz.
+            const revealName = (won && guessedName) ? guessedName : pair.bridges[0];
             statusEl.textContent = won
                 ? t(`🎉 Doğru! ${attempts} denemede bağlantıyı kurdun — köprü oyuncu: ${revealName}.`, `🎉 Correct! You made the connection in ${attempts} tries — bridge player: ${revealName}.`)
                 : t(`Bugünkü bağlantı: ${revealName}. Yarın tekrar dene!`, `Today's connection: ${revealName}. Try again tomorrow!`);
             try {
-                localStorage.setItem(STATE_KEY, JSON.stringify({ date: today, attempts, solved: won, pair }));
+                localStorage.setItem(STATE_KEY, JSON.stringify({ date: today, attempts, solved: won, pair, revealName }));
             } catch (e) { /* sessizce geç */ }
 
             const shareBtn = document.createElement('button');
@@ -5759,7 +5772,7 @@
             } catch (e) { /* sessizce geç */ }
 
             if (isCorrect) {
-                finish(true);
+                finish(true, rawGuess);
             } else if (attempts >= 5) {
                 finish(false);
             } else {
@@ -5777,7 +5790,9 @@
             if (savedState.solved) {
                 guessInput.disabled = true;
                 submitBtn.disabled = true;
-                const savedRevealName = pair.bridges[0];
+                // 🎯 DÜZELTME: her zaman pair.bridges[0] yerine, kaydedilmiş
+                // GERÇEK cevabı (kullanıcının doğru bildiği isim) kullanıyoruz.
+                const savedRevealName = savedState.revealName || pair.bridges[0];
                 statusEl.textContent = t(`✅ Bugün bu bağlantıyı ${attempts} denemede kurmuştun! Köprü oyuncu: ${savedRevealName}.`, `✅ You already solved this connection today in ${attempts} tries! Bridge player: ${savedRevealName}.`);
                 const savedInfoLink = document.createElement('a');
                 savedInfoLink.href = `https://www.transfermarkt.com/schnellsuche/ergebnis/schnellsuche?query=${encodeURIComponent(savedRevealName)}`;
@@ -5793,7 +5808,18 @@
             } else {
                 guessInput.disabled = true;
                 submitBtn.disabled = true;
-                statusEl.textContent = t(`Bugünkü bağlantı: ${pair.bridges[0]}. Yarın tekrar dene!`, `Today's connection: ${pair.bridges[0]}. Try again tomorrow!`);
+                // 🎯 DÜZELTME (bonus): kaybetme durumunda link hiç yoktu —
+                // Günün Sorusu'ndaki aynı sorunla birebir aynıydı, ekliyoruz.
+                const savedLossRevealName = savedState.revealName || pair.bridges[0];
+                statusEl.textContent = t(`Bugünkü bağlantı: ${savedLossRevealName}. Yarın tekrar dene!`, `Today's connection: ${savedLossRevealName}. Try again tomorrow!`);
+                const savedLossLink = document.createElement('a');
+                savedLossLink.href = `https://www.transfermarkt.com/schnellsuche/ergebnis/schnellsuche?query=${encodeURIComponent(savedLossRevealName)}`;
+                savedLossLink.target = '_blank';
+                savedLossLink.rel = 'noopener noreferrer';
+                savedLossLink.textContent = `🔗 ${savedLossRevealName} profili`;
+                savedLossLink.style.cssText = 'display:inline-block; margin-top:8px; font-size:0.7rem; color:var(--accent-gold); text-decoration:none; opacity:0.85;';
+                statusEl.appendChild(document.createElement('br'));
+                statusEl.appendChild(savedLossLink);
             }
         }
 
@@ -6075,7 +6101,11 @@
             }
         }
 
-        if (playerModeActive || duelActive || transfermatikActive || (typeof bonservisAviActive !== 'undefined' && bonservisAviActive)) return; // 🛡️ YARIŞ DURUMU KORUMASI: ağ isteği sürerken başka moda geçilmiş olabilir
+        // 🛡️ BUG DÜZELTMESİ: eskiden burada currentSport kontrolü YOKTU —
+        // kullanıcı bu ağ isteği (checkSolvable) sürerken hızlıca futbola
+        // geçerse, basketbol köprü kartı gecikmeli olarak yine de gösteriliyor,
+        // futbol köprü kartının ALTINDA takılı kalıyordu.
+        if (playerModeActive || duelActive || transfermatikActive || (typeof bonservisAviActive !== 'undefined' && bonservisAviActive) || currentSport !== 'basketball') return; // 🛡️ YARIŞ DURUMU KORUMASI: ağ isteği sürerken başka moda geçilmiş olabilir
         section.style.display = 'block';
         if (typeof updateHomeCardsRowAlignment === 'function') updateHomeCardsRowAlignment();
     }
@@ -6520,7 +6550,10 @@
             : `TransferKolik'te ${bio.name}'in tam takım geçmişini görmek için, oynadığı kulüplerden birini "1. Takım" ya da "2. Takım" kutusuna yazıp arayabilirsiniz.`;
 
         content.innerHTML += `<p style="margin-bottom: 14px;">${paragraph1}</p><p>${paragraph2}</p>`;
-        if (playerModeActive || duelActive || transfermatikActive || (typeof bonservisAviActive !== 'undefined' && bonservisAviActive)) return; // 🛡️ YARIŞ DURUMU KORUMASI: ağ isteği sürerken başka moda geçilmiş olabilir
+        // 🛡️ BUG DÜZELTMESİ: aynı hata kalıbı (loadBasketballConnectionGame'de
+        // düzeltilenle birebir aynı) burada da vardı — currentSport kontrolü
+        // eksikti.
+        if (playerModeActive || duelActive || transfermatikActive || (typeof bonservisAviActive !== 'undefined' && bonservisAviActive) || currentSport !== 'basketball') return; // 🛡️ YARIŞ DURUMU KORUMASI: ağ isteği sürerken başka moda geçilmiş olabilir
         section.style.display = 'block';
         section.dataset.hasContent = 'true';
     }
@@ -9057,6 +9090,10 @@
         // düzeltiyoruz. Aksi halde her poll'da ileri-geri zıplama oluyordu.
         if (isNaN(displayed) || Math.abs(displayed - state.remainingSeconds) > 2) {
             timerEl.textContent = String(state.remainingSeconds);
+            // 🎯 BUG DÜZELTMESİ: yerel sayacın kullandığı değişkeni de burada
+            // güncelliyoruz — yoksa bir sonraki yerel tik bu düzeltmeyi kendi
+            // (eski) sayısıyla ezip karışık rakamlar göstermeye devam ederdi.
+            duelLocalSecondsLeft = state.remainingSeconds;
         }
     }
 
@@ -9160,13 +9197,16 @@
 
         // ⏱️ Yerel geri sayım — sunucudan gelen remainingSeconds'tan başlayıp
         // her saniye azalıyor, tur bitince (round-result ekranı gelince) duruyor.
-        let localSecondsLeft = state.remainingSeconds;
+        // 🎯 BUG DÜZELTMESİ: artık kendi iç değişkeni yerine, resyncDuelTimer
+        // ile PAYLAŞILAN duelLocalSecondsLeft'i kullanıyor — böylece sunucu
+        // düzeltmesi ile yerel azaltma birbirini ezmiyor.
+        duelLocalSecondsLeft = state.remainingSeconds;
         clearInterval(duelLocalTimerInterval);
         duelLocalTimerInterval = setInterval(() => {
-            localSecondsLeft = Math.max(0, localSecondsLeft - 1);
+            duelLocalSecondsLeft = Math.max(0, duelLocalSecondsLeft - 1);
             const timerEl = document.getElementById('duelTimer');
             if (timerEl) {
-                timerEl.textContent = String(localSecondsLeft);
+                timerEl.textContent = String(duelLocalSecondsLeft);
             } else {
                 clearInterval(duelLocalTimerInterval);
             }
