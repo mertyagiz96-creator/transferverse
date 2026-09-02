@@ -77,7 +77,8 @@ object NewsManager {
         val title: String,
         val description: String,
         val url: String,
-        val source: String
+        val source: String,
+        val publishedAtMs: Long? // 🕐 YENİ: eski haberleri filtrelemek için (parse edilemezse null)
     )
 
     private data class SelectedNewsItem(
@@ -197,14 +198,25 @@ object NewsManager {
             offSportKeywords.none { kw -> c.title.contains(kw, ignoreCase = true) }
         }
 
-        if (sportFiltered.isEmpty()) {
+        // 🕐 YENİ: 72 saatten (3 gün) eski haberleri havuzdan tamamen
+        // çıkarıyoruz — özellikle basketbolda bazı günler yeterince taze
+        // haber olmayabiliyor, bu durumda eski bir haberin "en yeni 5" ya da
+        // AI seçimine sızmasını önlüyoruz. Tarihi PARSE EDİLEMEYEN haberleri
+        // (publishedAtMs == null) GÜVENLİ TARAFTA kalıp filtrelemiyoruz —
+        // bir parse hatası tüm havuzu boşaltmasın diye.
+        val freshnessThreshold = System.currentTimeMillis() - (72 * 60 * 60 * 1000L)
+        val freshFiltered = sportFiltered.filter { c ->
+            c.publishedAtMs == null || c.publishedAtMs >= freshnessThreshold
+        }
+
+        if (freshFiltered.isEmpty()) {
             println("⚠️ [$sport] Filtre sonrası hiç haber adayı kalmadı, bu turu atlıyoruz (eski haberler ekranda kalır).")
             return
         }
 
         // 💡 Gemini'ye göndermeden önce, hem maliyeti hem gecikmeyi düşürmek
         // için en yeni 20 adayla sınırlıyoruz — RSS zaten en yeniden eskiye sıralı geliyor.
-        val trimmed = sportFiltered.distinctBy { it.url }.take(20)
+        val trimmed = freshFiltered.distinctBy { it.url }.take(20)
 
         val selected = try {
             selectWithGemini(trimmed, sport)
@@ -245,17 +257,18 @@ object NewsManager {
 
         val results = mutableListOf<RawNewsCandidate>()
 
-        // RSS 2.0 formatı — <item><title>/<link>/<description>
+        // RSS 2.0 formatı — <item><title>/<link>/<description>/<pubDate>
         val items = doc.getElementsByTagName("item")
         for (i in 0 until items.length) {
             val el = items.item(i) as? Element ?: continue
             val title = el.getElementsByTagName("title").item(0)?.textContent?.trim() ?: continue
             val link = el.getElementsByTagName("link").item(0)?.textContent?.trim() ?: continue
             val desc = el.getElementsByTagName("description").item(0)?.textContent?.trim()?.let { stripHtml(it) } ?: ""
-            results.add(RawNewsCandidate(title, desc, link, sourceName))
+            val pubDateRaw = el.getElementsByTagName("pubDate").item(0)?.textContent?.trim() ?: ""
+            results.add(RawNewsCandidate(title, desc, link, sourceName, parsePubDate(pubDateRaw)))
         }
 
-        // Atom formatı (NTV Spor gibi) — <entry><title>/<link href=".."/>/<summary>
+        // Atom formatı (NTV Spor gibi) — <entry><title>/<link href=".."/>/<summary>/<published>
         if (results.isEmpty()) {
             val entries = doc.getElementsByTagName("entry")
             for (i in 0 until entries.length) {
@@ -264,11 +277,30 @@ object NewsManager {
                 val linkEl = el.getElementsByTagName("link").item(0) as? Element
                 val link = linkEl?.getAttribute("href")?.trim().takeUnless { it.isNullOrBlank() } ?: continue
                 val summary = el.getElementsByTagName("summary").item(0)?.textContent?.trim()?.let { stripHtml(it) } ?: ""
-                results.add(RawNewsCandidate(title, summary, link, sourceName))
+                val publishedRaw = el.getElementsByTagName("published").item(0)?.textContent?.trim() ?: ""
+                results.add(RawNewsCandidate(title, summary, link, sourceName, parsePubDate(publishedRaw)))
             }
         }
 
         return results
+    }
+
+    // 🕐 YENİ: RSS'in RFC 822 tarih formatını ("Wed, 02 Sep 2026 08:50:19 GMT")
+    // ve Atom'un ISO 8601 formatını ("2026-09-02T08:21:20Z") ikisini de
+    // deniyoruz. Parse edilemezse null döner — bu durumda haberi FİLTRELEMİYORUZ
+    // (tarih bilgisi yoksa güvenli tarafta kalıp göstermeye devam ediyoruz,
+    // bir parse hatası tüm haber havuzunu boşaltmasın diye).
+    private fun parsePubDate(raw: String): Long? {
+        if (raw.isBlank()) return null
+        return try {
+            java.time.ZonedDateTime.parse(raw, java.time.format.DateTimeFormatter.RFC_1123_DATE_TIME).toInstant().toEpochMilli()
+        } catch (e: Exception) {
+            try {
+                java.time.Instant.parse(raw).toEpochMilli()
+            } catch (e2: Exception) {
+                null
+            }
+        }
     }
 
     private fun stripHtml(s: String): String {
@@ -314,17 +346,10 @@ object NewsManager {
                     }
                 }
             }
-            // ⚡ DÜZELTME: yeni Gemini modelleri varsayılan olarak "düşünme"
-            // (extended thinking) moduyla çalışıp basit görevlerde bile
-            // yavaşlayabiliyor — bizim işimiz (seçim + kısa özet) buna
-            // ihtiyaç duymuyor, kapatıp yanıt süresini kısaltmaya çalışıyoruz.
-            // Model bu parametreyi desteklemiyorsa API hatası verir, biz de
-            // zaten var olan kural bazlı yedeğe düşeriz — risk yok.
-            putJsonObject("generationConfig") {
-                putJsonObject("thinkingConfig") {
-                    put("thinkingBudget", 0)
-                }
-            }
+            // ⚠️ DÜZELTME: "düşünmeyi kapatma" denemesi (thinkingConfig)
+            // gemini-3.6-flash'ta desteklenmiyor — production'da net bir
+            // "400 Bad Request: invalid argument" hatasına yol açtığı
+            // deploy loglarında görüldü. Kaldırıldı, sade istek yeterli.
         }.toString()
 
         val response: HttpResponse = httpClient.post(
