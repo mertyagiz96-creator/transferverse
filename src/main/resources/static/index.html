@@ -1794,12 +1794,12 @@
             #newsPreviewRow > a .news-card-title {
                 font-size: 0.9rem !important;
             }
+            /* 🎯 DÜZELTME: özet artık line-clamp ile KESİLMİYOR — backend'de
+               tam, eksiksiz özet üretiyoruz (Gemini'ye 3-5 cümle talimatı
+               verildi), kullanıcı linke tıklamadan haberi tam okuyabilsin
+               diye. Kart boyu içeriğe göre otomatik uzuyor. */
             #newsPreviewRow > a .news-card-summary {
                 font-size: 0.8rem !important;
-                -webkit-line-clamp: 5;
-                display: -webkit-box;
-                -webkit-box-orient: vertical;
-                overflow: hidden;
             }
             #newsPreviewRow > a .news-card-tag {
                 font-size: 0.66rem !important;

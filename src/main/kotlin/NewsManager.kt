@@ -238,7 +238,7 @@ object NewsManager {
             SelectedNewsItem(
                 tag = defaultTagFor(sport),
                 title = it.title,
-                summary = it.description.take(200),
+                summary = capSummaryLength(it.description), // 🎯 alt limit yok, sadece ~10 satırlık üst sınır
                 sourceUrl = it.url,
                 source = it.source
             )
@@ -307,6 +307,19 @@ object NewsManager {
         return s.replace(Regex("<[^>]*>"), "").replace("&nbsp;", " ").trim()
     }
 
+    // 🛡️ GÜVENLİK ÜST SINIRI: alt limit yok (Gemini istediği kadar eksiksiz
+    // yazabilir), ama ~10 satırı geçen nadir/aşırı uzun durumlar için bir
+    // üst sınır koyuyoruz — kelimenin ortasından kesmeden, son boşluktan
+    // kesip "..." ekliyoruz. ~600 karakter, kartın genişliğine göre kabaca
+    // 10 satıra denk geliyor.
+    private fun capSummaryLength(text: String, maxChars: Int = 600): String {
+        if (text.length <= maxChars) return text
+        val cut = text.take(maxChars)
+        val lastSpace = cut.lastIndexOf(' ')
+        val safeCut = if (lastSpace > maxChars - 40) cut.substring(0, lastSpace) else cut
+        return safeCut.trimEnd() + "..."
+    }
+
     private suspend fun selectWithGemini(candidates: List<RawNewsCandidate>, sport: String): List<SelectedNewsItem>? {
         if (geminiApiKey.isNullOrBlank()) {
             println("ℹ️ GEMINI_API_KEY tanımlı değil, kural bazlı seçime geçiliyor.")
@@ -314,7 +327,7 @@ object NewsManager {
         }
 
         val candidateListText = candidates.mapIndexed { idx, c ->
-            "${idx + 1}. Başlık: ${c.title}\nÖzet: ${c.description.take(200)}\nKaynak: ${c.source}"
+            "${idx + 1}. Başlık: ${c.title}\nÖzet: ${c.description}\nKaynak: ${c.source}"
         }.joinToString("\n\n")
 
         val sportLabel = if (sport == "basketball") "Türk basketbolu" else "Türk futbolu"
@@ -328,8 +341,9 @@ object NewsManager {
             dışında voleybol, tenis gibi başka dallardan olabilir — bunları ele, SADECE $sportLabel ile ilgili olanlar
             arasından seç). Bunlardan EN ÖNEMLİ ve EN İLGİ ÇEKİCİ 5 tanesini seç
             (transfer haberleri, resmi açıklamalar, önemli sonuçlar/gelişmeler öncelikli olsun; maç önizlemesi, yayın saati
-            gibi sıradan/rutin içerikleri arkaya at). Her biri için KISA (en fazla 2 cümle) bir Türkçe özet yaz ve kısa
-            bir etiket belirle (örn: $exampleTags).
+            gibi sıradan/rutin içerikleri arkaya at). Her biri için EKSİKSİZ bir Türkçe özet yaz — kullanıcı
+            haberin linkine hiç tıklamadan olayı tam olarak anlayabilmeli (kim, ne, ne zaman, neden önemli gibi detayları
+            atlamadan aktar, gerektiği kadar cümle kullan). Ayrıca kısa bir etiket belirle (örn: $exampleTags).
 
             SADECE aşağıdaki JSON formatında, başka HİÇBİR metin eklemeden cevap ver:
             [{"index": <listedeki numarası>, "tag": "...", "summary": "..."}, ...]
@@ -385,8 +399,9 @@ object NewsManager {
             val idx = obj["index"]?.jsonPrimitive?.intOrNull ?: continue
             val candidate = candidates.getOrNull(idx - 1) ?: continue
             val tag = obj["tag"]?.jsonPrimitive?.contentOrNull ?: defaultTagFor(sport)
-            val summary = obj["summary"]?.jsonPrimitive?.contentOrNull?.takeUnless { it.isBlank() }
-                ?: candidate.description.take(200)
+            val summaryRaw = obj["summary"]?.jsonPrimitive?.contentOrNull?.takeUnless { it.isBlank() }
+                ?: candidate.description
+            val summary = capSummaryLength(summaryRaw) // 🛡️ alt limit yok, sadece ~10 satırlık üst sınır
             selected.add(SelectedNewsItem(tag, candidate.title, summary, candidate.url, candidate.source))
         }
         return if (selected.isEmpty()) null else selected.take(5)
