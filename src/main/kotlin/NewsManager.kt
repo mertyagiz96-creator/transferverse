@@ -30,7 +30,10 @@ object NewsManager {
     // adlar zamanla farklı, bazen kararsız modellere yönlendirilebiliyor).
     // Google ileride bu modeli kullanımdan kaldırırsa, sadece bu satırı
     // güncel bir model ID'siyle değiştirmek yeterli.
-    private const val GEMINI_MODEL = "gemini-2.5-flash"
+    // 🔄 GÜNCELLEME: "gemini-2.5-flash" Google tarafından yeni kullanıcılara
+    // kapatıldı (deploy loglarında 404 hatası alındı). Google'ın kendi hata
+    // mesajında önerdiği "gemini-3.6-flash" kullanılıyor.
+    private const val GEMINI_MODEL = "gemini-3.6-flash"
     private val geminiApiKey = System.getenv("GEMINI_API_KEY")
 
     private val httpClient = HttpClient(CIO) {
@@ -47,7 +50,8 @@ object NewsManager {
     // hangisinin kullanılacağı belirleniyor.
     private val RSS_SOURCES: Map<String, List<Pair<String, String>>> = mapOf(
         "football" to listOf(
-            "https://www.ntvspor.net/rss/kategori/futbol" to "NTV Spor"
+            "https://www.ntvspor.net/rss/kategori/futbol" to "NTV Spor",
+            "https://www.haberturk.com/rss/spor.xml" to "Habertürk"
         ),
         "basketball" to listOf(
             "https://www.ntvspor.net/rss/kategori/basketbol" to "NTV Spor"
@@ -161,9 +165,29 @@ object NewsManager {
             return
         }
 
+        // 🛡️ DÜZELTME: Habertürk gibi genel "spor" feed'leri futbol/basketbol
+        // dışında voleybol, tenis vb. haberler de içerebiliyor. Gemini bunu
+        // prompt'taki talimatla eleyebiliyor, ama Gemini BAŞARISIZ olup kural
+        // bazlı yedeğe düşersek bu filtre olmazsa yanlış sporun haberi
+        // görünebilir — o yüzden burada basit bir anahtar kelime filtresi
+        // uyguluyoruz (NTV Spor'un kategori bazlı feed'leri zaten saf olduğu
+        // için onları etkilemez, sadece karışık feed'lerdeki yabancı içeriği eler).
+        val offSportKeywords = if (sport == "basketball")
+            listOf("voleybol", "tenis", "futbol")
+        else
+            listOf("voleybol", "tenis", "basketbol")
+        val sportFiltered = candidates.filter { c ->
+            offSportKeywords.none { kw -> c.title.contains(kw, ignoreCase = true) }
+        }
+
+        if (sportFiltered.isEmpty()) {
+            println("⚠️ [$sport] Filtre sonrası hiç haber adayı kalmadı, bu turu atlıyoruz (eski haberler ekranda kalır).")
+            return
+        }
+
         // 💡 Gemini'ye göndermeden önce, hem maliyeti hem gecikmeyi düşürmek
-        // için en yeni 15 adayla sınırlıyoruz — RSS zaten en yeniden eskiye sıralı geliyor.
-        val trimmed = candidates.distinctBy { it.url }.take(15)
+        // için en yeni 20 adayla sınırlıyoruz — RSS zaten en yeniden eskiye sıralı geliyor.
+        val trimmed = sportFiltered.distinctBy { it.url }.take(20)
 
         val selected = try {
             selectWithGemini(trimmed, sport)
@@ -181,11 +205,11 @@ object NewsManager {
             println("📋 [$sport] KURAL BAZLI seçime düşüldü (Gemini kullanılamadı ya da GEMINI_API_KEY tanımlı değil) — en yeni 3 haber gösteriliyor.")
         }
 
-        val finalItems = selected ?: trimmed.take(3).map {
+        val finalItems = selected ?: trimmed.take(5).map {
             SelectedNewsItem(
                 tag = defaultTagFor(sport),
                 title = it.title,
-                summary = it.description.take(160),
+                summary = it.description.take(200),
                 sourceUrl = it.url,
                 source = it.source
             )
@@ -251,7 +275,9 @@ object NewsManager {
             "\"⚽ TRANSFER\", \"🔄 RESMİ AÇIKLAMA\", \"🗣️ AÇIKLAMA\", \"📊 SONUÇ\""
 
         val prompt = """
-            Aşağıda güncel $sportLabel haberlerinin bir listesi var. Bunlardan EN ÖNEMLİ ve EN İLGİ ÇEKİCİ 3 tanesini seç
+            Aşağıda çeşitli spor kaynaklarından çekilmiş, KARIŞIK içerikli bir haber listesi var (bazıları $sportLabel
+            dışında voleybol, tenis gibi başka dallardan olabilir — bunları ele, SADECE $sportLabel ile ilgili olanlar
+            arasından seç). Bunlardan EN ÖNEMLİ ve EN İLGİ ÇEKİCİ 5 tanesini seç
             (transfer haberleri, resmi açıklamalar, önemli sonuçlar/gelişmeler öncelikli olsun; maç önizlemesi, yayın saati
             gibi sıradan/rutin içerikleri arkaya at). Her biri için KISA (en fazla 2 cümle) bir Türkçe özet yaz ve kısa
             bir etiket belirle (örn: $exampleTags).
@@ -307,10 +333,10 @@ object NewsManager {
             val candidate = candidates.getOrNull(idx - 1) ?: continue
             val tag = obj["tag"]?.jsonPrimitive?.contentOrNull ?: defaultTagFor(sport)
             val summary = obj["summary"]?.jsonPrimitive?.contentOrNull?.takeUnless { it.isBlank() }
-                ?: candidate.description.take(160)
+                ?: candidate.description.take(200)
             selected.add(SelectedNewsItem(tag, candidate.title, summary, candidate.url, candidate.source))
         }
-        return if (selected.isEmpty()) null else selected.take(3)
+        return if (selected.isEmpty()) null else selected.take(5)
     }
 
     private fun saveNews(sport: String, items: List<SelectedNewsItem>) {
@@ -349,7 +375,7 @@ object NewsManager {
         try {
             openConnection().use { conn ->
                 conn.prepareStatement(
-                    "SELECT tag, title, summary, source, url FROM news_items WHERE sport = ? ORDER BY created_at DESC LIMIT 3"
+                    "SELECT tag, title, summary, source, url FROM news_items WHERE sport = ? ORDER BY created_at DESC LIMIT 5"
                 ).use { stmt ->
                     stmt.setString(1, sport)
                     stmt.executeQuery().use { rs ->
