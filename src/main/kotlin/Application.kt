@@ -1564,6 +1564,27 @@ fun main() {
                     <h1><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-4px; margin-right:8px;"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l2.5 2.5"/><path d="M5 20h14"/></svg>Transfer Kehanetleri</h1>
                     <p class="subtitle">Kullanıcılarımızın gerçekleşeceğini düşündüğü transferler.</p>
 
+                    <button onclick="shareKehanetlerPage()" style="display:inline-flex; align-items:center; gap:6px; padding:8px 16px; margin-bottom:24px; border-radius:8px; border:1px solid rgba(0,0,0,0.12); background:transparent; color:#1d1d1f; font-size:0.85rem; font-weight:600; cursor:pointer;">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+                        Paylaş
+                    </button>
+                    <script>
+                        function shareKehanetlerPage() {
+                            const shareData = {
+                                title: 'Transfer Kehanetleri — TransferKolik',
+                                text: 'TransferKolik kullanıcılarının transfer kehanetlerine göz at!',
+                                url: window.location.href
+                            };
+                            if (navigator.share) {
+                                navigator.share(shareData).catch(() => {});
+                            } else {
+                                navigator.clipboard.writeText(window.location.href).then(() => {
+                                    alert('Link panoya kopyalandı!');
+                                }).catch(() => {});
+                            }
+                        }
+                    </script>
+
                     <h2><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-4px; margin-right:6px;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>Gerçekleşen Kehanetler</h2>
                     $fulfilledHtml
 

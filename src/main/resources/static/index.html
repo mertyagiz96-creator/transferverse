@@ -6681,6 +6681,21 @@
             resultMsg.textContent = currentLang === 'en' ? 'Please enter both player and club.' : 'Lütfen hem oyuncu hem takım gir.';
             return;
         }
+        // 🛡️ YENİ: sadece öneri listesinden SEÇİLEN değerlere izin veriyoruz
+        // — serbest metin (küfür, saçma isim vb.) kaydedilemesin diye.
+        // predictionPlayerSelected/predictionClubSelected sadece dropdown'dan
+        // bir öğeye tıklanınca dolduruluyor; kutudaki metinle birebir
+        // eşleşmiyorsa (kullanıcı seçtikten sonra elle değiştirmiş ya da hiç
+        // seçmemiş demektir) reddediyoruz.
+        if (predictionPlayerSelected !== player || predictionClubSelected !== club) {
+            resultMsg.style.display = 'block';
+            resultMsg.style.background = 'rgba(231, 76, 60, 0.12)';
+            resultMsg.style.borderColor = 'rgba(231, 76, 60, 0.3)';
+            resultMsg.textContent = currentLang === 'en'
+                ? 'Please pick both player and club from the suggestion list.'
+                : 'Lütfen hem oyuncuyu hem takımı öneri listesinden seç.';
+            return;
+        }
         const btn = document.getElementById('predictionSubmitBtn');
         const btnLabel = document.getElementById('i18n-predictionSubmitBtn'); // 🛡️ span'i koruyoruz (i18n için)
         btn.disabled = true;
@@ -6727,9 +6742,14 @@
                 mine.map(p => {
                     // 🛡️ DÜZELTME: bozuk/eksik veri gelirse ("undefined" gibi
                     // çirkin metinler yerine) güvenli varsayılanlar kullanıyoruz.
-                    const playerName = p.playerName || '—';
-                    const targetClub = p.targetClub || '—';
-                    const dateStr = formatPredictionDate(p.predictedAt);
+                    // 🎯 GERÇEK BUG DÜZELTMESİ: JSON'dan gelen alan adları
+                    // camelCase değil, backend'in gönderdiği gibi snake_case
+                    // (player_name, target_club, predicted_at) — önceki
+                    // "düzeltme" sadece çirkin metni gizlemişti, asıl sebep
+                    // buydu.
+                    const playerName = p.player_name || '—';
+                    const targetClub = p.target_club || '—';
+                    const dateStr = formatPredictionDate(p.predicted_at);
                     const statusIcon = p.fulfilled
                         ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2ecc71" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; margin-right:4px;"><polyline points="20 6 9 17 4 12"/></svg>'
                         : '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; margin-right:4px; opacity:0.5;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>';
