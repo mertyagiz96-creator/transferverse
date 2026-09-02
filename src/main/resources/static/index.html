@@ -528,8 +528,8 @@
         /* 🎯 YENİ: haber kartlarının kaydırılabilir olduğunu belli etmek için
            sağ ok butonuna hafif bir nabız animasyonu. */
         @keyframes newsArrowPulse {
-            0%, 100% { transform: translateY(-50%) scale(1); opacity: 0.9; }
-            50% { transform: translateY(-50%) scale(1.12); opacity: 1; }
+            0%, 100% { transform: scale(1); opacity: 0.9; }
+            50% { transform: scale(1.12); opacity: 1; }
         }
 
         .player-mode-avatar img.photo-fade-in {
@@ -1772,18 +1772,40 @@
                 padding: 20px 14px !important;
             }
 
-            /* 🛡️ DÜZELTME: mobilde haber kartları sabit 340px'ti — ekran
-               genişliğiyle tam örtüşmediği için bir kaydırma jestinin bazen
-               yarım kalıp "hantal" hissettirdiği bildirildi. Her kartı EKRAN
-               GENİŞLİĞİNE tam oturacak şekilde büyütüp, "mandatory" (zorunlu
-               tam hizalama) kaydırmaya geçiyoruz — artık tek kaydırma = tam
-               bir sonraki habere geçiş.  */
+            /* 🎯 DÜZELTME: mobilde tek kartı EKRANA TAM oturtmak yerine, artık
+               kenar\'dan bir sonraki habere hafif bir "önizleme" (peek)
+               bırakıyoruz — bu, kaydırılabilir olduğunu ekstra bir okla
+               anlatmaya çalışmaktan daha güçlü, evrensel olarak tanınan bir
+               görsel ipucu (Instagram/Netflix/Spotify vb. aynı deseni
+               kullanır). "mandatory" tam hizalama koruyoruz, tek kaydırma
+               yine tam bir sonraki habere geçiyor. */
             #newsPreviewRow {
                 scroll-snap-type: x mandatory !important;
             }
             #newsPreviewRow > a {
-                flex: 0 0 100% !important;
-                scroll-snap-align: center !important;
+                flex: 0 0 82% !important;
+                scroll-snap-align: start !important;
+                padding: 14px !important;
+            }
+            /* 🎯 DÜZELTME: kartın kendi dolgusu (20px) önizlemede sızan
+               kısmın tamamını yiyordu, sadece boşluk görünüyordu — gerçek
+               metin sızsın diye dolguyu ve yazı boyutlarını mobilde
+               küçültüyoruz. Okunabilirlik hâlâ rahat, sadece biraz kompakt. */
+            #newsPreviewRow > a .news-card-title {
+                font-size: 0.9rem !important;
+            }
+            #newsPreviewRow > a .news-card-summary {
+                font-size: 0.8rem !important;
+                -webkit-line-clamp: 3;
+                display: -webkit-box;
+                -webkit-box-orient: vertical;
+                overflow: hidden;
+            }
+            #newsPreviewRow > a .news-card-tag {
+                font-size: 0.66rem !important;
+            }
+            #newsPreviewRow > a .news-card-source {
+                font-size: 0.64rem !important;
             }
 
             /* 🛡️ DÜZELTME: mobil Safari'de position:fixed + backdrop-filter
@@ -2487,11 +2509,11 @@
             <!-- 🎯 YENİ: kaydırılabilir olduğunu göstermek için tıklanabilir
                  sol/sağ oklar — kartlar sığdığında ya da baştaysa/sondaysa
                  JS ile otomatik gizleniyor. -->
-            <button id="newsScrollLeftBtn" onclick="(function(){ const row=document.getElementById('newsPreviewRow'); const card=row.querySelector('a'); if(!row||!card) return; row.scrollBy({left: -(card.offsetWidth + 14), behavior:'smooth'}); })()" style="display:none; position:absolute; left:8px; top:50%; transform:translateY(-50%); width:34px; height:34px; border-radius:50%; border:none; background:rgba(var(--fg-rgb),0.85); color:rgba(var(--card-tint-rgb),1); align-items:center; justify-content:center; cursor:pointer; box-shadow:0 4px 12px rgba(0,0,0,0.25); z-index:2;" aria-label="Önceki haber">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+            <button id="newsScrollLeftBtn" type="button" onclick="scrollNewsRow('left')" style="display:none; position:absolute; left:8px; top:8px; width:34px; height:34px; border-radius:50%; border:none; background:rgba(var(--surface-strong-rgb),0.92); align-items:center; justify-content:center; cursor:pointer; box-shadow:0 4px 12px rgba(0,0,0,0.2); z-index:2;" aria-label="Önceki haber">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="color: rgb(var(--fg-rgb));"><path d="M15 18l-6-6 6-6"/></svg>
             </button>
-            <button id="newsScrollRightBtn" onclick="(function(){ const row=document.getElementById('newsPreviewRow'); const card=row.querySelector('a'); if(!row||!card) return; row.scrollBy({left: card.offsetWidth + 14, behavior:'smooth'}); })()" style="display:none; position:absolute; right:8px; top:50%; transform:translateY(-50%); width:34px; height:34px; border-radius:50%; border:none; background:rgba(var(--fg-rgb),0.85); color:rgba(var(--card-tint-rgb),1); align-items:center; justify-content:center; cursor:pointer; box-shadow:0 4px 12px rgba(0,0,0,0.25); z-index:2; animation: newsArrowPulse 1.8s ease-in-out infinite;" aria-label="Sonraki haber">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+            <button id="newsScrollRightBtn" type="button" onclick="scrollNewsRow('right')" style="display:none; position:absolute; right:8px; top:8px; width:34px; height:34px; border-radius:50%; border:none; background:rgba(var(--surface-strong-rgb),0.92); align-items:center; justify-content:center; cursor:pointer; box-shadow:0 4px 12px rgba(0,0,0,0.2); z-index:2; animation: newsArrowPulse 1.8s ease-in-out infinite;" aria-label="Sonraki haber">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="color: rgb(var(--fg-rgb));"><path d="M9 18l6-6-6-6"/></svg>
             </button>
         </div>
     </div>
@@ -6406,6 +6428,21 @@
         return `${diffDay} gün önce`;
     }
 
+    // 🎯 YENİ: haber kartı oklarının tıklama mantığı — inline IIFE yerine
+    // adlandırılmış, hata ayıklaması kolay tek bir fonksiyon. scrollBy yerine
+    // doğrudan hedef scrollLeft hesaplayıp scrollTo kullanıyoruz (CSS
+    // scroll-snap ile olası çakışmaları bypass etmek için).
+    function scrollNewsRow(direction) {
+        const row = document.getElementById('newsPreviewRow');
+        if (!row) return;
+        const card = row.querySelector('a');
+        if (!card) return;
+        const cardWidth = card.getBoundingClientRect().width;
+        const step = cardWidth + 14; // 14 = kartlar arası gap
+        const target = direction === 'right' ? row.scrollLeft + step : row.scrollLeft - step;
+        row.scrollTo({ left: target, behavior: 'smooth' });
+    }
+
     // 📰 Güncel Haberler — RSS + Gemini ile arka planda periyodik güncellenen
     // gerçek verilerden geliyor. Sunucu henüz ilk turu tamamlamadıysa boş
     // liste dönebilir, o durumda kartı hiç göstermiyoruz.
@@ -6436,13 +6473,20 @@
             }
 
             row.innerHTML = items.map(item => `
-                <a href="${item.url ? item.url.replace(/"/g, '&quot;') : '#'}" target="_blank" rel="noopener noreferrer" style="flex: 0 0 340px; scroll-snap-align: start; background: rgba(var(--fg-rgb), 0.04); border: 1px solid rgba(var(--fg-rgb), 0.1); border-radius: 12px; padding: 20px; text-decoration: none; color: inherit; display: block; transition: transform 0.15s ease, border-color 0.15s ease;" onmouseover="this.style.transform='translateY(-2px)'; this.style.borderColor='rgba(var(--accent-gold-rgb),0.4)';" onmouseout="this.style.transform=''; this.style.borderColor='rgba(var(--fg-rgb),0.1)';">
-                    <div style="font-size: 0.72rem; font-weight: 700; color: var(--accent-gold); letter-spacing: 0.4px; margin-bottom: 10px;">${escapeHtml(item.tag || '⚽ HABER')}</div>
-                    <div style="font-weight: 700; font-size: 1rem; line-height: 1.35; margin-bottom: 10px; color: rgb(var(--fg-rgb));">${escapeHtml(item.title)}</div>
-                    <div style="font-size: 0.85rem; opacity: 0.7; line-height: 1.45; margin-bottom: 12px;">${escapeHtml(item.summary)}</div>
-                    <div style="font-size: 0.7rem; opacity: 0.45;">${escapeHtml(item.source || '')}${item.createdAt ? ' · ' + formatNewsRelativeTime(item.createdAt) : ''}</div>
+                <a href="${item.url ? item.url.replace(/"/g, '&quot;') : '#'}" target="_blank" rel="noopener noreferrer" class="news-card-item" style="flex: 0 0 340px; scroll-snap-align: start; background: rgba(var(--fg-rgb), 0.04); border: 1px solid rgba(var(--fg-rgb), 0.1); border-radius: 12px; padding: 20px; text-decoration: none; color: inherit; display: block; transition: transform 0.15s ease, border-color 0.15s ease;" onmouseover="this.style.transform='translateY(-2px)'; this.style.borderColor='rgba(var(--accent-gold-rgb),0.4)';" onmouseout="this.style.transform=''; this.style.borderColor='rgba(var(--fg-rgb),0.1)';">
+                    <div class="news-card-tag" style="font-size: 0.72rem; font-weight: 700; color: var(--accent-gold); letter-spacing: 0.4px; margin-bottom: 10px;">${escapeHtml(item.tag || '⚽ HABER')}</div>
+                    <div class="news-card-title" style="font-weight: 700; font-size: 1rem; line-height: 1.35; margin-bottom: 10px; color: rgb(var(--fg-rgb));">${escapeHtml(item.title)}</div>
+                    <div class="news-card-summary" style="font-size: 0.85rem; opacity: 0.7; line-height: 1.45; margin-bottom: 12px;">${escapeHtml(item.summary)}</div>
+                    <div class="news-card-source" style="font-size: 0.7rem; opacity: 0.45;">${escapeHtml(item.source || '')}${item.createdAt ? ' · ' + formatNewsRelativeTime(item.createdAt) : ''}</div>
                 </a>
             `).join('');
+
+            // 🎯 DÜZELTME: sayfa ilk açıldığında bazen ortadaki habere
+            // odaklanmış görünüyordu (justify-content:center + taşan içerik
+            // kombinasyonu, tarayıcının taşmayı iki yana simetrik dağıtması
+            // yüzünden). Her render sonrası kaydırma konumunu AÇIKÇA en başa
+            // (en soldaki habere) sabitliyoruz.
+            row.scrollLeft = 0;
 
             // 🎯 Kartlar konteynerin genişliğine sığıyorsa (kaydırmaya gerek
             // yoksa) ORTALIYORUZ — sığmazsa sola yaslı bırakıyoruz, kaydırma
@@ -6452,6 +6496,7 @@
             requestAnimationFrame(() => {
                 const needsScroll = row.scrollWidth > row.clientWidth + 1;
                 row.style.justifyContent = needsScroll ? 'flex-start' : 'center';
+                row.scrollLeft = 0; // 🛡️ justify-content uygulandıktan sonra da en başa sabitliyoruz
                 // 🎯 YENİ: kaydırmaya gerek varsa sağ oku göster (baştaysak
                 // sol ok gizli kalır — henüz geri dönecek bir yer yok).
                 if (rightArrowBtn) rightArrowBtn.style.display = needsScroll ? 'flex' : 'none';
