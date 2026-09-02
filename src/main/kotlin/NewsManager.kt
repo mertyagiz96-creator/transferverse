@@ -22,7 +22,7 @@ import org.w3c.dom.Element
 // ⚠️ BİLİNEN RİSK: Gemini API'sinin, bazı bulut sunucu (Render gibi) IP
 // aralıklarından ara sıra 403 döndürdüğüne dair raporlar var. Bu yüzden
 // Gemini çağrısı BAŞARISIZ olursa, otomatik olarak basit kural bazlı bir
-// seçime (en yeni 3 haber, özetsiz kısa alıntı) düşüyoruz — haber kartı
+// seçime (en yeni 5 haber, özetsiz kısa alıntı) düşüyoruz — haber kartı
 // hiçbir zaman tamamen boş/bozuk kalmıyor.
 object NewsManager {
 
@@ -37,7 +37,10 @@ object NewsManager {
     private val geminiApiKey = System.getenv("GEMINI_API_KEY")
 
     private val httpClient = HttpClient(CIO) {
-        install(HttpTimeout) { requestTimeoutMillis = 20_000 }
+        // 🕐 DÜZELTME: 20sn yetersiz kaldı (deploy loglarında timeout hatası
+        // görüldü) — 20 haberlik geniş aday listesini işlemesi Gemini'ye
+        // daha uzun sürebiliyor. 45sn'ye çıkarıyoruz.
+        install(HttpTimeout) { requestTimeoutMillis = 45_000 }
     }
 
     // ⚠️ NOT: Fotomaç'ın RSS'i (anasayfa.xml) BİLEREK kullanılmıyor — kendi
@@ -66,7 +69,8 @@ object NewsManager {
         val title: String,
         val summary: String,
         val source: String,
-        val url: String
+        val url: String,
+        val createdAt: Long // 📅 YENİ: "X dk önce" göstermek için — epoch milisaniye
     )
 
     private data class RawNewsCandidate(
@@ -151,12 +155,25 @@ object NewsManager {
             return
         }
 
-        val candidates = mutableListOf<RawNewsCandidate>()
-        for ((url, sourceName) in sources) {
+        // 🛡️ DÜZELTME: Önceden kaynakları SIRAYLA (önce hepsi NTV Spor, sonra
+        // hepsi Habertürk) tek listeye ekleyip ilk 20'yi alıyorduk — NTV
+        // Spor'un feed'i tek başına 20'den kalabalık olduğu için Habertürk'ün
+        // haberleri havuza HİÇ giremiyordu (Gemini'ye bile gösterilmiyordu).
+        // Şimdi kaynakları NÖBETLEŞE (round-robin) karıştırıyoruz — her
+        // kaynaktan adil pay alıyor, hiçbiri diğerini tamamen ezmiyor.
+        val perSourceLists = sources.mapNotNull { (url, sourceName) ->
             try {
-                candidates.addAll(fetchAndParseFeed(url, sourceName))
+                fetchAndParseFeed(url, sourceName)
             } catch (e: Exception) {
                 println("⚠️ [$sport] $sourceName RSS çekilemedi: ${e.message}")
+                null
+            }
+        }
+        val candidates = mutableListOf<RawNewsCandidate>()
+        val maxLen = perSourceLists.maxOfOrNull { it.size } ?: 0
+        for (i in 0 until maxLen) {
+            for (list in perSourceLists) {
+                list.getOrNull(i)?.let { candidates.add(it) }
             }
         }
 
@@ -202,7 +219,7 @@ object NewsManager {
         if (selected != null) {
             println("🤖 [$sport] AI SEÇİMİ kullanıldı (Gemini, model: $GEMINI_MODEL) — ${selected.size} haber seçildi.")
         } else {
-            println("📋 [$sport] KURAL BAZLI seçime düşüldü (Gemini kullanılamadı ya da GEMINI_API_KEY tanımlı değil) — en yeni 3 haber gösteriliyor.")
+            println("📋 [$sport] KURAL BAZLI seçime düşüldü (Gemini kullanılamadı ya da GEMINI_API_KEY tanımlı değil) — en yeni 5 haber gösteriliyor.")
         }
 
         val finalItems = selected ?: trimmed.take(5).map {
@@ -297,6 +314,17 @@ object NewsManager {
                     }
                 }
             }
+            // ⚡ DÜZELTME: yeni Gemini modelleri varsayılan olarak "düşünme"
+            // (extended thinking) moduyla çalışıp basit görevlerde bile
+            // yavaşlayabiliyor — bizim işimiz (seçim + kısa özet) buna
+            // ihtiyaç duymuyor, kapatıp yanıt süresini kısaltmaya çalışıyoruz.
+            // Model bu parametreyi desteklemiyorsa API hatası verir, biz de
+            // zaten var olan kural bazlı yedeğe düşeriz — risk yok.
+            putJsonObject("generationConfig") {
+                putJsonObject("thinkingConfig") {
+                    put("thinkingBudget", 0)
+                }
+            }
         }.toString()
 
         val response: HttpResponse = httpClient.post(
@@ -375,7 +403,7 @@ object NewsManager {
         try {
             openConnection().use { conn ->
                 conn.prepareStatement(
-                    "SELECT tag, title, summary, source, url FROM news_items WHERE sport = ? ORDER BY created_at DESC LIMIT 5"
+                    "SELECT tag, title, summary, source, url, created_at FROM news_items WHERE sport = ? ORDER BY created_at DESC LIMIT 5"
                 ).use { stmt ->
                     stmt.setString(1, sport)
                     stmt.executeQuery().use { rs ->
@@ -386,7 +414,8 @@ object NewsManager {
                                     title = rs.getString("title") ?: "",
                                     summary = rs.getString("summary") ?: "",
                                     source = rs.getString("source") ?: "",
-                                    url = rs.getString("url") ?: ""
+                                    url = rs.getString("url") ?: "",
+                                    createdAt = rs.getLong("created_at")
                                 )
                             )
                         }

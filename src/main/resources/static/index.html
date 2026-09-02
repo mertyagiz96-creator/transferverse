@@ -525,6 +525,13 @@
             50% { opacity: 0.55; }
         }
 
+        /* 🎯 YENİ: haber kartlarının kaydırılabilir olduğunu belli etmek için
+           sağ ok butonuna hafif bir nabız animasyonu. */
+        @keyframes newsArrowPulse {
+            0%, 100% { transform: translateY(-50%) scale(1); opacity: 0.9; }
+            50% { transform: translateY(-50%) scale(1.12); opacity: 1; }
+        }
+
         .player-mode-avatar img.photo-fade-in {
             opacity: 0;
             animation: avatarFadeIn 0.35s ease forwards;
@@ -1765,6 +1772,20 @@
                 padding: 20px 14px !important;
             }
 
+            /* 🛡️ DÜZELTME: mobilde haber kartları sabit 340px'ti — ekran
+               genişliğiyle tam örtüşmediği için bir kaydırma jestinin bazen
+               yarım kalıp "hantal" hissettirdiği bildirildi. Her kartı EKRAN
+               GENİŞLİĞİNE tam oturacak şekilde büyütüp, "mandatory" (zorunlu
+               tam hizalama) kaydırmaya geçiyoruz — artık tek kaydırma = tam
+               bir sonraki habere geçiş.  */
+            #newsPreviewRow {
+                scroll-snap-type: x mandatory !important;
+            }
+            #newsPreviewRow > a {
+                flex: 0 0 100% !important;
+                scroll-snap-align: center !important;
+            }
+
             /* 🛡️ DÜZELTME: mobil Safari'de position:fixed + backdrop-filter
                kombinasyonu, bilinen bir WebKit render hatası yüzünden bazen
                elemanın GÖRÜNMEZ kalmasına yol açabiliyor — hamburger menünün
@@ -2459,8 +2480,20 @@
     </div><!-- /#homeCardsWrapper -->
 
     <div id="newsPreviewSection" style="margin-top: 24px; padding: 30px 26px; background: rgba(var(--card-tint-rgb), 0.3); border-radius: 18px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18); transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease; display: none;" onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 16px 40px rgba(0,0,0,0.22), 0 0 0 2px rgba(var(--accent-gold-rgb),0.35)';" onmouseout="this.style.transform=''; this.style.boxShadow='0 10px 30px rgba(0,0,0,0.18)';">
-        <h2 id="i18n-newsTitle" style="font-size: 1.05rem; font-weight: 700; color: rgba(var(--fg-rgb), 0.85); margin-bottom: 14px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px; margin-right:6px;"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>Öne Çıkan Haberler</h2>
-        <div id="newsPreviewRow" style="display: flex; gap: 14px; overflow-x: auto; padding-bottom: 6px; -webkit-overflow-scrolling: touch; scroll-snap-type: x proximity; justify-content: center;"></div>
+        <h2 id="i18n-newsTitle" style="font-size: 1.05rem; font-weight: 700; color: rgba(var(--fg-rgb), 0.85); margin-bottom: 2px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px; margin-right:6px;"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>Öne Çıkan Haberler</h2>
+        <div id="newsLastUpdated" style="font-size: 0.72rem; opacity: 0.45; margin-bottom: 12px; min-height: 1em;"></div>
+        <div style="position: relative;">
+            <div id="newsPreviewRow" style="display: flex; gap: 14px; overflow-x: auto; padding-bottom: 6px; -webkit-overflow-scrolling: touch; scroll-snap-type: x proximity; justify-content: center;"></div>
+            <!-- 🎯 YENİ: kaydırılabilir olduğunu göstermek için tıklanabilir
+                 sol/sağ oklar — kartlar sığdığında ya da baştaysa/sondaysa
+                 JS ile otomatik gizleniyor. -->
+            <button id="newsScrollLeftBtn" onclick="(function(){ const row=document.getElementById('newsPreviewRow'); const card=row.querySelector('a'); if(!row||!card) return; row.scrollBy({left: -(card.offsetWidth + 14), behavior:'smooth'}); })()" style="display:none; position:absolute; left:8px; top:50%; transform:translateY(-50%); width:34px; height:34px; border-radius:50%; border:none; background:rgba(var(--fg-rgb),0.85); color:rgba(var(--card-tint-rgb),1); align-items:center; justify-content:center; cursor:pointer; box-shadow:0 4px 12px rgba(0,0,0,0.25); z-index:2;" aria-label="Önceki haber">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+            </button>
+            <button id="newsScrollRightBtn" onclick="(function(){ const row=document.getElementById('newsPreviewRow'); const card=row.querySelector('a'); if(!row||!card) return; row.scrollBy({left: card.offsetWidth + 14, behavior:'smooth'}); })()" style="display:none; position:absolute; right:8px; top:50%; transform:translateY(-50%); width:34px; height:34px; border-radius:50%; border:none; background:rgba(var(--fg-rgb),0.85); color:rgba(var(--card-tint-rgb),1); align-items:center; justify-content:center; cursor:pointer; box-shadow:0 4px 12px rgba(0,0,0,0.25); z-index:2; animation: newsArrowPulse 1.8s ease-in-out infinite;" aria-label="Sonraki haber">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+            </button>
+        </div>
     </div>
 
     <div id="championshipPollSection" style="margin-top: 24px; padding: 30px 26px; background: rgba(var(--card-tint-rgb), 0.3); border-radius: 18px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18); transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease; display: none;" onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 16px 40px rgba(0,0,0,0.22), 0 0 0 2px rgba(var(--accent-gold-rgb),0.35)';" onmouseout="this.style.transform=''; this.style.boxShadow='0 10px 30px rgba(0,0,0,0.18)';">
@@ -6356,6 +6389,23 @@
         }
     }
 
+    // 🕐 YENİ: "2 dk önce", "1 sa önce" gibi göreceli zaman metni üretiyor —
+    // sitenin canlı/dinamik hissini pekiştirmek için. Sunucu saatiyle client
+    // saati arasında birkaç dakikalık fark olsa bile bu görüntü amaçlı
+    // metin için önemli değil (Günün Sorusu'ndaki hassas saat senkronizasyonu
+    // gibi kritik değil).
+    function formatNewsRelativeTime(epochMs) {
+        if (!epochMs) return '';
+        const diffSec = Math.floor((Date.now() - epochMs) / 1000);
+        if (diffSec < 60) return 'az önce';
+        const diffMin = Math.floor(diffSec / 60);
+        if (diffMin < 60) return `${diffMin} dk önce`;
+        const diffHour = Math.floor(diffMin / 60);
+        if (diffHour < 24) return `${diffHour} sa önce`;
+        const diffDay = Math.floor(diffHour / 24);
+        return `${diffDay} gün önce`;
+    }
+
     // 📰 Güncel Haberler — RSS + Gemini ile arka planda periyodik güncellenen
     // gerçek verilerden geliyor. Sunucu henüz ilk turu tamamlamadıysa boş
     // liste dönebilir, o durumda kartı hiç göstermiyoruz.
@@ -6377,20 +6427,45 @@
             // 🛡️ YARIŞ DURUMU KORUMASI: cevap gelene kadar spor değişmiş olabilir.
             if (currentSport !== requestedSport) return;
 
+            // 🕐 YENİ: en tepede tek bakışta görülecek "Son güncelleme: X dk
+            // önce" satırı — tüm haberler aynı turda birlikte kaydedildiği
+            // için ilk öğenin createdAt'i yeterli, hepsi aynı.
+            const lastUpdatedEl = document.getElementById('newsLastUpdated');
+            if (lastUpdatedEl && items[0]?.createdAt) {
+                lastUpdatedEl.textContent = `Son güncelleme: ${formatNewsRelativeTime(items[0].createdAt)}`;
+            }
+
             row.innerHTML = items.map(item => `
                 <a href="${item.url ? item.url.replace(/"/g, '&quot;') : '#'}" target="_blank" rel="noopener noreferrer" style="flex: 0 0 340px; scroll-snap-align: start; background: rgba(var(--fg-rgb), 0.04); border: 1px solid rgba(var(--fg-rgb), 0.1); border-radius: 12px; padding: 20px; text-decoration: none; color: inherit; display: block; transition: transform 0.15s ease, border-color 0.15s ease;" onmouseover="this.style.transform='translateY(-2px)'; this.style.borderColor='rgba(var(--accent-gold-rgb),0.4)';" onmouseout="this.style.transform=''; this.style.borderColor='rgba(var(--fg-rgb),0.1)';">
                     <div style="font-size: 0.72rem; font-weight: 700; color: var(--accent-gold); letter-spacing: 0.4px; margin-bottom: 10px;">${escapeHtml(item.tag || '⚽ HABER')}</div>
                     <div style="font-weight: 700; font-size: 1rem; line-height: 1.35; margin-bottom: 10px; color: rgb(var(--fg-rgb));">${escapeHtml(item.title)}</div>
                     <div style="font-size: 0.85rem; opacity: 0.7; line-height: 1.45; margin-bottom: 12px;">${escapeHtml(item.summary)}</div>
-                    <div style="font-size: 0.7rem; opacity: 0.45;">${escapeHtml(item.source || '')}</div>
+                    <div style="font-size: 0.7rem; opacity: 0.45;">${escapeHtml(item.source || '')}${item.createdAt ? ' · ' + formatNewsRelativeTime(item.createdAt) : ''}</div>
                 </a>
             `).join('');
 
             // 🎯 Kartlar konteynerin genişliğine sığıyorsa (kaydırmaya gerek
             // yoksa) ORTALIYORUZ — sığmazsa sola yaslı bırakıyoruz, kaydırma
             // doğal hissettirsin diye. homeCardsRow'daki mantıkla aynı.
+            const rightArrowBtn = document.getElementById('newsScrollRightBtn');
+            const leftArrowBtn = document.getElementById('newsScrollLeftBtn');
             requestAnimationFrame(() => {
-                row.style.justifyContent = row.scrollWidth <= row.clientWidth + 1 ? 'center' : 'flex-start';
+                const needsScroll = row.scrollWidth > row.clientWidth + 1;
+                row.style.justifyContent = needsScroll ? 'flex-start' : 'center';
+                // 🎯 YENİ: kaydırmaya gerek varsa sağ oku göster (baştaysak
+                // sol ok gizli kalır — henüz geri dönecek bir yer yok).
+                if (rightArrowBtn) rightArrowBtn.style.display = needsScroll ? 'flex' : 'none';
+                if (leftArrowBtn) leftArrowBtn.style.display = 'none';
+                if (rightArrowBtn && !rightArrowBtn.dataset.listenerAdded) {
+                    rightArrowBtn.dataset.listenerAdded = '1';
+                    row.addEventListener('scroll', () => {
+                        const stillNeedsScroll = row.scrollWidth > row.clientWidth + 1;
+                        const atStart = row.scrollLeft <= 8;
+                        const atEnd = row.scrollLeft + row.clientWidth >= row.scrollWidth - 8;
+                        if (rightArrowBtn) rightArrowBtn.style.display = (stillNeedsScroll && !atEnd) ? 'flex' : 'none';
+                        if (leftArrowBtn) leftArrowBtn.style.display = (stillNeedsScroll && !atStart) ? 'flex' : 'none';
+                    });
+                }
             });
 
             // 🛡️ YARIŞ DURUMU KORUMASI: ağ isteği sürerken (yukarıdaki await'ler
@@ -6642,12 +6717,22 @@
             // sadece rakam) ya da art arda AYNI kulübün tekrarı (veri kalitesi
             // sorunu) çıkabiliyor — ikisini de burada süzüyoruz.
             const rawMoves = bio.careerMoves.filter(m => m.club && !/^\d+$/.test(m.club.trim()));
-            const moves = [];
+            const dedupedMoves = [];
             for (const m of rawMoves) {
-                if (moves.length === 0 || moves[moves.length - 1].club !== m.club) {
-                    moves.push(m);
+                if (dedupedMoves.length === 0 || dedupedMoves[dedupedMoves.length - 1].club !== m.club) {
+                    dedupedMoves.push(m);
                 }
             }
+            if (dedupedMoves.length === 0) return;
+
+            // 🛡️ DÜZELTME: "Retired" / "Emekli" gibi kariyer-sonu işaretleri
+            // GERÇEK bir kulüp değil — bunları listeden çıkarıp ayrı bir
+            // bayrakla takip ediyoruz. Aksi halde "...Retired forması giydi"
+            // gibi anlamsız cümleler oluşuyordu.
+            const RETIREMENT_MARKERS = ['retired', 'emekli', 'free agent', 'unattached', 'released', 'without club'];
+            const isRetirementMarker = (club) => RETIREMENT_MARKERS.includes(club.trim().toLowerCase());
+            const hasRetired = dedupedMoves.some(m => isRetirementMarker(m.club));
+            const moves = dedupedMoves.filter(m => !isRetirementMarker(m.club));
             if (moves.length === 0) return;
 
             const clubList = moves.map(m => m.club);
@@ -6703,7 +6788,13 @@
                 } else {
                     paragraph2 = `${firstClub}'daki döneminin ardından, `;
                 }
-                paragraph2 += `kariyerinin bilinen son durağı olarak ${lastClub} forması giydi.`;
+                if (hasRetired) {
+                    paragraph2 += `kariyerinin bilinen son durağı ${lastClub} oldu ve buradaki döneminin ardından futbolu bıraktı.`;
+                } else {
+                    paragraph2 += `kariyerinin bilinen son durağı olarak ${lastClub} forması giydi.`;
+                }
+            } else if (hasRetired && clubList.length === 1) {
+                paragraph2 = `${firstClub}'daki döneminin ardından futbolu bıraktı.`;
             }
 
             const paragraph3 = `${bio.name}'in tam transfer geçmişine (isme tıklayarak) ulaşabilir, kariyerinde forma giydiği kulüplerden birini TransferKolik'in arama kutusuna yazarak, o kulüpte oynamış diğer oyuncuları da keşfedebilirsiniz.`;
