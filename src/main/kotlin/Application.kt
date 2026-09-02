@@ -79,15 +79,6 @@ fun main() {
         DatabaseClient.preloadAllBasketballLogos()
     }
 
-    // 📰 YENİ: Güncel Haberler — RSS'ten çekip Gemini ile en önemli 3'ünü
-    // seçen, tamamen izole bir modül. Sunucuyu hiç bekletmeden arka planda
-    // çalışıyor, ilk birkaç dakika kart boş görünebilir (ilk tur tamamlanana
-    // kadar) — bu normal, hata değil.
-    NewsManager.ensureNewsTable()
-    GlobalScope.launch {
-        NewsManager.startPeriodicRefresh()
-    }
-
     embeddedServer(Netty, port = port, host = "0.0.0.0") {
         // 🚀 Sıkıştırma (gzip) — index.html tek dosyada ~480KB'a ulaştı (bugün
         // eklenen tüm özellikler yüzünden). Gzip, metin tabanlı içerikte
@@ -125,18 +116,6 @@ fun main() {
             get("/suggestions") {
                 val suggestions = DatabaseClient.fetchAllUniqueSuggestions()
                 call.respond(suggestions)
-            }
-
-            // 📰 YENİ: Güncel Haberler — arka planda periyodik olarak
-            // güncellenen (RSS + Gemini özet) son 3 haberi döndürüyor.
-            // Henüz ilk tur tamamlanmadıysa (sunucu yeni başladıysa) boş
-            // liste dönebilir, frontend bunu sessizce ele alıyor.
-            get("/news") {
-                // 🏀⚽ YENİ: ?sport=football veya ?sport=basketball — belirtilmezse
-                // futbol varsayılan (geriye dönük uyumluluk için).
-                val sport = call.request.queryParameters["sport"]?.takeIf { it == "basketball" } ?: "football"
-                val news = NewsManager.fetchLatestNews(sport)
-                call.respond(news)
             }
 
             // 🏀 Basketbol — futboldan tamamen ayrı, izole uç noktalar.
@@ -1568,6 +1547,14 @@ fun main() {
                 val bio = DatabaseClient.fetchDailyPlayerBio(dateSeed)
                 if (bio == null) {
                     call.respond(HttpStatusCode.NotFound)
+                } else if (bio.imageUrl.isNullOrBlank()) {
+                    // 📸 YENİ: sonradan elle eklenen oyuncularda (örn.
+                    // Sneijder) veritabanında fotoğraf boş kalabiliyor —
+                    // SADECE Günün Oyuncusu için TheSportsDB'den canlı
+                    // çekmeyi deniyoruz. Bulunamazsa fotoğrafsız devam
+                    // ediyoruz (frontend zaten placeholder gösteriyor).
+                    val fallbackPhoto = DatabaseClient.fetchFootballDailyPlayerPhotoFallback(bio.name)
+                    call.respond(if (fallbackPhoto != null) bio.copy(imageUrl = fallbackPhoto) else bio)
                 } else {
                     call.respond(bio)
                 }

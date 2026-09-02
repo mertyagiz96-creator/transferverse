@@ -612,6 +612,13 @@ object DatabaseClient {
     private val basketballLogoCache = java.util.concurrent.ConcurrentHashMap<String, String>()
     private val basketballPhotoCache = java.util.concurrent.ConcurrentHashMap<String, String>()
 
+    // 📸 YENİ: futbolda "Günün Oyuncusu" için — sonradan elle eklenen
+    // oyuncularda (örn. Wesley Sneijder gibi) veritabanında image_url boş
+    // kalabiliyor. Bu durumda TheSportsDB API'sinden (basketboldaki AYNI,
+    // ücretsiz ve ToS-dostu kaynak) canlı çekip önbelleğe alıyoruz. SADECE
+    // Günün Oyuncusu için — normal arama sonuçlarına dokunmuyor.
+    private val footballDailyPlayerPhotoCache = java.util.concurrent.ConcurrentHashMap<String, String>()
+
     suspend fun preloadAllBasketballLogos() {
         try {
             val europeTeams = fetchAllBasketballSuggestions()
@@ -824,6 +831,80 @@ object DatabaseClient {
                 }
             } catch (e: Exception) {
                 println("fetchBasketballPlayerPhoto hata ($variant): ${e.message}")
+            }
+        }
+        return null
+    }
+
+    // 📸 YENİ: futbolda "Günün Oyuncusu" fotoğrafı veritabanında YOKSA
+    // (sonradan elle eklenen oyuncular — örn. Sneijder) TheSportsDB'den
+    // canlı çekip football.db içindeki KENDİ küçük tablosuna (football
+    // ana players tablosuna dokunmadan, ayrı) önbelleğe alıyoruz.
+    // fetchBasketballPlayerPhoto ile birebir aynı desen, sadece SADECE
+    // Günün Oyuncusu akışından çağrılıyor — normal arama/quiz'lere dokunmuyor.
+    suspend fun fetchFootballDailyPlayerPhotoFallback(playerName: String): String? {
+        val cacheKey = playerName.trim().lowercase()
+        footballDailyPlayerPhotoCache[cacheKey]?.let { return it }
+
+        try {
+            val cachedUrl = withConnection { conn ->
+                conn.createStatement().use { stmt ->
+                    stmt.execute(
+                        "CREATE TABLE IF NOT EXISTS football_daily_player_photos (player_name_std TEXT PRIMARY KEY, photo_url TEXT)"
+                    )
+                }
+                var result: String? = null
+                conn.prepareStatement("SELECT photo_url FROM football_daily_player_photos WHERE player_name_std = ?").use { stmt ->
+                    stmt.setString(1, cacheKey)
+                    stmt.executeQuery().use { rs ->
+                        if (rs.next()) {
+                            result = rs.getString("photo_url")
+                        }
+                    }
+                }
+                result
+            }
+            if (cachedUrl != null) {
+                footballDailyPlayerPhotoCache[cacheKey] = cachedUrl
+                return cachedUrl
+            }
+        } catch (e: Exception) {
+            println("football_daily_player_photos okuma hatası: ${e.message}")
+        }
+
+        val nameVariants = listOf(playerName.trim(), playerName.trim().replace(Regex("\\s+"), "_")).distinct()
+        for (variant in nameVariants) {
+            try {
+                val response = httpClient.get("https://www.thesportsdb.com/api/v1/json/123/searchplayers.php") {
+                    parameter("p", variant)
+                }
+                if (response.status.isSuccess()) {
+                    val body = response.bodyAsText()
+                    val root = Json.parseToJsonElement(body).jsonObject
+                    val playersElement = root["player"]
+                    if (playersElement != null && playersElement !is JsonNull) {
+                        val first = playersElement.jsonArray.firstOrNull()?.jsonObject
+                        val photo = first?.get("strCutout")?.jsonPrimitive?.contentOrNull
+                            ?: first?.get("strThumb")?.jsonPrimitive?.contentOrNull
+                        if (!photo.isNullOrBlank()) {
+                            footballDailyPlayerPhotoCache[cacheKey] = photo
+                            try {
+                                withConnection { conn ->
+                                    conn.prepareStatement("INSERT OR REPLACE INTO football_daily_player_photos (player_name_std, photo_url) VALUES (?, ?)").use { stmt ->
+                                        stmt.setString(1, cacheKey)
+                                        stmt.setString(2, photo)
+                                        stmt.executeUpdate()
+                                    }
+                                }
+                            } catch (e: Exception) {
+                                println("football_daily_player_photos yazma hatası: ${e.message}")
+                            }
+                            return photo
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                println("fetchFootballDailyPlayerPhotoFallback hata ($variant): ${e.message}")
             }
         }
         return null
