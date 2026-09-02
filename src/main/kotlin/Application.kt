@@ -79,6 +79,15 @@ fun main() {
         DatabaseClient.preloadAllBasketballLogos()
     }
 
+    // 📰 Güncel Haberler — RSS'ten çekip Gemini ile en önemli haberleri
+    // seçen, tamamen izole bir modül. Sunucuyu hiç bekletmeden arka planda
+    // çalışıyor, ilk birkaç dakika kart boş görünebilir (ilk tur tamamlanana
+    // kadar) — bu normal, hata değil.
+    NewsManager.ensureNewsTable()
+    GlobalScope.launch {
+        NewsManager.startPeriodicRefresh()
+    }
+
     embeddedServer(Netty, port = port, host = "0.0.0.0") {
         // 🚀 Sıkıştırma (gzip) — index.html tek dosyada ~480KB'a ulaştı (bugün
         // eklenen tüm özellikler yüzünden). Gzip, metin tabanlı içerikte
@@ -116,6 +125,17 @@ fun main() {
             get("/suggestions") {
                 val suggestions = DatabaseClient.fetchAllUniqueSuggestions()
                 call.respond(suggestions)
+            }
+
+            // 📰 Güncel Haberler — arka planda periyodik olarak güncellenen
+            // (RSS + Gemini özet) son haberleri döndürüyor. ?sport=football
+            // veya ?sport=basketball — belirtilmezse futbol varsayılan.
+            // Henüz ilk tur tamamlanmadıysa (sunucu yeni başladıysa) boş
+            // liste dönebilir, frontend bunu sessizce ele alıyor.
+            get("/news") {
+                val sport = call.request.queryParameters["sport"]?.takeIf { it == "basketball" } ?: "football"
+                val news = NewsManager.fetchLatestNews(sport)
+                call.respond(news)
             }
 
             // 🏀 Basketbol — futboldan tamamen ayrı, izole uç noktalar.
