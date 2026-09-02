@@ -6706,6 +6706,15 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ deviceId: getOrCreatePredictionDeviceId(), playerName: player, targetClub: club })
             });
+            if (res.status === 429) {
+                resultMsg.style.display = 'block';
+                resultMsg.style.background = 'rgba(231, 76, 60, 0.12)';
+                resultMsg.style.borderColor = 'rgba(231, 76, 60, 0.3)';
+                resultMsg.textContent = currentLang === 'en'
+                    ? 'You\'ve reached today\'s limit of 3 predictions. Try again tomorrow!'
+                    : 'Günlük 3 kehanet limitine ulaştın. Yarın tekrar deneyebilirsin!';
+                return;
+            }
             if (!res.ok) throw new Error('kayıt başarısız');
             resultMsg.style.display = 'block';
             resultMsg.style.background = 'rgba(46, 204, 113, 0.12)';
@@ -6738,7 +6747,7 @@
             if (!res.ok) return;
             const mine = await res.json();
             if (!Array.isArray(mine) || mine.length === 0) { listEl.innerHTML = ''; return; }
-            listEl.innerHTML = `<div style="font-size:0.78rem; font-weight:700; opacity:0.6; margin-bottom:8px;">${currentLang === 'en' ? `My Predictions (${mine.length})` : `Kehanetlerim (${mine.length})`}</div>` +
+            listEl.innerHTML = `<div style="font-size:0.78rem; font-weight:700; opacity:0.6; margin-bottom:8px;">${currentLang === 'en' ? 'My Recent Predictions' : 'Son Kehanetlerim'}</div>` +
                 mine.map(p => {
                     // 🛡️ DÜZELTME: bozuk/eksik veri gelirse ("undefined" gibi
                     // çirkin metinler yerine) güvenli varsayılanlar kullanıyoruz.

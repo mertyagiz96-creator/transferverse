@@ -147,6 +147,13 @@ fun main() {
             // (localStorage, tarayıcıya özel) ile kimin kehaneti olduğu takip ediliyor.
             post("/predictions") {
                 val input = call.receive<PredictionManager.PredictionInput>()
+                // 🛡️ YENİ: günlük 3 kehanet limiti — spam/kötüye kullanımı
+                // engellemek için. Limite ulaşıldıysa net bir mesajla 429 dönüyoruz.
+                val todayCount = PredictionManager.countPredictionsToday(input.deviceId)
+                if (todayCount >= 3) {
+                    call.respond(HttpStatusCode.TooManyRequests, mapOf("error" to "daily_limit_reached"))
+                    return@post
+                }
                 val saved = PredictionManager.savePrediction(input.deviceId, input.playerName, input.targetClub)
                 if (saved != null) {
                     call.respond(saved)

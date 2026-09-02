@@ -54,6 +54,34 @@ object PredictionManager {
         val fulfilled: Boolean = false
     )
 
+    // 🛡️ YENİ: bir cihazın (deviceId) BUGÜN kaç kehanet yaptığını sayıyor —
+    // spam/kötüye kullanımı engellemek için (İstanbul saatine göre "bugün").
+    suspend fun countPredictionsToday(deviceId: String): Int {
+        if (supabaseUrl == null || supabaseKey == null) return 0
+        val cleanDeviceId = deviceId.trim()
+        if (cleanDeviceId.isBlank()) return 0
+        return try {
+            val todayStartMs = java.time.LocalDate.now(java.time.ZoneId.of("Europe/Istanbul"))
+                .atStartOfDay(java.time.ZoneId.of("Europe/Istanbul"))
+                .toInstant()
+                .toEpochMilli()
+            val response = httpClient.get("$supabaseUrl/rest/v1/transfer_predictions") {
+                header("apikey", supabaseKey)
+                header("Authorization", "Bearer $supabaseKey")
+                header("Prefer", "count=exact")
+                header("Range", "0-0")
+                parameter("select", "id")
+                parameter("device_id", "eq.$cleanDeviceId")
+                parameter("predicted_at", "gte.$todayStartMs")
+            }
+            val contentRange = response.headers["Content-Range"]
+            contentRange?.substringAfter("/")?.toIntOrNull() ?: 0
+        } catch (e: Exception) {
+            println("🔥 countPredictionsToday HATASI: ${e.message}")
+            0
+        }
+    }
+
     suspend fun savePrediction(deviceId: String, playerName: String, targetClub: String): Prediction? {
         if (supabaseUrl == null || supabaseKey == null) {
             println("⚠️ SUPABASE_URL/SUPABASE_KEY tanımlı değil, kehanet kaydedilemedi.")
@@ -97,7 +125,12 @@ object PredictionManager {
                 header("Authorization", "Bearer $supabaseKey")
                 parameter("device_id", "eq.${deviceId.trim()}")
                 parameter("order", "predicted_at.desc")
-                parameter("limit", "50")
+                // 🎯 DÜZELTME: eskiden 50'ydi — günlük 3 limitiyle bir kullanıcı
+                // 90 günde 270 kehanete ulaşabiliyor, hepsini ana sayfa
+                // kartında listelemek kartı aşırı uzatırdı. Sadece SON 10'u
+                // gösteriyoruz (bu fonksiyon SADECE ana sayfa kartı için
+                // kullanılıyor, /kehanetler sayfası ayrı fonksiyonlar kullanıyor).
+                parameter("limit", "10")
             }
             if (!response.status.isSuccess()) {
                 println("🔥 fetchPredictionsForDevice HATASI: HTTP ${response.status}")
@@ -180,6 +213,18 @@ object PredictionManager {
     // satırları çekip Kotlin tarafında grupluyoruz. Şu ölçekte tamamen
     // yeterli; ileride kehanet sayısı çok büyürse (örn. 100 binler) bir
     // Postgres view'a geçmek gerekebilir.
+    // 🎯 BUG DÜZELTMESİ: fetchTopPredictions sadece player_name/target_club
+    // çekiyor (performans için), ama önceden bunu TÜM alanları zorunlu olan
+    // Prediction sınıfına çevirmeye çalışıyordu — predicted_at JSON'da hiç
+    // olmadığı için dönüştürme HER SEFERİNDE sessizce patlıyordu, sonuç hep
+    // boş liste dönüyordu. Sadece bu iki alanı içeren ayrı, minimal bir sınıf
+    // kullanıyoruz.
+    @Serializable
+    private data class PredictionNameOnly(
+        @kotlinx.serialization.SerialName("player_name") val playerName: String,
+        @kotlinx.serialization.SerialName("target_club") val targetClub: String
+    )
+
     suspend fun fetchTopPredictions(limit: Int = 15): List<TopPrediction> {
         if (supabaseUrl == null || supabaseKey == null) return emptyList()
         return try {
@@ -191,11 +236,12 @@ object PredictionManager {
                 parameter("limit", "2000")
             }
             if (!response.status.isSuccess()) return emptyList()
-            val rows = Json.decodeFromString<List<Prediction>>(response.bodyAsText())
+            val rows = Json.decodeFromString<List<PredictionNameOnly>>(response.bodyAsText())
             rows.groupBy { it.playerName.trim().lowercase() to it.targetClub.trim().lowercase() }
                 .map { (_, group) ->
                     TopPrediction(group.first().playerName, group.first().targetClub, group.size)
                 }
+                .filter { it.count >= 5 } // 🎯 YENİ: en az 5 kişi tahmin etmedikçe listeye girmiyor
                 .sortedByDescending { it.count }
                 .take(limit)
         } catch (e: Exception) {
