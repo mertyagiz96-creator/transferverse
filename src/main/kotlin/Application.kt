@@ -88,6 +88,10 @@ fun main() {
         NewsManager.startPeriodicRefresh()
     }
 
+    // 🔮 Transfer Kehaneti — Supabase'de saklanıyor (SQLite değil, football.db
+    // deploy'lar arası kalıcı olmadığı için). Tablo Supabase panelinden elle
+    // oluşturulmalı, kod tarafında ekstra bir hazırlık gerekmiyor.
+
     embeddedServer(Netty, port = port, host = "0.0.0.0") {
         // 🚀 Sıkıştırma (gzip) — index.html tek dosyada ~480KB'a ulaştı (bugün
         // eklenen tüm özellikler yüzünden). Gzip, metin tabanlı içerikte
@@ -136,6 +140,26 @@ fun main() {
                 val sport = call.request.queryParameters["sport"]?.takeIf { it == "basketball" } ?: "football"
                 val news = NewsManager.fetchLatestNews(sport)
                 call.respond(news)
+            }
+
+            // 🔮 Transfer Kehaneti — "Kim Şampiyon Olur?" anketinin yerini
+            // alan yeni özellik. Giriş sistemi olmadığı için deviceId
+            // (localStorage, tarayıcıya özel) ile kimin kehaneti olduğu takip ediliyor.
+            post("/predictions") {
+                val input = call.receive<PredictionManager.PredictionInput>()
+                val saved = PredictionManager.savePrediction(input.deviceId, input.playerName, input.targetClub)
+                if (saved != null) {
+                    call.respond(saved)
+                } else {
+                    call.respond(HttpStatusCode.BadRequest)
+                }
+            }
+            get("/predictions/mine") {
+                val deviceId = call.request.queryParameters["deviceId"] ?: ""
+                call.respond(PredictionManager.fetchPredictionsForDevice(deviceId))
+            }
+            get("/predictions/count") {
+                call.respond(mapOf("total" to PredictionManager.fetchTotalPredictionCount()))
             }
 
             // 🏀 Basketbol — futboldan tamamen ayrı, izole uç noktalar.
@@ -1486,6 +1510,80 @@ fun main() {
                 </body>
                 </html>
             """.trimIndent()
+
+            // 🔮 Kehanetler istatistik sayfası — en çok tahmin edilen
+            // transferler, en son yapılan kehanetler ve gerçekleşenler.
+            // blogPageHtml şablonunu (aynı CSS/tasarım) yeniden kullanıyor.
+            get("/kehanetler") {
+                val top = PredictionManager.fetchTopPredictions(15)
+                val recent = PredictionManager.fetchRecentPredictions(30)
+                val fulfilled = PredictionManager.fetchFulfilledPredictions(30)
+
+                fun formatDate(ms: Long): String {
+                    val months = listOf("Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık")
+                    val instant = java.time.Instant.ofEpochMilli(ms)
+                    val date = java.time.ZonedDateTime.ofInstant(instant, java.time.ZoneId.of("Europe/Istanbul"))
+                    return "${date.dayOfMonth} ${months[date.monthValue - 1]} ${date.year}"
+                }
+                fun esc(s: String) = s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;")
+
+                val topHtml = if (top.isEmpty()) {
+                    "<p style=\"opacity:0.6;\">Henüz yeterince kehanet birikmedi.</p>"
+                } else {
+                    "<div class=\"article-list\">" + top.joinToString("") { p ->
+                        "<div style=\"padding:14px 18px; border-radius:12px; background:rgba(0,0,0,0.03); border:1px solid rgba(0,0,0,0.06); display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;\">" +
+                            "<span><strong>${esc(p.playerName)}</strong> → ${esc(p.targetClub)}</span>" +
+                            "<span style=\"opacity:0.55; font-size:0.82rem; white-space:nowrap; margin-left:10px;\">${p.count} kişi</span>" +
+                        "</div>"
+                    } + "</div>"
+                }
+
+                val recentHtml = if (recent.isEmpty()) {
+                    "<p style=\"opacity:0.6;\">Henüz hiç kehanet yapılmadı.</p>"
+                } else {
+                    "<div class=\"article-list\">" + recent.joinToString("") { p ->
+                        "<div style=\"padding:14px 18px; border-radius:12px; background:rgba(0,0,0,0.03); border:1px solid rgba(0,0,0,0.06); display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;\">" +
+                            "<span><strong>${esc(p.playerName)}</strong> → ${esc(p.targetClub)}</span>" +
+                            "<span style=\"opacity:0.55; font-size:0.82rem; white-space:nowrap; margin-left:10px;\">${formatDate(p.predictedAt)}</span>" +
+                        "</div>"
+                    } + "</div>"
+                }
+
+                val fulfilledHtml = if (fulfilled.isEmpty()) {
+                    "<p style=\"opacity:0.6;\">Henüz gerçekleşen kehanet doğrulanmadı.</p>"
+                } else {
+                    "<div class=\"article-list\">" + fulfilled.joinToString("") { p ->
+                        "<div style=\"padding:14px 18px; border-radius:12px; background:rgba(46,204,113,0.08); border:1px solid rgba(46,204,113,0.25); display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;\">" +
+                            "<span><svg width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#2ecc71\" stroke-width=\"2.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"vertical-align:-2px; margin-right:4px;\"><polyline points=\"20 6 9 17 4 12\"/></svg><strong>${esc(p.playerName)}</strong> → ${esc(p.targetClub)}</span>" +
+                            "<span style=\"opacity:0.55; font-size:0.82rem; white-space:nowrap; margin-left:10px;\">${formatDate(p.predictedAt)}</span>" +
+                        "</div>"
+                    } + "</div>"
+                }
+
+                val body = """
+                    <h1><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-4px; margin-right:8px;"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l2.5 2.5"/><path d="M5 20h14"/></svg>Transfer Kehanetleri</h1>
+                    <p class="subtitle">Kullanıcılarımızın gerçekleşeceğini düşündüğü transferler.</p>
+
+                    <h2><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-4px; margin-right:6px;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>Gerçekleşen Kehanetler</h2>
+                    $fulfilledHtml
+
+                    <h2><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-4px; margin-right:6px;"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg>En Çok Tahmin Edilen Transferler</h2>
+                    $topHtml
+
+                    <h2><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-4px; margin-right:6px;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Son Kehanetler</h2>
+                    $recentHtml
+                """.trimIndent()
+
+                call.respondText(
+                    blogPageHtml(
+                        "Transfer Kehanetleri",
+                        body,
+                        "TransferKolik kullanıcılarının transfer kehanetleri — en çok tahmin edilen transferler ve gerçekleşenler.",
+                        showAllArticlesLink = false
+                    ),
+                    ContentType.Text.Html
+                )
+            }
 
             get("/blog") {
                 val footballHtml = blogArticles.entries

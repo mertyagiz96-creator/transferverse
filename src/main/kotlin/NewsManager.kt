@@ -198,6 +198,24 @@ object NewsManager {
             offSportKeywords.none { kw -> c.title.contains(kw, ignoreCase = true) }
         }
 
+        // 🛡️ DÜZELTME: "Vanspor - Batman Petrolspor maçı ne zaman, saat kaçta,
+        // hangi kanalda?" gibi rutin YAYIN BİLGİSİ haberleri (önem derecesi
+        // düşük, iki takım küçük ligden olsa bile geçebiliyordu) AI seçimine
+        // hiç gitmeden burada elimine ediyoruz. Bu filtre hem Gemini
+        // çalışırken hem kural bazlı yedekte AYNI ŞEKİLDE geçerli — AI'nin
+        // prompt talimatına güvenmek yerine, kesin bir güvenlik ağı.
+        val routineBroadcastKeywords = listOf(
+            "ne zaman", "saat kaçta", "hangi kanalda", "canlı izle", "şifresiz mi",
+            "canlı yayın", "muhtemel 11", "ilk 11"
+        )
+        val importanceFiltered = sportFiltered.filter { c ->
+            routineBroadcastKeywords.none { kw -> c.title.contains(kw, ignoreCase = true) }
+        }
+        // 💡 Eğer bu filtre TÜM adayları silip süpürdüyse (o gün gerçekten
+        // başka haber yoksa), filtresiz listeye geri dönüyoruz — boş kalmaktansa
+        // rutin bir haber göstermek daha iyi.
+        val finalCandidates = if (importanceFiltered.isNotEmpty()) importanceFiltered else sportFiltered
+
         // 🕐 YENİ: 72 saatten (3 gün) eski haberleri havuzdan tamamen
         // çıkarıyoruz — özellikle basketbolda bazı günler yeterince taze
         // haber olmayabiliyor, bu durumda eski bir haberin "en yeni 5" ya da
@@ -205,7 +223,7 @@ object NewsManager {
         // (publishedAtMs == null) GÜVENLİ TARAFTA kalıp filtrelemiyoruz —
         // bir parse hatası tüm havuzu boşaltmasın diye.
         val freshnessThreshold = System.currentTimeMillis() - (72 * 60 * 60 * 1000L)
-        val freshFiltered = sportFiltered.filter { c ->
+        val freshFiltered = finalCandidates.filter { c ->
             c.publishedAtMs == null || c.publishedAtMs >= freshnessThreshold
         }
 

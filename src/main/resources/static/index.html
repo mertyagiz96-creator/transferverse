@@ -1330,6 +1330,17 @@
             padding: 6px;
         }
 
+        /* 🎯 DÜZELTME: masaüstünde input kutusu geniş olduğu için dropdown da
+           (left:0/right:0 ile input genişliğine eşitlendiği için) aşırı geniş
+           açılıp içindeki kısa kulüp isimleri boşlukta kayboluyor, "çirkin"
+           duruyordu. SADECE masaüstünde (mobil eşiğinin üstünde) bir üst
+           genişlik sınırı koyuyoruz — mobildeki davranışa hiç dokunmuyoruz. */
+        @media (min-width: 651px) {
+            .autocomplete-dropdown {
+                max-width: 380px;
+            }
+        }
+
         .autocomplete-item {
             padding: 10px 14px;
             margin-bottom: 2px;
@@ -2519,8 +2530,34 @@
     </div>
 
     <div id="championshipPollSection" style="margin-top: 24px; padding: 30px 26px; background: rgba(var(--card-tint-rgb), 0.3); border-radius: 18px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18); transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease; display: none;" onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 16px 40px rgba(0,0,0,0.22), 0 0 0 2px rgba(var(--accent-gold-rgb),0.35)';" onmouseout="this.style.transform=''; this.style.boxShadow='0 10px 30px rgba(0,0,0,0.18)';">
-        <h2 id="i18n-pollTitle" style="font-size: 1.05rem; font-weight: 700; color: rgba(var(--fg-rgb), 0.85); margin-bottom: 14px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="vertical-align:-3px; margin-right:6px;"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>Bu Sezon Kim Şampiyon Olur?</h2>
-        <div id="championshipPollGrid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px;"></div>
+        <div style="max-width: 460px; margin: 0 auto; text-align: center;">
+            <h2 id="i18n-pollTitle" style="font-size: 1.05rem; font-weight: 700; color: rgba(var(--fg-rgb), 0.85); margin-bottom: 4px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px; margin-right:6px;"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l2.5 2.5"/><path d="M5 20h14"/></svg>Transfer Kehaneti</h2>
+            <p id="i18n-predictionDesc" style="font-size: 0.82rem; opacity: 0.65; margin-bottom: 18px;">Bu sezon gerçekleşeceğini düşündüğün transferi tahmin et!</p>
+
+            <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 14px; text-align: left;">
+                <div style="position: relative;">
+                    <label id="i18n-predictionPlayerLabel" style="display: block; font-size: 0.78rem; font-weight: 600; opacity: 0.7; margin-bottom: 6px;">👤 Oyuncu</label>
+                    <input id="predictionPlayerInput" type="text" placeholder="Oyuncu ara..." autocomplete="off" style="width: 100%; box-sizing: border-box; padding: 11px 14px; border-radius: 10px; border: 1px solid rgba(var(--fg-rgb), 0.15); background: rgba(var(--fg-rgb), 0.04); color: rgb(var(--fg-rgb)); font-size: 0.9rem;">
+                    <div id="predictionPlayerSuggestions" style="display: none; position: absolute; top: 100%; left: 0; right: 0; margin-top: 4px; background: rgba(var(--card-tint-rgb), 1); border: 1px solid rgba(var(--fg-rgb), 0.15); border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,0.2); max-height: 220px; overflow-y: auto; z-index: 500;"></div>
+                </div>
+                <div style="position: relative;">
+                    <label id="i18n-predictionClubLabel" style="display: block; font-size: 0.78rem; font-weight: 600; opacity: 0.7; margin-bottom: 6px;">🏟️ Gideceği takım</label>
+                    <input id="predictionClubInput" type="text" placeholder="Takım ara..." autocomplete="off" style="width: 100%; box-sizing: border-box; padding: 11px 14px; border-radius: 10px; border: 1px solid rgba(var(--fg-rgb), 0.15); background: rgba(var(--fg-rgb), 0.04); color: rgb(var(--fg-rgb)); font-size: 0.9rem;">
+                    <div id="predictionClubSuggestions" style="display: none; position: absolute; top: 100%; left: 0; right: 0; margin-top: 4px; background: rgba(var(--card-tint-rgb), 1); border: 1px solid rgba(var(--fg-rgb), 0.15); border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,0.2); max-height: 220px; overflow-y: auto; z-index: 500;"></div>
+                </div>
+            </div>
+
+            <div style="text-align: center;">
+                <button id="predictionSubmitBtn" onclick="submitTransferPrediction()" class="btn-search" style="width: auto;"><span id="i18n-predictionSubmitBtn">KEHANET ET</span></button>
+            </div>
+
+            <div id="predictionResultMsg" style="display: none; margin-top: 14px; padding: 12px 14px; border-radius: 10px; background: rgba(46, 204, 113, 0.12); border: 1px solid rgba(46, 204, 113, 0.3); font-size: 0.85rem;"></div>
+
+            <p id="predictionTotalCount" style="display: none; font-size: 0.75rem; opacity: 0.5; margin-top: 12px; margin-bottom: 0; text-align: center;"></p>
+            <p style="text-align: center; margin-top: 8px; margin-bottom: 0;"><a href="/kehanetler" id="i18n-predictionAllLink" style="font-size: 0.78rem; color: var(--accent-gold); text-decoration: none; font-weight: 600;">Tüm Kehanetleri Gör →</a></p>
+
+            <div id="myPredictionsList" style="margin-top: 16px; text-align: left;"></div>
+        </div>
     </div>
 
     <div id="basketballPollSection" style="margin-top: 24px; padding: 30px 26px; background: rgba(var(--card-tint-rgb), 0.3); border-radius: 18px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18); transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease, margin-top 0.25s ease; display: none;" onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 16px 40px rgba(0,0,0,0.22), 0 0 0 2px rgba(var(--accent-gold-rgb),0.35)';" onmouseout="this.style.transform=''; this.style.boxShadow='0 10px 30px rgba(0,0,0,0.18)';">
@@ -3599,7 +3636,12 @@
         'i18n-connectionTitle': { en: '🔗 Transfer Connection' },
         'i18n-bbConnectionTitle': { en: '🏀 Transfer Connection' },
         'i18n-feeQuizTitle': { en: '💰 Which Transfer Was More Expensive?' },
-        'i18n-pollTitle': { en: '🗳️ Who Will Win the Title This Season?' },
+        'i18n-pollTitle': { en: '🔮 Transfer Prophecy' },
+        'i18n-predictionDesc': { en: 'Predict a transfer you think will happen this season!' },
+        'i18n-predictionPlayerLabel': { en: '👤 Player' },
+        'i18n-predictionClubLabel': { en: '🏟️ Destination Club' },
+        'i18n-predictionSubmitBtn': { en: 'PREDICT' },
+        'i18n-predictionAllLink': { en: 'See All Predictions →' },
         'i18n-bbPollTitle': { en: '🏀 Who Will Win the Title This Season?' },
         'i18n-newsTitle': { en: '🔥 Featured News' },
         'i18n-bioTitle': { en: '📰 Player of the Day' }
@@ -6523,110 +6565,206 @@
         }
     }
 
-    async function loadChampionshipPoll() {
-        const section = document.getElementById('championshipPollSection');
-        const grid = document.getElementById('championshipPollGrid');
-        if (!section || !grid) return;
-        if (playerModeActive || duelActive || transfermatikActive || (typeof bonservisAviActive !== 'undefined' && bonservisAviActive) || currentSport !== 'football') return; // 🛡️ sadece futbol ana ekranı
+    // 🔮 TRANSFER KEHANETİ — eski "Kim Şampiyon Olur?" anketinin yerine geçti.
+    // Fonksiyon adı (loadChampionshipPoll) BİLEREK aynı bırakıldı — sitenin
+    // her yerinde (mod giriş/çıkışları, spor değişimi) bu isimle çağrılıyor,
+    // adı değiştirmek onlarca çağrı noktasına dokunmayı gerektirirdi.
+    function getOrCreatePredictionDeviceId() {
+        let id = localStorage.getItem('tk_device_id');
+        if (!id) {
+            id = (crypto.randomUUID ? crypto.randomUUID() : 'dev-' + Date.now() + '-' + Math.random().toString(36).slice(2));
+            localStorage.setItem('tk_device_id', id);
+        }
+        return id;
+    }
 
+    function formatPredictionDate(ms) {
+        const d = new Date(ms);
+        const months = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
+        return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+    }
+
+    let predictionPlayerSelected = '';
+    let predictionClubSelected = '';
+
+    function setupPredictionAutocomplete() {
+        const playerInput = document.getElementById('predictionPlayerInput');
+        const playerBox = document.getElementById('predictionPlayerSuggestions');
+        const clubInput = document.getElementById('predictionClubInput');
+        const clubBox = document.getElementById('predictionClubSuggestions');
+        if (!playerInput || !clubInput || playerInput.dataset.wired) return;
+        playerInput.dataset.wired = '1';
+
+        let playerDebounce;
+        playerInput.addEventListener('input', () => {
+            predictionPlayerSelected = '';
+            clearTimeout(playerDebounce);
+            const q = playerInput.value.trim();
+            if (q.length < 2) { playerBox.style.display = 'none'; return; }
+            playerDebounce = setTimeout(async () => {
+                try {
+                    const res = await fetch(`/playerNameSuggestions?q=${encodeURIComponent(q)}`);
+                    const names = await res.json();
+                    if (!Array.isArray(names) || names.length === 0) { playerBox.style.display = 'none'; return; }
+                    playerBox.innerHTML = names.slice(0, 8).map(n => `<div class="pred-suggestion-item" style="padding:10px 14px; cursor:pointer; font-size:0.86rem;" onmouseover="this.style.background='rgba(var(--accent-gold-rgb),0.12)'" onmouseout="this.style.background=''">${escapeHtml(n)}</div>`).join('');
+                    playerBox.style.display = 'block';
+                    Array.from(playerBox.children).forEach((el, i) => {
+                        el.onclick = () => {
+                            playerInput.value = names[i];
+                            predictionPlayerSelected = names[i];
+                            playerBox.style.display = 'none';
+                        };
+                    });
+                } catch (e) { playerBox.style.display = 'none'; }
+            }, 200);
+        });
+
+        clubInput.addEventListener('input', () => {
+            predictionClubSelected = '';
+            const q = clubInput.value.trim();
+            if (!q) { clubBox.style.display = 'none'; return; }
+            // 🎯 DÜZELTME: eskiden sadece basit bir substring filtresi vardı,
+            // "Inter" ya da "Sporting Lizb" gibi yazınca tanıdık kulüpler
+            // aramada kaybolabiliyordu. Ana arama kutusunun (1./2. Kulüp)
+            // kullandığı AYNI eşleştirme + öncelikli kulüp sıralama mantığını
+            // (normalize, alias genişletme, priorityClubsSet, coreNameFor,
+            // dedupeSuggestions — hepsi zaten sitede tanımlı) buraya da bağlıyoruz.
+            const normalizedQuery = normalize(q);
+            const aliasExpansion = expandQueryWithAliases(normalizedQuery);
+            const matches = dedupeSuggestions(
+                (allSuggestions || []).filter(s => normalize(s).includes(normalizedQuery) || (aliasExpansion && normalize(s).includes(aliasExpansion)))
+            ).sort((a, b) => {
+                const aCore = coreNameFor(a);
+                const bCore = coreNameFor(b);
+                const aPriority = priorityClubsSet.has(aCore) ? 0 : 1;
+                const bPriority = priorityClubsSet.has(bCore) ? 0 : 1;
+                if (aPriority !== bPriority) return aPriority - bPriority;
+                return a.localeCompare(b);
+            }).slice(0, 8);
+            if (matches.length === 0) { clubBox.style.display = 'none'; return; }
+            clubBox.innerHTML = matches.map(n => {
+                const logoUrl = getClubLogo(n);
+                const logoHtml = logoUrl ? `<img src="${logoUrl}" alt="" style="width:18px; height:18px; object-fit:contain; margin-right:8px; vertical-align:-4px;" onerror="this.remove()">` : '';
+                return `<div class="pred-suggestion-item" style="padding:10px 14px; cursor:pointer; font-size:0.86rem;" onmouseover="this.style.background='rgba(var(--accent-gold-rgb),0.12)'" onmouseout="this.style.background=''">${logoHtml}${escapeHtml(n)}</div>`;
+            }).join('');
+            clubBox.style.display = 'block';
+            Array.from(clubBox.children).forEach((el, i) => {
+                el.onclick = () => {
+                    clubInput.value = matches[i];
+                    predictionClubSelected = matches[i];
+                    clubBox.style.display = 'none';
+                };
+            });
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!playerInput.contains(e.target) && !playerBox.contains(e.target)) playerBox.style.display = 'none';
+            if (!clubInput.contains(e.target) && !clubBox.contains(e.target)) clubBox.style.display = 'none';
+        });
+    }
+
+    async function submitTransferPrediction() {
+        const playerInput = document.getElementById('predictionPlayerInput');
+        const clubInput = document.getElementById('predictionClubInput');
+        const resultMsg = document.getElementById('predictionResultMsg');
+        const player = playerInput.value.trim();
+        const club = clubInput.value.trim();
+        if (!player || !club) {
+            resultMsg.style.display = 'block';
+            resultMsg.style.background = 'rgba(231, 76, 60, 0.12)';
+            resultMsg.style.borderColor = 'rgba(231, 76, 60, 0.3)';
+            resultMsg.textContent = currentLang === 'en' ? 'Please enter both player and club.' : 'Lütfen hem oyuncu hem takım gir.';
+            return;
+        }
+        const btn = document.getElementById('predictionSubmitBtn');
+        const btnLabel = document.getElementById('i18n-predictionSubmitBtn'); // 🛡️ span'i koruyoruz (i18n için)
+        btn.disabled = true;
+        if (btnLabel) btnLabel.textContent = currentLang === 'en' ? 'Saving...' : '⏳ Kaydediliyor...';
         try {
-            const res = await fetch('/poll/results');
-            if (!res.ok) return;
-            // 🧪 GEÇİCİ TEŞHİS AŞAMASI: veri boş gelse bile (örn. Supabase henüz
-            // yapılandırılmadıysa) UI'ı 0 oyla göstermeye devam ediyoruz — böylece
-            // görünüm/tasarım ayrı test edilebiliyor, veri sorunu ayrı çözülüyor.
-            let results = [];
-            try {
-                results = await res.json();
-                if (!Array.isArray(results)) results = [];
-            } catch (e) {
-                results = [];
-            }
-
-            grid.innerHTML = '';
-            POLL_LEAGUES.forEach(leagueInfo => {
-                const card = document.createElement('div');
-                card.style.cssText = 'background: rgba(var(--fg-rgb), 0.04); border: 1px solid rgba(var(--fg-rgb), 0.09); border-radius: 10px; padding: 14px;';
-
-                const teamVotes = leagueInfo.teams.map(team => {
-                    const found = results.find(r => r.league === leagueInfo.key && r.team === team);
-                    return { team, votes: found ? found.votes : 0 };
-                });
-                const totalVotes = teamVotes.reduce((sum, t) => sum + t.votes, 0);
-                const voted = hasVotedInPoll(leagueInfo.key);
-
-                let html = `<div style="font-size:0.82rem; font-weight:700; margin-bottom:10px; color: rgb(var(--fg-rgb));">${leagueInfo.label}</div>`;
-
-                teamVotes.forEach(({ team, votes }) => {
-                    const pct = totalVotes > 0 ? Math.round((votes / totalVotes) * 100) : 50;
-                    const logoUrl = getClubLogo(team);
-                    const logoHtml = logoUrl ? `<img src="${logoUrl}" alt="" style="width:20px; height:20px; object-fit:contain; margin-right:6px; vertical-align:-5px;" onerror="this.remove()">` : '';
-
-                    if (voted) {
-                        html += `
-                            <div style="margin-bottom:8px;">
-                                <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.78rem; margin-bottom:3px;">
-                                    <span>${logoHtml}${escapeHtml(team)}</span>
-                                    <span style="font-weight:700;">%${pct}</span>
-                                </div>
-                                <div style="height:6px; background:rgba(var(--fg-rgb),0.08); border-radius:3px; overflow:hidden;">
-                                    <div style="height:100%; width:${pct}%; background:var(--accent-gold); border-radius:3px;"></div>
-                                </div>
-                            </div>`;
-                    } else {
-                        html += `
-                            <button class="poll-vote-btn" data-league="${leagueInfo.key}" data-team="${escapeHtml(team)}"
-                                style="display:flex; align-items:center; width:100%; padding:8px 10px; margin-bottom:6px; background:rgba(var(--fg-rgb),0.06); border:1px solid rgba(var(--fg-rgb),0.12); border-radius:6px; color:rgb(var(--fg-rgb)); font-size:0.8rem; font-weight:600; cursor:pointer; text-align:left;">
-                                ${logoHtml}${escapeHtml(team)}
-                            </button>`;
-                    }
-                });
-
-                if (voted) {
-                    html += `<div style="font-size:0.68rem; opacity:0.5; margin-top:4px;">Toplam ${totalVotes} oy</div>`;
-                }
-
-                card.innerHTML = html;
-                grid.appendChild(card);
+            const res = await fetch('/predictions', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ deviceId: getOrCreatePredictionDeviceId(), playerName: player, targetClub: club })
             });
-
-            // 🗳️ Oy verme butonlarına tıklama
-            grid.querySelectorAll('.poll-vote-btn').forEach(btn => {
-                btn.addEventListener('click', async () => {
-                    const league = btn.dataset.league;
-                    const team = btn.dataset.team;
-                    if (hasVotedInPoll(league)) return; // 🛡️ çift tıklama koruması
-
-                    // 💡 ANINDA GERİ BİLDİRİM: ağ isteği 2-3 saniye sürebiliyordu, bu
-                    // sırada hiçbir görsel değişiklik olmadığı için kullanıcılar
-                    // "olmadı" sanıp tekrar/başka butona basıyordu. Şimdi hemen
-                    // tüm oy butonlarını kilitleyip "Kaydediliyor..." gösteriyoruz.
-                    const parentCard = btn.closest('div');
-                    if (parentCard) {
-                        parentCard.querySelectorAll('.poll-vote-btn').forEach(b => {
-                            b.disabled = true;
-                            b.style.opacity = '0.5';
-                            b.style.cursor = 'wait';
-                        });
-                    }
-                    btn.innerHTML = `⏳ Kaydediliyor...`;
-
-                    markVotedInPoll(league);
-                    try {
-                        await fetch(`/poll/vote?league=${encodeURIComponent(league)}&team=${encodeURIComponent(team)}`, { method: 'POST' });
-                    } catch (e) { /* sessizce geç */ }
-                    loadChampionshipPoll(); // 💡 sonucu güncel oylarla yeniden çiz
-                });
-            });
-
-            // 🛡️ YARIŞ DURUMU KORUMASI: ağ isteği sürerken kullanıcı başka bir
-            // moda geçmiş olabilir — göstermeden HEMEN önce tekrar kontrol ediyoruz.
-            if (playerModeActive || duelActive || transfermatikActive || (typeof bonservisAviActive !== 'undefined' && bonservisAviActive) || currentSport !== 'football') return;
-            section.style.display = 'block';
+            if (!res.ok) throw new Error('kayıt başarısız');
+            resultMsg.style.display = 'block';
+            resultMsg.style.background = 'rgba(46, 204, 113, 0.12)';
+            resultMsg.style.borderColor = 'rgba(46, 204, 113, 0.3)';
+            resultMsg.innerHTML = currentLang === 'en'
+                ? `🔮 Your prediction is saved!<br><strong>${escapeHtml(player)} → ${escapeHtml(club)}</strong><br><span style="opacity:0.7;">Predicted on ${formatPredictionDate(Date.now())}.</span>`
+                : `🔮 Kehanetin kaydedildi!<br><strong>${escapeHtml(player)} → ${escapeHtml(club)}</strong><br><span style="opacity:0.7;">${formatPredictionDate(Date.now())} tarihinde tahmin edildi.</span>`;
+            playerInput.value = '';
+            clubInput.value = '';
+            predictionPlayerSelected = '';
+            predictionClubSelected = '';
+            loadMyPredictions();
+            loadPredictionTotalCount();
         } catch (e) {
-            // sessizce geç, bölüm gizli kalır
+            resultMsg.style.display = 'block';
+            resultMsg.style.background = 'rgba(231, 76, 60, 0.12)';
+            resultMsg.style.borderColor = 'rgba(231, 76, 60, 0.3)';
+            resultMsg.textContent = currentLang === 'en' ? 'Could not save, please try again.' : 'Kaydedilemedi, lütfen tekrar dene.';
+        } finally {
+            btn.disabled = false;
+            if (btnLabel) btnLabel.textContent = currentLang === 'en' ? 'PREDICT' : 'KEHANET ET';
         }
     }
+
+    async function loadMyPredictions() {
+        const listEl = document.getElementById('myPredictionsList');
+        if (!listEl) return;
+        try {
+            const res = await fetch(`/predictions/mine?deviceId=${encodeURIComponent(getOrCreatePredictionDeviceId())}`);
+            if (!res.ok) return;
+            const mine = await res.json();
+            if (!Array.isArray(mine) || mine.length === 0) { listEl.innerHTML = ''; return; }
+            listEl.innerHTML = `<div style="font-size:0.78rem; font-weight:700; opacity:0.6; margin-bottom:8px;">${currentLang === 'en' ? `My Predictions (${mine.length})` : `Kehanetlerim (${mine.length})`}</div>` +
+                mine.map(p => `
+                    <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 12px; background: rgba(var(--fg-rgb), 0.04); border-radius: 8px; margin-bottom: 6px; font-size: 0.82rem;">
+                        <span>${p.fulfilled ? '🟢' : '🔮'} <strong>${escapeHtml(p.playerName)}</strong> → ${escapeHtml(p.targetClub)}</span>
+                        <span style="opacity:0.5; font-size:0.72rem; white-space:nowrap; margin-left:8px;">${formatPredictionDate(p.predictedAt)}</span>
+                    </div>
+                `).join('');
+        } catch (e) { /* sessizce geç */ }
+    }
+
+    async function loadPredictionTotalCount() {
+        const el = document.getElementById('predictionTotalCount');
+        if (!el) return;
+        try {
+            const res = await fetch('/predictions/count');
+            if (!res.ok) return;
+            const data = await res.json();
+            const total = data.total || 0;
+            // 🎯 DÜZELTME: "0 kehanet yapıldı" özellik yeni başladığında kötü
+            // bir izlenim veriyordu ("kimse kullanmıyor" hissi) — sıfırken
+            // satırı tamamen gizliyoruz, ilk gerçek kehanetten sonra beliriyor.
+            if (total > 0) {
+                el.textContent = currentLang === 'en'
+                    ? `${total.toLocaleString('en-US')} predictions made so far.`
+                    : `Şimdiye kadar ${total.toLocaleString('tr-TR')} kehanet yapıldı.`;
+                el.style.display = 'block';
+            } else {
+                el.style.display = 'none';
+            }
+        } catch (e) { /* sessizce geç */ }
+    }
+
+    async function loadChampionshipPoll() {
+        const section = document.getElementById('championshipPollSection');
+        if (!section) return;
+        if (playerModeActive || duelActive || transfermatikActive || (typeof bonservisAviActive !== 'undefined' && bonservisAviActive) || currentSport !== 'football') return; // 🛡️ sadece futbol ana ekranı
+
+        setupPredictionAutocomplete();
+        loadMyPredictions();
+        loadPredictionTotalCount();
+
+        // 🛡️ YARIŞ DURUMU KORUMASI: yukarıdaki işlemler sürerken kullanıcı
+        // başka bir moda geçmiş olabilir — göstermeden HEMEN önce tekrar kontrol ediyoruz.
+        if (playerModeActive || duelActive || transfermatikActive || (typeof bonservisAviActive !== 'undefined' && bonservisAviActive) || currentSport !== 'football') return;
+        section.style.display = 'block';
+    }
+
 
     // 🏀 Basketbol için SABİT, koda gömülü 14 oyuncu havuzu (7 NBA + 7 Avrupa) —
     // futboldaki gibi canlı veritabanı sorgusu YOK, elle yazılmış kısa tanıtımlar.
