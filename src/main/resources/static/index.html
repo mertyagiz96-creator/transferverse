@@ -6579,7 +6579,12 @@
     }
 
     function formatPredictionDate(ms) {
+        // 🛡️ DÜZELTME: tarih verisi boş/geçersiz geldiğinde (örn. eski/bozuk
+        // bir test kaydı) eskiden "NaN undefined NaN" gibi çirkin bir metin
+        // üretiyordu — artık böyle bir durumda sessizce boş dönüyor.
+        if (!ms || isNaN(ms)) return '';
         const d = new Date(ms);
+        if (isNaN(d.getTime())) return '';
         const months = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
         return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
     }
@@ -6691,8 +6696,8 @@
             resultMsg.style.background = 'rgba(46, 204, 113, 0.12)';
             resultMsg.style.borderColor = 'rgba(46, 204, 113, 0.3)';
             resultMsg.innerHTML = currentLang === 'en'
-                ? `🔮 Your prediction is saved!<br><strong>${escapeHtml(player)} → ${escapeHtml(club)}</strong><br><span style="opacity:0.7;">Predicted on ${formatPredictionDate(Date.now())}.</span>`
-                : `🔮 Kehanetin kaydedildi!<br><strong>${escapeHtml(player)} → ${escapeHtml(club)}</strong><br><span style="opacity:0.7;">${formatPredictionDate(Date.now())} tarihinde tahmin edildi.</span>`;
+                ? `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2ecc71" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; margin-right:4px;"><polyline points="20 6 9 17 4 12"/></svg>Your prediction is saved!<br><strong>${escapeHtml(player)} → ${escapeHtml(club)}</strong><br><span style="opacity:0.7;">Predicted on ${formatPredictionDate(Date.now())}.</span>`
+                : `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2ecc71" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; margin-right:4px;"><polyline points="20 6 9 17 4 12"/></svg>Kehanetin kaydedildi!<br><strong>${escapeHtml(player)} → ${escapeHtml(club)}</strong><br><span style="opacity:0.7;">${formatPredictionDate(Date.now())} tarihinde tahmin edildi.</span>`;
             playerInput.value = '';
             clubInput.value = '';
             predictionPlayerSelected = '';
@@ -6719,12 +6724,22 @@
             const mine = await res.json();
             if (!Array.isArray(mine) || mine.length === 0) { listEl.innerHTML = ''; return; }
             listEl.innerHTML = `<div style="font-size:0.78rem; font-weight:700; opacity:0.6; margin-bottom:8px;">${currentLang === 'en' ? `My Predictions (${mine.length})` : `Kehanetlerim (${mine.length})`}</div>` +
-                mine.map(p => `
+                mine.map(p => {
+                    // 🛡️ DÜZELTME: bozuk/eksik veri gelirse ("undefined" gibi
+                    // çirkin metinler yerine) güvenli varsayılanlar kullanıyoruz.
+                    const playerName = p.playerName || '—';
+                    const targetClub = p.targetClub || '—';
+                    const dateStr = formatPredictionDate(p.predictedAt);
+                    const statusIcon = p.fulfilled
+                        ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2ecc71" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; margin-right:4px;"><polyline points="20 6 9 17 4 12"/></svg>'
+                        : '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; margin-right:4px; opacity:0.5;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>';
+                    return `
                     <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 12px; background: rgba(var(--fg-rgb), 0.04); border-radius: 8px; margin-bottom: 6px; font-size: 0.82rem;">
-                        <span>${p.fulfilled ? '🟢' : '🔮'} <strong>${escapeHtml(p.playerName)}</strong> → ${escapeHtml(p.targetClub)}</span>
-                        <span style="opacity:0.5; font-size:0.72rem; white-space:nowrap; margin-left:8px;">${formatPredictionDate(p.predictedAt)}</span>
+                        <span>${statusIcon}<strong>${escapeHtml(playerName)}</strong> → ${escapeHtml(targetClub)}</span>
+                        ${dateStr ? `<span style="opacity:0.5; font-size:0.72rem; white-space:nowrap; margin-left:8px;">${dateStr}</span>` : ''}
                     </div>
-                `).join('');
+                `;
+                }).join('');
         } catch (e) { /* sessizce geç */ }
     }
 
