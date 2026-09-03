@@ -1,4 +1,5 @@
 import io.ktor.client.*
+import io.ktor.client.call.*
 import io.ktor.client.engine.cio.*
 import io.ktor.client.plugins.*
 import io.ktor.client.request.*
@@ -10,7 +11,7 @@ import java.sql.DriverManager
 import javax.xml.parsers.DocumentBuilderFactory
 import org.w3c.dom.Element
 
-// 📰 GÜNCEL HABERLER — RSS kaynaklarından çekip, Google Gemini API'siyle
+// 📰 GÜNCEL HABERLER — RSS kaynaklarından çekip, Groq API'siyle
 // (ücretsiz katman) en önemli 3 tanesini seçip özetleyen, tamamen izole bir
 // modül. Mevcut DatabaseClient/DuelManager mantığına hiç dokunmuyor, kendi
 // bağımsız SQLite bağlantılarını (football.db'deki AYRI bir tabloya) kullanıyor.
@@ -26,15 +27,13 @@ import org.w3c.dom.Element
 // hiçbir zaman tamamen boş/bozuk kalmıyor.
 object NewsManager {
 
-    // 💡 Model adı BİLEREK sabit/versiyonlu tutuluyor ("-latest" gibi takma
-    // adlar zamanla farklı, bazen kararsız modellere yönlendirilebiliyor).
-    // Google ileride bu modeli kullanımdan kaldırırsa, sadece bu satırı
-    // güncel bir model ID'siyle değiştirmek yeterli.
-    // 🔄 GÜNCELLEME: "gemini-2.5-flash" Google tarafından yeni kullanıcılara
-    // kapatıldı (deploy loglarında 404 hatası alındı). Google'ın kendi hata
-    // mesajında önerdiği "gemini-3.6-flash" kullanılıyor.
-    private const val GEMINI_MODEL = "gemini-3.6-flash"
-    private val geminiApiKey = System.getenv("GEMINI_API_KEY")
+    // 🔄 GÜNCELLEME: Gemini'nin ücretsiz katmanı sürekli kotaya takıldığı için
+    // (429 Too Many Requests, günler geçse bile düzelmedi) Groq'a geçildi —
+    // kredi kartsız, SÜRESİZ, günde 14.400 istek ücretsiz katman (bizim
+    // ihtiyacımızın ~300 katı). OpenAI uyumlu API kullanıyor, Gemini'den çok
+    // daha basit bir istek/cevap formatı var.
+    private const val GROQ_MODEL = "openai/gpt-oss-20b"
+    private val groqApiKey = System.getenv("GROQ_API_KEY")
 
     private val httpClient = HttpClient(CIO) {
         // 🕐 DÜZELTME: 20sn yetersiz kaldı (deploy loglarında timeout hatası
@@ -49,16 +48,33 @@ object NewsManager {
     // kontrolümüz dışında bir sorun). NTV Spor'un feed'leri test edildi ve
     // gerçekten canlı/güncel çıktı.
     //
+    // 🎯 YENİ: Sporx'un "Son Haberler" akışı — hem futbol hem basketbol (ve
+    // diğer spor dalları) TEK bir feed'de karışık geliyor, test edildi ve
+    // gerçekten canlı çıktı. Bu yüzden HEM futbol HEM basketbol listesine
+    // ekleniyor — sport-filtresi zaten alakasız dalları eliyor.
+    //
+    // ⚠️ ÖNEMLİ: Sporx'un feed'i UTF-8 DEĞİL, "Windows-1254" (Türkçe'ye özel
+    // eski bir kodlama) kullanıyor — bunu göz ardı edersek "Fenerbahçe" gibi
+    // kelimeler "Fenerbah�e" diye bozuk çıkar. RSS_SOURCE_CHARSETS ile
+    // kaynak bazlı doğru kodlamayı belirtiyoruz (belirtilmezse UTF-8 varsayılan).
+    //
     // 🏀⚽ Her spor için AYRI kaynak listesi — sport parametresine göre
     // hangisinin kullanılacağı belirleniyor.
     private val RSS_SOURCES: Map<String, List<Pair<String, String>>> = mapOf(
         "football" to listOf(
             "https://www.ntvspor.net/rss/kategori/futbol" to "NTV Spor",
-            "https://www.haberturk.com/rss/spor.xml" to "Habertürk"
+            "https://www.haberturk.com/rss/spor.xml" to "Habertürk",
+            "https://www.sporx.com/son-dakika-rss" to "Sporx"
         ),
         "basketball" to listOf(
-            "https://www.ntvspor.net/rss/kategori/basketbol" to "NTV Spor"
+            "https://www.ntvspor.net/rss/kategori/basketbol" to "NTV Spor",
+            "https://www.sporx.com/son-dakika-rss" to "Sporx"
         )
+    )
+
+    // 💡 Kaynak bazlı kodlama override'ı — belirtilmeyen kaynaklar UTF-8 kabul edilir.
+    private val RSS_SOURCE_CHARSETS: Map<String, java.nio.charset.Charset> = mapOf(
+        "https://www.sporx.com/son-dakika-rss" to java.nio.charset.Charset.forName("windows-1254")
     )
 
     private fun defaultTagFor(sport: String) = if (sport == "basketball") "🏀 HABER" else "⚽ HABER"
@@ -137,7 +153,7 @@ object NewsManager {
     // 🔁 Sürekli çalışan arka plan döngüsü — her (varsayılan 30 dk) bir HEM
     // futbol HEM basketbol haberlerini ayrı ayrı yeniden çekip günceller.
     // main()'de GlobalScope.launch içinde çağrılması bekleniyor.
-    suspend fun startPeriodicRefresh(intervalMinutes: Long = 30) {
+    suspend fun startPeriodicRefresh(intervalMinutes: Long = 120) {
         while (true) {
             for (sport in listOf("football", "basketball")) {
                 try {
@@ -234,12 +250,12 @@ object NewsManager {
 
         // 💡 Gemini'ye göndermeden önce, hem maliyeti hem gecikmeyi düşürmek
         // için en yeni 20 adayla sınırlıyoruz — RSS zaten en yeniden eskiye sıralı geliyor.
-        val trimmed = freshFiltered.distinctBy { it.url }.take(20)
+        val trimmed = dedupeSimilarNews(freshFiltered.distinctBy { it.url }).take(20)
 
         val selected = try {
             selectWithGemini(trimmed, sport)
         } catch (e: Exception) {
-            println("⚠️ [$sport] Gemini seçimi başarısız (${e.message}), kural bazlı seçime düşülüyor.")
+            println("⚠️ [$sport] Groq seçimi başarısız (${e.message}), kural bazlı seçime düşülüyor.")
             null
         }
 
@@ -247,9 +263,9 @@ object NewsManager {
         // loglarında arayarak (Ctrl+F) "AI SEÇİMİ" ya da "KURAL BAZLI" yazarak
         // hangi turda hangisinin çalıştığını kolayca görebilirsin.
         if (selected != null) {
-            println("🤖 [$sport] AI SEÇİMİ kullanıldı (Gemini, model: $GEMINI_MODEL) — ${selected.size} haber seçildi.")
+            println("🤖 [$sport] AI SEÇİMİ kullanıldı (Groq, model: $GROQ_MODEL) — ${selected.size} haber seçildi.")
         } else {
-            println("📋 [$sport] KURAL BAZLI seçime düşüldü (Gemini kullanılamadı ya da GEMINI_API_KEY tanımlı değil) — en yeni 5 haber gösteriliyor.")
+            println("📋 [$sport] KURAL BAZLI seçime düşüldü (Groq kullanılamadı ya da GROQ_API_KEY tanımlı değil) — en yeni 5 haber gösteriliyor.")
         }
 
         val finalItems = selected ?: trimmed.take(5).map {
@@ -266,12 +282,20 @@ object NewsManager {
     }
 
     private suspend fun fetchAndParseFeed(url: String, sourceName: String): List<RawNewsCandidate> {
-        val xmlText = httpClient.get(url).bodyAsText()
+        // 🎯 DÜZELTME: eskiden .bodyAsText() ile direkt metne çeviriyorduk —
+        // bu, Ktor'un varsayılan (UTF-8'e yakın) kodlama tahminini kullanıyordu.
+        // Sporx gibi Windows-1254 kullanan kaynaklarda bu, Türkçe karakterleri
+        // ("Fenerbahçe" → "Fenerbah�e") bozuyordu. Şimdi ham byte'ları çekip,
+        // kaynağa özel DOĞRU kodlamayla (RSS_SOURCE_CHARSETS'te belirtilmişse)
+        // kendimiz çeviriyoruz.
+        val charset = RSS_SOURCE_CHARSETS[url] ?: Charsets.UTF_8
+        val rawBytes = httpClient.get(url).body<ByteArray>()
+        val xmlText = String(rawBytes, charset)
 
         val factory = DocumentBuilderFactory.newInstance()
         factory.isNamespaceAware = false // 💡 basit tutmak için namespace ayrımını görmezden geliyoruz
         val builder = factory.newDocumentBuilder()
-        val doc = builder.parse(xmlText.byteInputStream(Charsets.UTF_8))
+        val doc = builder.parse(org.xml.sax.InputSource(java.io.StringReader(xmlText)))
 
         val results = mutableListOf<RawNewsCandidate>()
 
@@ -325,6 +349,40 @@ object NewsManager {
         return s.replace(Regex("<[^>]*>"), "").replace("&nbsp;", " ").trim()
     }
 
+    // 🛡️ YENİ: URL farklı ama AYNI HABER olan durumları eliyor (örn. Beşiktaş
+    // haberi hem Habertürk'ten hem NTV Spor'dan, farklı URL'lerle ama neredeyse
+    // aynı başlıkla gelebiliyor — sadece URL'e bakan eski yöntem bunu
+    // yakalamıyordu). Başlıkları kelime kümesine indirip (Jaccard benzerliği)
+    // %55'ten fazla ortak kelimesi olan iki başlığı "aynı haber" sayıyoruz.
+    private fun normalizeForDedup(title: String): Set<String> {
+        return title.lowercase()
+            .replace(Regex("[^a-zçğıöşü0-9\\s]"), " ")
+            .split(Regex("\\s+"))
+            .filter { it.length > 2 } // "ve", "bir" gibi kısa kelimeleri göz ardı ediyoruz
+            .toSet()
+    }
+
+    private fun titleSimilarity(a: Set<String>, b: Set<String>): Double {
+        if (a.isEmpty() || b.isEmpty()) return 0.0
+        val intersection = a.intersect(b).size
+        val union = a.union(b).size
+        return if (union == 0) 0.0 else intersection.toDouble() / union.toDouble()
+    }
+
+    private fun dedupeSimilarNews(candidates: List<RawNewsCandidate>): List<RawNewsCandidate> {
+        val result = mutableListOf<RawNewsCandidate>()
+        val resultWordSets = mutableListOf<Set<String>>()
+        for (c in candidates) {
+            val words = normalizeForDedup(c.title)
+            val isDuplicate = resultWordSets.any { titleSimilarity(it, words) >= 0.55 }
+            if (!isDuplicate) {
+                result.add(c)
+                resultWordSets.add(words)
+            }
+        }
+        return result
+    }
+
     // 🛡️ GÜVENLİK ÜST SINIRI: alt limit yok (Gemini istediği kadar eksiksiz
     // yazabilir), ama ~10 satırı geçen nadir/aşırı uzun durumlar için bir
     // üst sınır koyuyoruz — kelimenin ortasından kesmeden, son boşluktan
@@ -339,8 +397,8 @@ object NewsManager {
     }
 
     private suspend fun selectWithGemini(candidates: List<RawNewsCandidate>, sport: String): List<SelectedNewsItem>? {
-        if (geminiApiKey.isNullOrBlank()) {
-            println("ℹ️ GEMINI_API_KEY tanımlı değil, kural bazlı seçime geçiliyor.")
+        if (groqApiKey.isNullOrBlank()) {
+            println("ℹ️ GROQ_API_KEY tanımlı değil, kural bazlı seçime geçiliyor.")
             return null
         }
 
@@ -370,44 +428,40 @@ object NewsManager {
             $candidateListText
         """.trimIndent()
 
+        // 💡 Groq, OpenAI ile birebir uyumlu "chat completions" formatı
+        // kullanıyor — Gemini'nin karmaşık contents/parts yapısına göre
+        // çok daha basit: tek bir "messages" dizisi yeterli.
         val requestBodyJson = buildJsonObject {
-            putJsonArray("contents") {
+            put("model", GROQ_MODEL)
+            putJsonArray("messages") {
                 addJsonObject {
-                    putJsonArray("parts") {
-                        addJsonObject { put("text", prompt) }
-                    }
+                    put("role", "user")
+                    put("content", prompt)
                 }
             }
-            // ⚠️ DÜZELTME: "düşünmeyi kapatma" denemesi (thinkingConfig)
-            // gemini-3.6-flash'ta desteklenmiyor — production'da net bir
-            // "400 Bad Request: invalid argument" hatasına yol açtığı
-            // deploy loglarında görüldü. Kaldırıldı, sade istek yeterli.
         }.toString()
 
-        val response: HttpResponse = httpClient.post(
-            "https://generativelanguage.googleapis.com/v1beta/models/$GEMINI_MODEL:generateContent"
-        ) {
-            header("x-goog-api-key", geminiApiKey)
+        val response: HttpResponse = httpClient.post("https://api.groq.com/openai/v1/chat/completions") {
+            header("Authorization", "Bearer $groqApiKey")
             contentType(ContentType.Application.Json)
             setBody(requestBodyJson)
         }
 
         if (!response.status.isSuccess()) {
-            println("⚠️ Gemini API hatası: HTTP ${response.status} — ${response.bodyAsText().take(300)}")
+            println("⚠️ Groq API hatası: HTTP ${response.status} — ${response.bodyAsText().take(300)}")
             return null
         }
 
         val bodyText = response.bodyAsText()
         val root = Json.parseToJsonElement(bodyText).jsonObject
-        val text = root["candidates"]?.jsonArray?.getOrNull(0)?.jsonObject
-            ?.get("content")?.jsonObject
-            ?.get("parts")?.jsonArray?.getOrNull(0)?.jsonObject
-            ?.get("text")?.jsonPrimitive?.content ?: run {
-                println("⚠️ Gemini cevabı beklenmedik formatta: ${bodyText.take(300)}")
+        val text = root["choices"]?.jsonArray?.getOrNull(0)?.jsonObject
+            ?.get("message")?.jsonObject
+            ?.get("content")?.jsonPrimitive?.content ?: run {
+                println("⚠️ Groq cevabı beklenmedik formatta: ${bodyText.take(300)}")
                 return null
             }
 
-        // 🛡️ Gemini bazen ```json ... ``` kod bloğu içinde döndürüyor, temizliyoruz.
+        // 🛡️ Model bazen ```json ... ``` kod bloğu içinde döndürüyor, temizliyoruz.
         val cleanJson = text.replace(Regex("```json|```"), "").trim()
         val parsed = Json.parseToJsonElement(cleanJson).jsonArray
 
