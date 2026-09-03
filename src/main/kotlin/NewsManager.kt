@@ -213,8 +213,14 @@ object NewsManager {
             listOf("voleybol", "tenis", "futbol")
         else
             listOf("voleybol", "tenis", "basketbol")
+        // 🎯 DÜZELTME: eskiden sadece BAŞLIĞA bakıyorduk — "Biraz baskıyı
+        // hissettik" gibi başlıklar spor dalını hiç belli etmiyor, sadece
+        // AÇIKLAMA metninde ("...Voleybol Takımı'nın başantrenörü...") geçiyor.
+        // Şimdi ikisine birden bakıyoruz.
         val sportFiltered = candidates.filter { c ->
-            offSportKeywords.none { kw -> c.title.contains(kw, ignoreCase = true) }
+            offSportKeywords.none { kw ->
+                c.title.contains(kw, ignoreCase = true) || c.description.contains(kw, ignoreCase = true)
+            }
         }
 
         // 🛡️ DÜZELTME: "Vanspor - Batman Petrolspor maçı ne zaman, saat kaçta,
