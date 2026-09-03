@@ -1974,34 +1974,11 @@ object DatabaseClient {
         return best
     }
 
-    private fun sqlAccentStripExpr(column: String): String {
-        var expr = "LOWER($column)"
-        val replacements = listOf(
-            "İ" to "i", "I" to "i", "ı" to "i",
-            "Ğ" to "g", "ğ" to "g",
-            "Ş" to "s", "ş" to "s",
-            "Ç" to "c", "ç" to "c",
-            "Ö" to "o", "ö" to "o",
-            "Ü" to "u", "ü" to "u",
-            "Á" to "a", "á" to "a", "É" to "e", "é" to "e",
-            "Í" to "i", "í" to "i", "Ó" to "o", "ó" to "o",
-            "Ú" to "u", "ú" to "u", "Ñ" to "n", "ñ" to "n",
-            "Ć" to "c", "ć" to "c",
-            // 🎯 DÜZELTME: Balkan dillerinde (Hırvatça/Sırpça/Boşnakça/Slovence)
-            // kullanılan, TÜRKÇE karakterlere GÖRSEL olarak benzeyen ama
-            // Unicode'da TAMAMEN FARKLI olan karakterler eksikti — "Ivan
-            // Perišić" gibi isimlerde arama hiç eşleşmiyordu (Ş≠Š, haçek/caron
-            // işaretli Š, Türkçe çengelli Ş'den farklı bir karakter).
-            "Š" to "s", "š" to "s",
-            "Č" to "c", "č" to "c",
-            "Ž" to "z", "ž" to "z",
-            "Đ" to "d", "đ" to "d"
-        )
-        for ((from, to) in replacements) {
-            expr = "REPLACE($expr, '$from', '$to')"
-        }
-        return expr
-    }
+    // 🗑️ KALDIRILDI: sqlAccentStripExpr() — iç içe REPLACE() zinciri Balkan
+    // karakterleri eklenince SQLite'ın "parser stack overflow" limitine
+    // takıldı (deploy loglarında görüldü). Basketbolda zaten kanıtlanmış olan
+    // Kotlin tabanlı stripAccentsForCompare() hesaplamasına geçildi —
+    // ensureNameStdColumn() artık bunu kullanıyor.
 
     // 🚀 PERFORMANS MİGRASYONU (tek seferlik): "players" tablosunda ~92.000 satır
     // var, ve isim aramalarında HER SATIR için ~20 iç içe REPLACE() (aksan
@@ -2132,66 +2109,109 @@ object DatabaseClient {
                     }
                 }
 
-                if (columnExists) {
-                    // 🛡️ DÜZELTME: sütun VAR diye migrasyonun TAM tamamlandığı anlamına
-                    // gelmiyor — yerel geliştirmede sunucu, migrasyon bitmeden
-                    // durdurulmuşsa, sütun eklenmiş ama İÇİ BOŞ (NULL) kalmış
-                    // olabilir. Bu durumda TÜM aramalar sessizce boş dönerdi
-                    // (hata vermeden). Doldurulup doldurulmadığını kontrol edip,
-                    // gerekirse EKSİK KALAN kısmı tamamlıyoruz.
-                    var nullCount = 0
-                    conn.prepareStatement("SELECT COUNT(*) as cnt FROM players WHERE name_std IS NULL").use { stmt ->
-                        stmt.executeQuery().use { rs ->
-                            if (rs.next()) nullCount = rs.getInt("cnt")
-                        }
+                if (!columnExists) {
+                    conn.createStatement().use { stmt ->
+                        stmt.execute("ALTER TABLE players ADD COLUMN name_std TEXT")
                     }
-                    // 🎯 YENİ: sqlAccentStripExpr'e SONRADAN eklenen Balkan
-                    // karakterleri (Š/Č/Ž/Đ — "Ivan Perišić" gibi isimlerde
-                    // arama hiç eşleşmiyordu) için HEDEFLİ bir onarım — sadece
-                    // bu karakterleri İÇEREN satırları (tüm 92.000 değil,
-                    // muhtemelen birkaç yüz satır) yeniden hesaplıyoruz. Ucuz
-                    // olduğu için her başlangıçta çalışması sorun değil.
+                }
+
+                // 🛡️ DÜZELTME: sütun VAR diye migrasyonun TAM tamamlandığı anlamına
+                // gelmiyor — yerel geliştirmede sunucu, migrasyon bitmeden
+                // durdurulmuşsa, sütun eklenmiş ama İÇİ BOŞ (NULL) kalmış
+                // olabilir. Bu durumda TÜM aramalar sessizce boş dönerdi
+                // (hata vermeden). Doldurulup doldurulmadığını kontrol edip,
+                // gerekirse EKSİK KALAN kısmı tamamlıyoruz.
+                var nullCount = 0
+                conn.prepareStatement("SELECT COUNT(*) as cnt FROM players WHERE name_std IS NULL").use { stmt ->
+                    stmt.executeQuery().use { rs ->
+                        if (rs.next()) nullCount = rs.getInt("cnt")
+                    }
+                }
+
+                // 🎯 KESİN DÜZELTME: SQL'in iç içe REPLACE() zinciri, Balkan
+                // karakterlerini (Š/Č/Ž/Đ) eklemek için 20'ye çıkınca SQLite'ın
+                // "parser stack overflow" limitine takıldı — deploy loglarında
+                // görüldü. Basketbol tarafında AYNI sınıf hata daha önce fark
+                // edilip Kotlin tabanlı hesaplamaya geçilerek çözülmüştü — futbol
+                // tarafını da AYNI kanıtlanmış yönteme taşıyoruz. stripAccentsForCompare
+                // (Unicode NFD normalizasyonu kullanıyor) hem daha güvenli hem
+                // Türkçe/İspanyolca/Balkan dillerinin HEPSİNİ doğru işliyor.
+                val needsRepair = nullCount > 0
+                var repairedBalkanCount = 0
+                if (!needsRepair) {
+                    // Sütun zaten dolu — sadece Balkan karakterli (daha önce
+                    // yanlış hesaplanmış olabilecek) isimleri hedefli onarıyoruz.
                     try {
-                        conn.createStatement().use { stmt ->
-                            stmt.execute(
-                                "UPDATE players SET name_std = ${sqlAccentStripExpr("name")} " +
-                                "WHERE name LIKE '%Š%' OR name LIKE '%š%' OR name LIKE '%Č%' OR name LIKE '%č%' " +
-                                "OR name LIKE '%Ž%' OR name LIKE '%ž%' OR name LIKE '%Đ%' OR name LIKE '%đ%'"
-                            )
+                        val affectedNames = mutableSetOf<String>()
+                        conn.prepareStatement(
+                            "SELECT DISTINCT name FROM players WHERE name LIKE '%Š%' OR name LIKE '%š%' " +
+                            "OR name LIKE '%Č%' OR name LIKE '%č%' OR name LIKE '%Ž%' OR name LIKE '%ž%' " +
+                            "OR name LIKE '%Đ%' OR name LIKE '%đ%'"
+                        ).use { stmt ->
+                            stmt.executeQuery().use { rs ->
+                                while (rs.next()) {
+                                    rs.getString("name")?.let { affectedNames.add(it) }
+                                }
+                            }
+                        }
+                        if (affectedNames.isNotEmpty()) {
+                            conn.autoCommit = false
+                            try {
+                                conn.prepareStatement("UPDATE players SET name_std = ? WHERE name = ?").use { stmt ->
+                                    for (name in affectedNames) {
+                                        stmt.setString(1, stripAccentsForCompare(name))
+                                        stmt.setString(2, name)
+                                        stmt.addBatch()
+                                    }
+                                    stmt.executeBatch()
+                                }
+                                conn.commit()
+                            } finally {
+                                conn.autoCommit = true
+                            }
+                            repairedBalkanCount = affectedNames.size
                         }
                     } catch (e: Exception) {
                         println("⚠️ Balkan karakter onarımı hatası: ${e.message}")
                     }
-                    if (nullCount == 0) {
-                        println("✅ name_std sütunu zaten mevcut ve dolu, performans migrasyonu atlanıyor.")
-                        return@withConnection
+                    if (repairedBalkanCount > 0) {
+                        println("✅ $repairedBalkanCount Balkan karakterli isim onarıldı.")
                     }
-                    println("⚠️ name_std sütunu var ama $nullCount satır BOŞ (yarım kalmış migrasyon) — tamamlanıyor...")
-                    conn.createStatement().use { stmt ->
-                        stmt.execute("UPDATE players SET name_std = ${sqlAccentStripExpr("name")} WHERE name_std IS NULL")
-                    }
-                    conn.createStatement().use { stmt ->
-                        stmt.execute("CREATE INDEX IF NOT EXISTS idx_players_name_std ON players(name_std)")
-                    }
-                    println("✅ name_std eksik kısmı tamamlandı.")
+                    println("✅ name_std sütunu zaten mevcut ve dolu, performans migrasyonu atlanıyor.")
                     return@withConnection
                 }
 
-                println("⏳ name_std sütunu ekleniyor ve dolduruluyor (tek seferlik, biraz sürebilir)...")
+                println("⏳ name_std hesaplanıyor (Kotlin tarafında, isme göre, $nullCount satır)...")
                 val startTime = System.currentTimeMillis()
-
-                conn.createStatement().use { stmt ->
-                    stmt.execute("ALTER TABLE players ADD COLUMN name_std TEXT")
+                val distinctNames = mutableSetOf<String>()
+                conn.prepareStatement("SELECT DISTINCT name FROM players WHERE name_std IS NULL").use { stmt ->
+                    stmt.executeQuery().use { rs ->
+                        while (rs.next()) {
+                            val name = rs.getString("name")
+                            if (!name.isNullOrBlank()) distinctNames.add(name)
+                        }
+                    }
                 }
-                conn.createStatement().use { stmt ->
-                    stmt.execute("UPDATE players SET name_std = ${sqlAccentStripExpr("name")}")
+                conn.autoCommit = false
+                try {
+                    conn.prepareStatement("UPDATE players SET name_std = ? WHERE name = ?").use { stmt ->
+                        for (name in distinctNames) {
+                            stmt.setString(1, stripAccentsForCompare(name))
+                            stmt.setString(2, name)
+                            stmt.addBatch()
+                        }
+                        stmt.executeBatch()
+                    }
+                    conn.commit()
+                } finally {
+                    conn.autoCommit = true
                 }
                 conn.createStatement().use { stmt ->
                     stmt.execute("CREATE INDEX IF NOT EXISTS idx_players_name_std ON players(name_std)")
                 }
 
                 val elapsed = System.currentTimeMillis() - startTime
-                println("✅ name_std migrasyonu tamamlandı (${elapsed}ms).")
+                println("✅ name_std migrasyonu tamamlandı (${distinctNames.size} benzersiz isim, ${elapsed}ms).")
             }
         } catch (e: Exception) {
             // 🛡️ Migrasyon başarısız olursa uygulama ÇÖKMESİN — sadece log basıp
