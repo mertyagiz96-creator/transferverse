@@ -430,6 +430,10 @@ object NewsManager {
             haberin linkine hiç tıklamadan olayı tam olarak anlayabilmeli (kim, ne, ne zaman, neden önemli gibi detayları
             atlamadan aktar, gerektiği kadar cümle kullan). Ayrıca kısa bir etiket belirle (örn: $exampleTags).
 
+            ÖNEMLİ: özet metninin İÇİNDE kesinlikle çift tırnak (") kullanma —
+            birinin sözünü aktarman gerekirse tek tırnak (') kullan, aksi halde
+            JSON formatı bozulur. Örnek: Yerine "başarılı" dedi YAZ: 'başarılı' dedi.
+
             SADECE aşağıdaki JSON formatında, başka HİÇBİR metin eklemeden cevap ver:
             [{"index": <listedeki numarası>, "tag": "...", "summary": "..."}, ...]
 
