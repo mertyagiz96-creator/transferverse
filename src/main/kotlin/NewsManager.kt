@@ -153,7 +153,10 @@ object NewsManager {
     // 🔁 Sürekli çalışan arka plan döngüsü — her (varsayılan 30 dk) bir HEM
     // futbol HEM basketbol haberlerini ayrı ayrı yeniden çekip günceller.
     // main()'de GlobalScope.launch içinde çağrılması bekleniyor.
-    suspend fun startPeriodicRefresh(intervalMinutes: Long = 120) {
+    // 💡 30 dakika — Groq'a geçtiğimizden beri kota endişesi yok (günde 14.400
+    // hakkımız var, biz ~48 kullanıyoruz), o yüzden "canlı site" hissini
+    // güçlendirmek için sık aralığa geri dönüldü.
+    suspend fun startPeriodicRefresh(intervalMinutes: Long = 30) {
         while (true) {
             for (sport in listOf("football", "basketball")) {
                 try {
@@ -453,6 +456,15 @@ object NewsManager {
         }
 
         val bodyText = response.bodyAsText()
+        if (bodyText.isBlank()) {
+            // 🎯 DÜZELTME: Groq bazen HTTP 200 ile birlikte TAMAMEN BOŞ bir gövde
+            // döndürebiliyor (deploy loglarında görüldü, muhtemelen geçici bir
+            // aksaklık) — bu durumda eskiden JSON parser'ın genel/kafa karıştırıcı
+            // "unexpected end of input" hatası düşüyordu. Artık net bir mesajla
+            // erken çıkıyoruz, güvenlik ağı (kural bazlı yedek) zaten devreye giriyor.
+            println("⚠️ Groq HTTP ${response.status} ile boş gövde döndürdü — muhtemelen geçici, kural bazlı seçime düşülüyor.")
+            return null
+        }
         val root = Json.parseToJsonElement(bodyText).jsonObject
         val text = root["choices"]?.jsonArray?.getOrNull(0)?.jsonObject
             ?.get("message")?.jsonObject
