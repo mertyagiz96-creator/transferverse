@@ -1986,7 +1986,16 @@ object DatabaseClient {
             "Á" to "a", "á" to "a", "É" to "e", "é" to "e",
             "Í" to "i", "í" to "i", "Ó" to "o", "ó" to "o",
             "Ú" to "u", "ú" to "u", "Ñ" to "n", "ñ" to "n",
-            "Ć" to "c", "ć" to "c"
+            "Ć" to "c", "ć" to "c",
+            // 🎯 DÜZELTME: Balkan dillerinde (Hırvatça/Sırpça/Boşnakça/Slovence)
+            // kullanılan, TÜRKÇE karakterlere GÖRSEL olarak benzeyen ama
+            // Unicode'da TAMAMEN FARKLI olan karakterler eksikti — "Ivan
+            // Perišić" gibi isimlerde arama hiç eşleşmiyordu (Ş≠Š, haçek/caron
+            // işaretli Š, Türkçe çengelli Ş'den farklı bir karakter).
+            "Š" to "s", "š" to "s",
+            "Č" to "c", "č" to "c",
+            "Ž" to "z", "ž" to "z",
+            "Đ" to "d", "đ" to "d"
         )
         for ((from, to) in replacements) {
             expr = "REPLACE($expr, '$from', '$to')"
@@ -2135,6 +2144,23 @@ object DatabaseClient {
                         stmt.executeQuery().use { rs ->
                             if (rs.next()) nullCount = rs.getInt("cnt")
                         }
+                    }
+                    // 🎯 YENİ: sqlAccentStripExpr'e SONRADAN eklenen Balkan
+                    // karakterleri (Š/Č/Ž/Đ — "Ivan Perišić" gibi isimlerde
+                    // arama hiç eşleşmiyordu) için HEDEFLİ bir onarım — sadece
+                    // bu karakterleri İÇEREN satırları (tüm 92.000 değil,
+                    // muhtemelen birkaç yüz satır) yeniden hesaplıyoruz. Ucuz
+                    // olduğu için her başlangıçta çalışması sorun değil.
+                    try {
+                        conn.createStatement().use { stmt ->
+                            stmt.execute(
+                                "UPDATE players SET name_std = ${sqlAccentStripExpr("name")} " +
+                                "WHERE name LIKE '%Š%' OR name LIKE '%š%' OR name LIKE '%Č%' OR name LIKE '%č%' " +
+                                "OR name LIKE '%Ž%' OR name LIKE '%ž%' OR name LIKE '%Đ%' OR name LIKE '%đ%'"
+                            )
+                        }
+                    } catch (e: Exception) {
+                        println("⚠️ Balkan karakter onarımı hatası: ${e.message}")
                     }
                     if (nullCount == 0) {
                         println("✅ name_std sütunu zaten mevcut ve dolu, performans migrasyonu atlanıyor.")
