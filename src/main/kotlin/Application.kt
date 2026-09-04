@@ -183,6 +183,56 @@ fun main() {
                 }
             }
 
+            // 🔎 GEÇİCİ: bir oyuncunun TÜM transfer kayıtlarını ham haliyle
+            // gösteriyor — arama ekranını hiç karıştırmadan, doğrudan
+            // veritabanına bakıp "gerçekten eklendi mi" sorusuna kesin cevap
+            // veriyor. Örn: /admin/check-player?name=Guendouzi
+            get("/admin/check-player") {
+                val nameQuery = call.request.queryParameters["name"] ?: ""
+                val report = TransferImport.checkPlayerTransfers(nameQuery)
+                call.respondText(report, ContentType.Text.Plain)
+            }
+
+            // 🎯 YENİ: büyük kulüplerde (TR + Avrupa) geçen ama bizde hiç
+            // olmayan oyuncuları TAM PROFİLLERİYLE oluşturuyor. Varsayılan
+            // önizleme modunda — ?dryRun=false ile gerçekten yazar.
+            get("/admin/create-missing-players") {
+                val dryRun = call.request.queryParameters["dryRun"]?.toBooleanStrictOrNull() ?: true
+                try {
+                    val result = TransferImport.createMissingPlayersForBigClubs(dryRun)
+                    call.respondText(TransferImport.formatMissingPlayerReport(result, dryRun), ContentType.Text.Plain)
+                } catch (e: Exception) {
+                    call.respondText("🔥 HATA: ${e.message}\n${e.stackTraceToString().take(1500)}", ContentType.Text.Plain)
+                }
+            }
+
+            // 🛠️ GERİYE DÖNÜK ONARIM: from_club_std/to_club_std boş olan
+            // TÜM satırları (bugünkü import'larımız + Belhanda gibi elle
+            // eklenmiş eski kayıtlar dahil) dolduruyor.
+            get("/admin/repair-std-columns") {
+                val dryRun = call.request.queryParameters["dryRun"]?.toBooleanStrictOrNull() ?: true
+                try {
+                    val report = TransferImport.repairMissingStdColumns(dryRun)
+                    call.respondText(report, ContentType.Text.Plain)
+                } catch (e: Exception) {
+                    call.respondText("🔥 HATA: ${e.message}\n${e.stackTraceToString().take(1500)}", ContentType.Text.Plain)
+                }
+            }
+
+            // 🛠️ YENİ: isimdeki kesme işareti (N'Golo gibi) yüzünden name
+            // alanı BOŞ kalmış oyuncuları (520 kayıt) players.csv'deki
+            // gerçek isimleriyle onarıyor — bugünkü işimizden bağımsız,
+            // eski bir veri kalitesi sorunu.
+            get("/admin/repair-empty-names") {
+                val dryRun = call.request.queryParameters["dryRun"]?.toBooleanStrictOrNull() ?: true
+                try {
+                    val report = TransferImport.repairEmptyPlayerNames(dryRun)
+                    call.respondText(report, ContentType.Text.Plain)
+                } catch (e: Exception) {
+                    call.respondText("🔥 HATA: ${e.message}\n${e.stackTraceToString().take(1500)}", ContentType.Text.Plain)
+                }
+            }
+
             // 🏀 Basketbol — futboldan tamamen ayrı, izole uç noktalar.
             get("/basketball/suggestions") {
                 val suggestions = DatabaseClient.fetchAllBasketballSuggestions()
