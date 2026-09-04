@@ -169,6 +169,20 @@ fun main() {
                 call.respond(mapOf("total" to PredictionManager.fetchTotalPredictionCount()))
             }
 
+            // 🔮 GEÇİCİ: Ekim 2025 sonrası transferleri dış kaynaktan çekip
+            // mevcut transfers tablomuza ekliyor. VARSAYILAN ÖNİZLEME
+            // MODUNDA — hiçbir şey yazmıyor. ?dryRun=false eklersen gerçekten
+            // yazar. İş bitince bu route + TransferImport.kt silinebilir.
+            get("/admin/import-transfers") {
+                val dryRun = call.request.queryParameters["dryRun"]?.toBooleanStrictOrNull() ?: true
+                try {
+                    val result = TransferImport.runImport(dryRun)
+                    call.respondText(TransferImport.formatReport(result, dryRun), ContentType.Text.Plain)
+                } catch (e: Exception) {
+                    call.respondText("🔥 İthalat HATASI: ${e.message}\n${e.stackTraceToString().take(1500)}", ContentType.Text.Plain)
+                }
+            }
+
             // 🏀 Basketbol — futboldan tamamen ayrı, izole uç noktalar.
             get("/basketball/suggestions") {
                 val suggestions = DatabaseClient.fetchAllBasketballSuggestions()
