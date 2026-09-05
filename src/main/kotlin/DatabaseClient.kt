@@ -1211,8 +1211,8 @@ object DatabaseClient {
         "Steven Gerrard", "Andrea Pirlo", "Xavi", "Andres Iniesta",
         "Karim Benzema", "Luka Modric", "Sergio Ramos", "Gareth Bale",
         "Robert Lewandowski", "Neymar", "Kylian Mbappe", "Erling Haaland",
-        "Hakan Sukur", "Arda Turan", "Nuri Sahin", "Emre Belozoglu",
-        "Rustu Recber", "Tuncay Sanli", "Burak Yilmaz", "Wesley Sneijder"
+        "Ronaldinho", "Arda Turan", "Nuri Sahin", "Emre Belozoglu",
+        "Rustu Recber", "Tuncay Sanli", "Burak Yilmaz"
     ).distinct()
 
     // 🏀 KESİN DÜZELTME: eskiden bu isimlerin kariyer geçmişi ELLE YAZILMIŞTI —
@@ -1367,7 +1367,14 @@ object DatabaseClient {
 
                             val moves = mutableListOf<ClubSeason>()
                             conn.prepareStatement(
-                                "SELECT from_club, to_club, season FROM transfers WHERE transfer_id = ? ORDER BY season ASC"
+                                // 🎯 KÖK SEBEP DÜZELTMESİ: "ORDER BY season ASC" season'ı
+                                // DÜZ METİN olarak sıralıyordu — "96/97" gibi 1990'lı
+                                // sezonlar, "15/16" gibi 2010'lu sezonlardan alfabetik
+                                // olarak SONRA geliyordu ("9" > "1"), kariyer tamamen
+                                // karışık sırada görünüyordu (Pirlo örneğinde olduğu gibi).
+                                // Artık sıralamayı SQL'de değil, aşağıda Kotlin'de gerçek
+                                // yıla çevirerek yapıyoruz.
+                                "SELECT from_club, to_club, season FROM transfers WHERE transfer_id = ?"
                             ).use { stmt2 ->
                                 stmt2.setInt(1, pId)
                                 stmt2.executeQuery().use { rs2 ->
@@ -1380,6 +1387,17 @@ object DatabaseClient {
                                     }
                                 }
                             }
+                            // 🎯 "YY/YY" formatındaki sezonu gerçek bir yıla çevirip
+                            // KRONOLOJİK olarak sıralıyoruz. İki haneli yıl belirsiz
+                            // olduğu için (örn. "96" mı 1996 mı, "05" mi 2005 mi):
+                            // 50 ve üzeri → 19XX, 50'nin altı → 20XX kabul ediyoruz
+                            // (bir oyuncunun kariyeri gerçekçi olarak bu iki yüzyıla
+                            // yayılmaz, bu yüzden tek bir eşik yeterli).
+                            fun seasonSortKey(season: String): Int {
+                                val startYY = season.take(2).toIntOrNull() ?: return 0
+                                return if (startYY >= 50) 1900 + startYY else 2000 + startYY
+                            }
+                            moves.sortBy { seasonSortKey(it.season) }
 
                             result = DailyPlayerBio(
                                 name = fullName.replace(Regex("\\s*\\(\\d+\\)\\s*"), "").trim(),
