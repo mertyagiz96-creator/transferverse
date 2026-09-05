@@ -442,7 +442,7 @@ object TransferImport {
         // 🎯 YENİ: quiz havuzlarında (luckyClubs/superLigClubs) olup burada
         // eksik olan kulüpler — tam kapsama için.
         "panathinaikos", "olympiacos", "boca juniors", "river plate",
-        "braga", "hatayspor"
+        "braga", "hatayspor", "flamengo"
     )
 
     private fun matchesBigClub(clubName: String): Boolean {

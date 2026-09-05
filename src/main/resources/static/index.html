@@ -4144,7 +4144,9 @@
         'Boca Juniors', 'River Plate',
         // 🌍 Ünlü oyuncuların oynadığı "egzotik" kulüpler — soru zenginliği için
         'Inter Miami', 'Al-Ahli', 'Beijing Guoan', 'Shanghai Port', 'Vissel Kobe', 'LA Galaxy',
-        'Feyenoord', 'PSV', 'Panathinaikos', 'Olympiacos'
+        'Feyenoord', 'PSV', 'Panathinaikos', 'Olympiacos',
+        // 🎯 YENİ: eksik oyuncular tamamlandığı için güvenle eklenen 5 kulüp
+        'Atalanta', 'Bayer Leverkusen', 'Villarreal', 'Celtic', 'Shakhtar Donetsk', 'Flamengo'
     ];
 
     const luckyCountries = [
@@ -4184,9 +4186,9 @@
     // bilmemiş) kullanıcılar için ilk sorular bu havuzdan geliyor — kolaydan
     // zora doğru bir giriş hissi versin, insanlar hemen pes edip kapatmasın.
     const easyClubs = [
-        'Galatasaray', 'Fenerbahçe', 'Beşiktaş', 'Kocaelispor',
-        'Manchester United', 'Manchester City', 'Chelsea', 'Arsenal',
-        'Real Madrid', 'Barcelona', 'Juventus', 'AC Milan', 'Inter',
+        'Galatasaray', 'Fenerbahçe', 'Beşiktaş',
+        'Manchester United', 'Manchester City', 'Chelsea', 'Arsenal', 'Liverpool',
+        'Real Madrid', 'Barcelona', 'Atlético Madrid', 'Juventus', 'AC Milan', 'Inter',
         'Bayern Munich', 'Borussia Dortmund', 'Paris SG', 'Ajax'
     ];
 
@@ -4195,7 +4197,8 @@
     // çıkarıyoruz. Kolay (0-3) → Orta (3-10) → Tam (10+) şeklinde yumuşak bir geçiş.
     const hardClubs = [
         'Inter Miami', 'Al-Ahli', 'Beijing Guoan', 'Shanghai Port', 'Vissel Kobe', 'LA Galaxy',
-        'Feyenoord', 'PSV', 'Panathinaikos', 'Olympiacos'
+        'Feyenoord', 'PSV', 'Panathinaikos', 'Olympiacos',
+        'Villarreal', 'Celtic', 'Shakhtar Donetsk', 'Boca Juniors', 'River Plate', 'Flamengo'
     ];
     const mediumClubs = luckyClubs.filter(c => !hardClubs.includes(c));
 
@@ -4847,8 +4850,13 @@
         // 🟢🟡 Üç kademeli zorluk: skor 3'e kadar KOLAY (17 bilindik kulüp),
         // 3-10 arası ORTA (egzotik/dar bağlantılı ~10 kulüp çıkarılmış hâli),
         // 10'dan sonra TAM havuz — kolaydan zora daha yumuşak bir geçiş.
-        const inEasyPhase = quizScore < 3;
-        const inMediumPhase = !inEasyPhase && quizScore < 10;
+        const inEasyPhase = quizScore < 4;
+        const inMediumEasyPhase = !inEasyPhase && quizScore < 7;
+        const inMediumHardPhase = !inEasyPhase && !inMediumEasyPhase && quizScore < 10;
+        const inMediumPhase = inMediumEasyPhase || inMediumHardPhase;
+        // 🎯 DÜZELTME: eskiden "orta" tek bir kademeydi (skor 3-9), sert bir
+        // sıçrama hissi veriyordu. Şimdi ikiye bölündü — 3-5 arası "orta-kolay"
+        // (bir kolay + bir orta kulüp), 6-9 arası "orta-zor" (iki orta kulüp).
         const currentClubPool = inEasyPhase ? easyClubs : (inMediumPhase ? mediumClubs : luckyClubs);
 
         for (let i = 0; i < maxAttempts; i++) {
@@ -4862,6 +4870,15 @@
                 const country = luckyCountries[Math.floor(Math.random() * luckyCountries.length)];
                 pick = [club, country];
                 isCountryFlags = [false, true];
+            } else if (inMediumEasyPhase) {
+                // 🟡 Orta-kolay: bir taraf kolay havuzdan, bir taraf orta havuzdan.
+                let easyPick, mediumPick;
+                do {
+                    easyPick = easyClubs[Math.floor(Math.random() * easyClubs.length)];
+                    mediumPick = mediumClubs[Math.floor(Math.random() * mediumClubs.length)];
+                } while (easyPick === mediumPick);
+                pick = [easyPick, mediumPick];
+                isCountryFlags = [false, false];
             } else {
                 const pool = (!inEasyPhase && !inMediumPhase && Math.random() < 0.1) ? superLigClubs : currentClubPool;
                 const shuffled = fisherYatesShuffle(pool);

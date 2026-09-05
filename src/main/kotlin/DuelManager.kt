@@ -10,6 +10,8 @@ private const val ROOM_STALE_MS = 2 * 60 * 60 * 1000L // 2 saat hareketsizlik = 
 private const val CLEANUP_INTERVAL_MS = 30 * 60 * 1000L // 30 dakikada bir kontrol et
 private const val OPPONENT_LEFT_THRESHOLD_SECONDS = 8 // ~5-6 kaçırılmış polling turu
 private const val EASY_PHASE_ROUND_COUNT = 5 // 🟢 ısınma turu sayısı
+private const val MEDIUM_EASY_PHASE_ROUND_COUNT = 7 // 🟡 6-7. turlar "orta-kolay" — bir kolay + bir orta kulüp
+private const val MEDIUM_PHASE_ROUND_COUNT = 10 // 🟠 8-10. turlar "orta-zor" — iki orta kulüp, hardClubPool hariç
 
 @Serializable
 data class DuelClubInfo(val club: String, val season: String)
@@ -114,17 +116,29 @@ object DuelManager {
         "Kasimpasa", "Kayserispor", "Konyaspor", "Samsunspor",
         "Sivasspor", "Eyupspor", "Kocaelispor",
         "Inter Miami", "Al-Ahli", "Beijing Guoan", "Shanghai Port", "Vissel Kobe", "LA Galaxy",
-        "Feyenoord", "PSV", "Panathinaikos", "Olympiacos"
+        "Feyenoord", "PSV", "Panathinaikos", "Olympiacos",
+        // 🎯 YENİ: eksik oyuncular tamamlandığı için güvenle eklenen 5 kulüp
+        "Atalanta", "Bayer Leverkusen", "Villarreal", "Celtic", "Shakhtar Donetsk", "Flamengo"
     )
+
+    // 🔴 "Zor Kulüpler" — sadece en üst kademede (MEDIUM_PHASE_ROUND_COUNT
+    // sonrası) devreye giriyor. Frontend'deki Bil Bakalım'ın hardClubs
+    // listesiyle AYNI mantık/liste.
+    private val hardClubPool = listOf(
+        "Inter Miami", "Al-Ahli", "Beijing Guoan", "Shanghai Port", "Vissel Kobe", "LA Galaxy",
+        "Feyenoord", "PSV", "Panathinaikos", "Olympiacos",
+        "Villarreal", "Celtic", "Shakhtar Donetsk", "Boca Juniors", "River Plate", "Flamengo"
+    )
+    private val mediumClubPool = clubPool.filter { it !in hardClubPool }
 
     // 🟢 "Kolay Kulüpler" — frontend'deki Bil Bakalım'daki easyClubs ile AYNI 17
     // kulüp (stadyum verimizin de olduğu, Avrupa'nın en bilindik takımları). Her
     // odanın İLK 3 turu bu havuzdan geliyor — ısınma turu, kimse hemen zor bir
     // soruyla karşılaşıp oyundan soğumasın diye.
     private val easyClubPool = listOf(
-        "Galatasaray", "Fenerbahce", "Besiktas", "Kocaelispor",
-        "Manchester United", "Manchester City", "Chelsea", "Arsenal",
-        "Real Madrid", "Barcelona", "Juventus", "AC Milan", "Inter",
+        "Galatasaray", "Fenerbahce", "Besiktas",
+        "Manchester United", "Manchester City", "Chelsea", "Arsenal", "Liverpool",
+        "Real Madrid", "Barcelona", "Atletico Madrid", "Juventus", "AC Milan", "Inter",
         "Bayern Munich", "Borussia Dortmund", "Paris SG", "Ajax"
     )
 
@@ -418,6 +432,12 @@ object DuelManager {
         // 17 kulüpten geliyor — ısınma turu. Bu fazda ülke karışımı da kapalı,
         // tamamen kulüp-kulüp gidiyor (Bil Bakalım'daki mantıkla birebir aynı).
         val inEasyPhase = room.roundNumber <= EASY_PHASE_ROUND_COUNT
+        // 🟡 6-7. turlar "orta-kolay" — bir taraf kolay, bir taraf orta kulüp
+        // (sert bir sıçrama yerine yumuşak bir geçiş için).
+        val inMediumEasyPhase = !inEasyPhase && room.roundNumber <= MEDIUM_EASY_PHASE_ROUND_COUNT
+        // 🟠 8. tur "orta-zor" — iki taraf da orta kulüp (hardClubPool hariç).
+        val inMediumHardPhase = !inEasyPhase && !inMediumEasyPhase && room.roundNumber <= MEDIUM_PHASE_ROUND_COUNT
+        val inMediumPhase = inMediumEasyPhase || inMediumHardPhase
 
         var found: MultiClubPlayerResult? = null
         var attempts = 0
@@ -434,13 +454,31 @@ object DuelManager {
             var pickAttempts = 0
             val turkishAcceptProbability = if (inEasyPhase) 0.15 else 0.59
             do {
-                useCountryMix = !inEasyPhase && kotlin.random.Random.nextDouble() < 0.2
+                useCountryMix = !inEasyPhase && kotlin.random.Random.nextDouble() < 0.05
                 terms = if (useCountryMix) {
-                    val club = clubPool.random()
+                    // 🎯 DÜZELTME: eskiden ülke-karışımı sorularında kulüp HER ZAMAN
+                    // tam havuzdan (clubPool) seçiliyordu, faz'a bakılmaksızın — bu
+                    // yüzden orta fazda bile bazen zor bir kulüp çıkabiliyordu. Artık
+                    // kulüp de aynı faz mantığına uyuyor.
+                    val clubSourcePool = if (inMediumHardPhase) mediumClubPool
+                        else if (inMediumEasyPhase) (easyClubPool + mediumClubPool)
+                        else clubPool
+                    val club = clubSourcePool.random()
                     val country = countryPool.random()
                     listOf(club to false, country to true)
+                } else if (inMediumEasyPhase) {
+                    // 🟡 Bir taraf kolay havuzdan, bir taraf orta havuzdan — ikisi
+                    // aynı isimde çıkarsa (nadir de olsa mümkün, easyClubPool zaten
+                    // mediumClubPool'un alt kümesi) tekrar deniyoruz.
+                    var easyPick: String
+                    var mediumPick: String
+                    do {
+                        easyPick = easyClubPool.random()
+                        mediumPick = mediumClubPool.random()
+                    } while (easyPick == mediumPick)
+                    listOf(easyPick to false, mediumPick to false)
                 } else {
-                    val pool = if (inEasyPhase) easyClubPool else clubPool
+                    val pool = if (inEasyPhase) easyClubPool else if (inMediumHardPhase) mediumClubPool else clubPool
                     pool.shuffled().take(2).map { it to false }
                 }
                 pickAttempts++
