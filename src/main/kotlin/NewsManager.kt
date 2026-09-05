@@ -173,20 +173,28 @@ object NewsManager {
     // 💡 60 dakika (saat başı) — 30 dakikada Groq'un günlük 200K token kotası
     // günün ortasında tükeniyordu (2 spor × 48 istek/gün). Saat başı ile
     // günde 2 spor × 24 istek = kota tüm gün boyunca yetiyor.
-    suspend fun startPeriodicRefresh(intervalMinutes: Long = 60) {
+    // 💡 30 dakika — haberler taze kalsın diye. Ama Groq'un günlük 200K token
+    // kotası her 30 dakikada bir HEM futbol HEM basketbol için harcanınca
+    // günün ortasında tükeniyordu. Çözüm: haberleri her turda tazele (30 dk),
+    // ama Groq'u sadece HER 2 TURDA BİR çağır — diğer turlarda direkt kural
+    // bazlı seçime düş. Böylece hem tazelik korunuyor hem kota yarı yarıya azalıyor.
+    suspend fun startPeriodicRefresh(intervalMinutes: Long = 30) {
+        var cycleCount = 0
         while (true) {
+            val useAiThisCycle = cycleCount % 2 == 0
             for (sport in listOf("football", "basketball")) {
                 try {
-                    refreshNewsOnce(sport)
+                    refreshNewsOnce(sport, useAi = useAiThisCycle)
                 } catch (e: Exception) {
                     println("🔥 refreshNewsOnce($sport) (döngü) HATASI: ${e.message}")
                 }
             }
+            cycleCount++
             kotlinx.coroutines.delay(intervalMinutes * 60 * 1000)
         }
     }
 
-    suspend fun refreshNewsOnce(sport: String) {
+    suspend fun refreshNewsOnce(sport: String, useAi: Boolean = true) {
         val sources = RSS_SOURCES[sport] ?: run {
             println("⚠️ Bilinmeyen spor: $sport, atlanıyor.")
             return
@@ -227,9 +235,23 @@ object NewsManager {
         // uyguluyoruz (NTV Spor'un kategori bazlı feed'leri zaten saf olduğu
         // için onları etkilemez, sadece karışık feed'lerdeki yabancı içeriği eler).
         val offSportKeywords = if (sport == "basketball")
-            listOf("voleybol", "tenis", "futbol")
+            listOf(
+                "voleybol", "tenis", "futbol",
+                // 🎯 YENİ: bazı futbol haberleri "futbol" kelimesini hiç
+                // geçirmiyor (sadece takım/oyuncu isimleriyle yazılmış oluyor),
+                // bu yüzden basketbola özgü olmayan ama futbola KESİN özgü
+                // terimlerle de eliyoruz.
+                "gol", "kaleci", "korner", "ofsayt", "penaltı",
+                "sarı kart", "kırmızı kart", "santrfor", "süper lig"
+            )
         else
-            listOf("voleybol", "tenis", "basketbol")
+            listOf(
+                "voleybol", "tenis", "basketbol",
+                // 🎯 YENİ: motor sporları için hiç dışlama kelimemiz yoktu —
+                // karışık feed'lerden (Sporx gibi) F1/MotoGP haberleri futbol
+                // havuzuna sızabiliyordu.
+                "formula 1", "formula1", " f1 ", "motogp", "moto gp", "moto3", "moto2"
+            )
         // 🎯 DÜZELTME: eskiden sadece BAŞLIĞA bakıyorduk — "Biraz baskıyı
         // hissettik" gibi başlıklar spor dalını hiç belli etmiyor, sadece
         // AÇIKLAMA metninde ("...Voleybol Takımı'nın başantrenörü...") geçiyor.
@@ -278,7 +300,9 @@ object NewsManager {
         // için en yeni 20 adayla sınırlıyoruz — RSS zaten en yeniden eskiye sıralı geliyor.
         val trimmed = dedupeSimilarNews(freshFiltered.distinctBy { it.url }).take(20)
 
-        val selected = try {
+        val selected = if (!useAi) {
+            null // 💡 bu turda kota tasarrufu için Groq'a hiç sorulmuyor, direkt kural bazlı
+        } else try {
             selectWithGemini(trimmed, sport)
         } catch (e: Exception) {
             println("⚠️ [$sport] Groq seçimi başarısız (${e.message}), kural bazlı seçime düşülüyor.")
@@ -290,6 +314,8 @@ object NewsManager {
         // hangi turda hangisinin çalıştığını kolayca görebilirsin.
         if (selected != null) {
             println("🤖 [$sport] AI SEÇİMİ kullanıldı (Groq, model: $GROQ_MODEL) — ${selected.size} haber seçildi.")
+        } else if (!useAi) {
+            println("📋 [$sport] Bu tur Groq'a hiç sorulmadı (kota tasarrufu) — kural bazlı seçim kullanılıyor.")
         } else {
             println("📋 [$sport] KURAL BAZLI seçime düşüldü (Groq kullanılamadı ya da GROQ_API_KEY tanımlı değil) — en yeni 5 haber gösteriliyor.")
         }
@@ -469,6 +495,11 @@ object NewsManager {
             gibi sıradan/rutin içerikleri arkaya at). Her biri için EKSİKSİZ bir Türkçe özet yaz — kullanıcı
             haberin linkine hiç tıklamadan olayı tam olarak anlayabilmeli (kim, ne, ne zaman, neden önemli gibi detayları
             atlamadan aktar, gerektiği kadar cümle kullan). Ayrıca kısa bir etiket belirle (örn: $exampleTags).
+
+            ÖNEMLİ: özetlerken kimsenin unvanını (teknik direktör, kaptan,
+            başkan vb.) KENDİN UYDURMA veya TAHMİN ETME — sadece kaynak
+            metinde AÇIKÇA belirtilen unvanı kullan, emin değilsen unvanı hiç
+            yazma, sadece ismi kullan.
 
             ÖNEMLİ: özet metninin İÇİNDE kesinlikle çift tırnak (") kullanma —
             birinin sözünü aktarman gerekirse tek tırnak (') kullan, aksi halde
