@@ -206,6 +206,18 @@ fun main() {
                 }
             }
 
+            // 🧹 GEÇİCİ: Belhanda'nın sahte/tekrar eden kayıtlarını ve
+            // Seyit Cem Ünsal'ın (kaynak veride karışmış) kaydını temizliyor.
+            get("/admin/cleanup-bad-data") {
+                val dryRun = call.request.queryParameters["dryRun"]?.toBooleanStrictOrNull() ?: true
+                try {
+                    val report = TransferImport.cleanupKnownBadData(dryRun)
+                    call.respondText(report, ContentType.Text.Plain)
+                } catch (e: Exception) {
+                    call.respondText("🔥 HATA: ${e.message}\n${e.stackTraceToString().take(1500)}", ContentType.Text.Plain)
+                }
+            }
+
             // 🛠️ GERİYE DÖNÜK ONARIM: from_club_std/to_club_std boş olan
             // TÜM satırları (bugünkü import'larımız + Belhanda gibi elle
             // eklenmiş eski kayıtlar dahil) dolduruyor.

@@ -435,7 +435,14 @@ object TransferImport {
         "manchester united", "manchester city", "liverpool", "chelsea", "arsenal", "tottenham",
         "juventus", "ac milan", "inter milan", "napoli", "as roma",
         "paris saint-germain", "marseille", "lyon", "monaco",
-        "ajax", "psv eindhoven", "porto", "benfica", "sporting cp"
+        "ajax", "psv eindhoven", "porto", "benfica", "sporting cp",
+        // 🎯 YENİ: ikinci tur eklenen kulüpler
+        "rb leipzig", "bayer leverkusen", "atalanta", "feyenoord",
+        "villarreal", "sevilla", "celtic", "shakhtar donetsk",
+        // 🎯 YENİ: quiz havuzlarında (luckyClubs/superLigClubs) olup burada
+        // eksik olan kulüpler — tam kapsama için.
+        "panathinaikos", "olympiacos", "boca juniors", "river plate",
+        "braga", "hatayspor"
     )
 
     private fun matchesBigClub(clubName: String): Boolean {
@@ -787,6 +794,66 @@ object TransferImport {
                 appendLine("   olduğu için, daha önce 'eşleşmeyen' sayılan transferleri")
                 appendLine("   (örn. Kanté'nin Fenerbahçe transferi) şimdi yakalayabilir.")
             }
+        }
+    }
+
+    // 🧹 GEÇİCİ TEMİZLİK: iki spesifik veri sorununu düzeltiyor —
+    // • Belhanda'nın eski sahte ID'li (9999502) kaydı SİLİNİYOR, gerçek
+    //   ID'li (118022) kaydındaki TEKRAR EDEN transfer satırları temizleniyor.
+    // • Seyit Cem Ünsal (380430) — kaynak veride başka bir kişiyle karışmış
+    //   (Kore kulüpleri + Barcelona iç içe geçmiş) — tamamen SİLİNİYOR.
+    suspend fun cleanupKnownBadData(dryRun: Boolean): String {
+        return openConnection().use { conn ->
+            val report = StringBuilder()
+            report.appendLine(if (dryRun) "🔍 ÖNİZLEME MODU (hiçbir şey silinmedi)" else "✅ ONAY MODU (silindi)")
+            report.appendLine()
+
+            // 1️⃣ Belhanda'nın sahte kaydı (9999502) — players + transfers
+            var fakeBelhandaTransfers = 0
+            conn.prepareStatement("SELECT COUNT(*) c FROM transfers WHERE transfer_id = 9999502").use { stmt ->
+                stmt.executeQuery().use { rs -> if (rs.next()) fakeBelhandaTransfers = rs.getInt("c") }
+            }
+            report.appendLine("🗑️ Sahte Belhanda (id=9999502): $fakeBelhandaTransfers transfer satırı + 1 players satırı silinecek.")
+            if (!dryRun) {
+                conn.prepareStatement("DELETE FROM transfers WHERE transfer_id = 9999502").use { it.executeUpdate() }
+                conn.prepareStatement("DELETE FROM players WHERE id = 9999502").use { it.executeUpdate() }
+            }
+
+            // 2️⃣ Gerçek Belhanda'daki (118022) TEKRAR EDEN satırları temizle —
+            // aynı from_club+to_club+season'dan birden fazla varsa, sadece 1
+            // tanesini bırak.
+            var belhandaDupesRemoved = 0
+            conn.prepareStatement(
+                """SELECT COUNT(*) c FROM transfers WHERE rowid NOT IN (
+                     SELECT MIN(rowid) FROM transfers WHERE transfer_id = 118022
+                     GROUP BY from_club, to_club, season
+                   ) AND transfer_id = 118022"""
+            ).use { stmt ->
+                stmt.executeQuery().use { rs -> if (rs.next()) belhandaDupesRemoved = rs.getInt("c") }
+            }
+            if (!dryRun && belhandaDupesRemoved > 0) {
+                conn.prepareStatement(
+                    """DELETE FROM transfers WHERE rowid NOT IN (
+                         SELECT MIN(rowid) FROM transfers WHERE transfer_id = 118022
+                         GROUP BY from_club, to_club, season
+                       ) AND transfer_id = 118022"""
+                ).use { it.executeUpdate() }
+            }
+            report.appendLine("🔁 Gerçek Belhanda (id=118022): $belhandaDupesRemoved tekrar eden transfer satırı ${if (dryRun) "bulundu (silinecek)" else "silindi"}.")
+            report.appendLine()
+
+            // 3️⃣ Seyit Cem Ünsal (380430) — tamamen sil
+            var seyitTransfers = 0
+            conn.prepareStatement("SELECT COUNT(*) c FROM transfers WHERE transfer_id = 380430").use { stmt ->
+                stmt.executeQuery().use { rs -> if (rs.next()) seyitTransfers = rs.getInt("c") }
+            }
+            report.appendLine("🗑️ Seyit Cem Ünsal (id=380430, şüpheli/karışık veri): $seyitTransfers transfer satırı + 1 players satırı silinecek.")
+            if (!dryRun) {
+                conn.prepareStatement("DELETE FROM transfers WHERE transfer_id = 380430").use { it.executeUpdate() }
+                conn.prepareStatement("DELETE FROM players WHERE id = 380430").use { it.executeUpdate() }
+            }
+
+            report.toString()
         }
     }
 }
