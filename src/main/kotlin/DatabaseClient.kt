@@ -141,7 +141,14 @@ object DatabaseClient {
         "manchester utd" to "man utd",
         "man united" to "man utd",
         "manchester city" to "man city",
-        "borussia dortmund" to "bor. dortmund"
+        "borussia dortmund" to "bor. dortmund",
+        // 🎯 YENİ: yaygın yazılış farklılıkları (Rusça/Türkçe tarzı transliterasyon
+        // vb.) — kullanıcı ne yazarsa yazsın, veritabanındaki gerçek isme çözülsün.
+        "kiev" to "dynamo kyiv",
+        "dinamo kiev" to "dynamo kyiv",
+        "dynamo kiev" to "dynamo kyiv",
+        "newells old boys" to "newell's",
+        "newells" to "newell's"
     )
 
     private fun resolveClubSearchTerm(raw: String): String {

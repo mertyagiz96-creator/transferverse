@@ -118,7 +118,7 @@ object DuelManager {
         "Inter Miami", "Al-Ahli", "Beijing Guoan", "Shanghai Port", "Vissel Kobe", "LA Galaxy",
         "Feyenoord", "PSV", "Panathinaikos", "Olympiacos",
         // 🎯 YENİ: eksik oyuncular tamamlandığı için güvenle eklenen 5 kulüp
-        "Atalanta", "Bayer Leverkusen", "Villarreal", "Celtic", "Shakhtar Donetsk", "Flamengo"
+        "Atalanta", "Bayer Leverkusen", "Villarreal", "Celtic", "Shakhtar Donetsk", "Flamengo", "Dynamo Kyiv"
     )
 
     // 🔴 "Zor Kulüpler" — sadece en üst kademede (MEDIUM_PHASE_ROUND_COUNT
@@ -127,7 +127,7 @@ object DuelManager {
     private val hardClubPool = listOf(
         "Inter Miami", "Al-Ahli", "Beijing Guoan", "Shanghai Port", "Vissel Kobe", "LA Galaxy",
         "Feyenoord", "PSV", "Panathinaikos", "Olympiacos",
-        "Villarreal", "Celtic", "Shakhtar Donetsk", "Boca Juniors", "River Plate", "Flamengo"
+        "Villarreal", "Celtic", "Shakhtar Donetsk", "Boca Juniors", "River Plate", "Flamengo", "Dynamo Kyiv"
     )
     private val mediumClubPool = clubPool.filter { it !in hardClubPool }
 
