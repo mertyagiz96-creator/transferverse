@@ -6536,6 +6536,7 @@
 
             row.innerHTML = items.map(item => `
                 <a href="${item.url ? item.url.replace(/"/g, '&quot;') : '#'}" target="_blank" rel="noopener noreferrer" class="news-card-item" style="flex: 0 0 340px; scroll-snap-align: start; background: rgba(var(--fg-rgb), 0.04); border: 1px solid rgba(var(--fg-rgb), 0.1); border-radius: 12px; padding: 20px; text-decoration: none; color: inherit; display: block; transition: transform 0.15s ease, border-color 0.15s ease;" onmouseover="this.style.transform='translateY(-2px)'; this.style.borderColor='rgba(var(--accent-gold-rgb),0.4)';" onmouseout="this.style.transform=''; this.style.borderColor='rgba(var(--fg-rgb),0.1)';">
+                    ${item.imageUrl ? `<img src="${item.imageUrl.replace(/"/g, '&quot;')}" alt="" loading="lazy" onerror="this.style.display='none';" style="width: 100%; height: 140px; object-fit: cover; border-radius: 8px; margin-bottom: 12px; display: block;">` : ''}
                     <div class="news-card-tag" style="font-size: 0.72rem; font-weight: 700; color: var(--accent-gold); letter-spacing: 0.4px; margin-bottom: 10px;">${escapeHtml(item.tag || '⚽ HABER')}</div>
                     <div class="news-card-title" style="font-weight: 700; font-size: 1rem; line-height: 1.35; margin-bottom: 10px; color: rgb(var(--fg-rgb));">${escapeHtml(item.title)}</div>
                     <div class="news-card-summary" style="font-size: 0.85rem; opacity: 0.7; line-height: 1.45; margin-bottom: 12px;">${escapeHtml(item.summary)}</div>

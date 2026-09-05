@@ -86,7 +86,8 @@ object NewsManager {
         val summary: String,
         val source: String,
         val url: String,
-        val createdAt: Long // 📅 YENİ: "X dk önce" göstermek için — epoch milisaniye
+        val createdAt: Long, // 📅 YENİ: "X dk önce" göstermek için — epoch milisaniye
+        val imageUrl: String? // 🖼️ YENİ: haber kartında görsel göstermek için
     )
 
     private data class RawNewsCandidate(
@@ -94,7 +95,8 @@ object NewsManager {
         val description: String,
         val url: String,
         val source: String,
-        val publishedAtMs: Long? // 🕐 YENİ: eski haberleri filtrelemek için (parse edilemezse null)
+        val publishedAtMs: Long?, // 🕐 YENİ: eski haberleri filtrelemek için (parse edilemezse null)
+        val imageUrl: String? // 🖼️ YENİ: RSS'in <enclosure> etiketinden geliyor
     )
 
     private data class SelectedNewsItem(
@@ -102,7 +104,8 @@ object NewsManager {
         val title: String,
         val summary: String,
         val sourceUrl: String,
-        val source: String
+        val source: String,
+        val imageUrl: String? // 🖼️ YENİ
     )
 
     private fun openConnection() =
@@ -127,7 +130,8 @@ object NewsManager {
                             summary TEXT NOT NULL,
                             source TEXT,
                             url TEXT,
-                            created_at INTEGER
+                            created_at INTEGER,
+                            image_url TEXT
                         )
                         """.trimIndent()
                     )
@@ -140,6 +144,16 @@ object NewsManager {
                         stmt.execute("ALTER TABLE news_items ADD COLUMN sport TEXT NOT NULL DEFAULT 'football'")
                     }
                     println("ℹ️ news_items tablosuna 'sport' sütunu sonradan eklendi.")
+                } catch (e: Exception) {
+                    // sütun zaten vardı, normal — sessizce geç
+                }
+                // 🖼️ YENİ: image_url sütunu da aynı şekilde — eski tablolarda
+                // yoksa ekleniyor, varsa sessizce geçiliyor.
+                try {
+                    conn.createStatement().use { stmt ->
+                        stmt.execute("ALTER TABLE news_items ADD COLUMN image_url TEXT")
+                    }
+                    println("ℹ️ news_items tablosuna 'image_url' sütunu sonradan eklendi.")
                 } catch (e: Exception) {
                     // sütun zaten vardı, normal — sessizce geç
                 }
@@ -156,7 +170,10 @@ object NewsManager {
     // 💡 30 dakika — Groq'a geçtiğimizden beri kota endişesi yok (günde 14.400
     // hakkımız var, biz ~48 kullanıyoruz), o yüzden "canlı site" hissini
     // güçlendirmek için sık aralığa geri dönüldü.
-    suspend fun startPeriodicRefresh(intervalMinutes: Long = 30) {
+    // 💡 60 dakika (saat başı) — 30 dakikada Groq'un günlük 200K token kotası
+    // günün ortasında tükeniyordu (2 spor × 48 istek/gün). Saat başı ile
+    // günde 2 spor × 24 istek = kota tüm gün boyunca yetiyor.
+    suspend fun startPeriodicRefresh(intervalMinutes: Long = 60) {
         while (true) {
             for (sport in listOf("football", "basketball")) {
                 try {
@@ -283,7 +300,8 @@ object NewsManager {
                 title = it.title,
                 summary = capSummaryLength(it.description), // 🎯 alt limit yok, sadece ~10 satırlık üst sınır
                 sourceUrl = it.url,
-                source = it.source
+                source = it.source,
+                imageUrl = it.imageUrl
             )
         }
 
@@ -308,6 +326,28 @@ object NewsManager {
 
         val results = mutableListOf<RawNewsCandidate>()
 
+        // 🖼️ YENİ: <enclosure url="..." type="image/..."/> — hem RSS hem Atom'da
+        // (NTV Spor'da doğrulandı) opsiyonel olarak bulunabilen görsel etiketi.
+        // Yoksa null döner, haber görselsiz gösterilir (kırılmaz).
+        fun extractEnclosureImage(el: Element): String? {
+            // 1️⃣ Önce standart <enclosure url="..." type="image/..."/> (NTV Spor'da bu var)
+            val enc = el.getElementsByTagName("enclosure").item(0) as? Element
+            if (enc != null) {
+                val url = enc.getAttribute("url")?.trim()
+                val type = enc.getAttribute("type")?.trim() ?: ""
+                if (!url.isNullOrBlank() && (type.isBlank() || type.startsWith("image"))) return url
+            }
+            // 2️⃣ YENİ: <media:content url="..." type="image/..."/> (Sporx bunu kullanıyor —
+            // MRSS/Yahoo Media RSS standardı, enclosure'dan farklı bir etiket).
+            val media = el.getElementsByTagName("media:content").item(0) as? Element
+            if (media != null) {
+                val url = media.getAttribute("url")?.trim()
+                val type = media.getAttribute("type")?.trim() ?: ""
+                if (!url.isNullOrBlank() && (type.isBlank() || type.startsWith("image"))) return url
+            }
+            return null
+        }
+
         // RSS 2.0 formatı — <item><title>/<link>/<description>/<pubDate>
         val items = doc.getElementsByTagName("item")
         for (i in 0 until items.length) {
@@ -316,7 +356,7 @@ object NewsManager {
             val link = el.getElementsByTagName("link").item(0)?.textContent?.trim() ?: continue
             val desc = el.getElementsByTagName("description").item(0)?.textContent?.trim()?.let { stripHtml(it) } ?: ""
             val pubDateRaw = el.getElementsByTagName("pubDate").item(0)?.textContent?.trim() ?: ""
-            results.add(RawNewsCandidate(title, desc, link, sourceName, parsePubDate(pubDateRaw)))
+            results.add(RawNewsCandidate(title, desc, link, sourceName, parsePubDate(pubDateRaw), extractEnclosureImage(el)))
         }
 
         // Atom formatı (NTV Spor gibi) — <entry><title>/<link href=".."/>/<summary>/<published>
@@ -329,7 +369,7 @@ object NewsManager {
                 val link = linkEl?.getAttribute("href")?.trim().takeUnless { it.isNullOrBlank() } ?: continue
                 val summary = el.getElementsByTagName("summary").item(0)?.textContent?.trim()?.let { stripHtml(it) } ?: ""
                 val publishedRaw = el.getElementsByTagName("published").item(0)?.textContent?.trim() ?: ""
-                results.add(RawNewsCandidate(title, summary, link, sourceName, parsePubDate(publishedRaw)))
+                results.add(RawNewsCandidate(title, summary, link, sourceName, parsePubDate(publishedRaw), extractEnclosureImage(el)))
             }
         }
 
@@ -496,7 +536,7 @@ object NewsManager {
             val summaryRaw = obj["summary"]?.jsonPrimitive?.contentOrNull?.takeUnless { it.isBlank() }
                 ?: candidate.description
             val summary = capSummaryLength(summaryRaw) // 🛡️ alt limit yok, sadece ~10 satırlık üst sınır
-            selected.add(SelectedNewsItem(tag, candidate.title, summary, candidate.url, candidate.source))
+            selected.add(SelectedNewsItem(tag, candidate.title, summary, candidate.url, candidate.source, candidate.imageUrl))
         }
         return if (selected.isEmpty()) null else selected.take(5)
     }
@@ -511,7 +551,7 @@ object NewsManager {
                     stmt.executeUpdate()
                 }
                 conn.prepareStatement(
-                    "INSERT INTO news_items (sport, tag, title, summary, source, url, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)"
+                    "INSERT INTO news_items (sport, tag, title, summary, source, url, created_at, image_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
                 ).use { stmt ->
                     val now = System.currentTimeMillis()
                     for (item in items) {
@@ -522,6 +562,7 @@ object NewsManager {
                         stmt.setString(5, item.source)
                         stmt.setString(6, item.sourceUrl)
                         stmt.setLong(7, now)
+                        stmt.setString(8, item.imageUrl)
                         stmt.executeUpdate()
                     }
                 }
@@ -537,7 +578,7 @@ object NewsManager {
         try {
             openConnection().use { conn ->
                 conn.prepareStatement(
-                    "SELECT tag, title, summary, source, url, created_at FROM news_items WHERE sport = ? ORDER BY created_at DESC LIMIT 5"
+                    "SELECT tag, title, summary, source, url, created_at, image_url FROM news_items WHERE sport = ? ORDER BY created_at DESC LIMIT 5"
                 ).use { stmt ->
                     stmt.setString(1, sport)
                     stmt.executeQuery().use { rs ->
@@ -549,7 +590,8 @@ object NewsManager {
                                     summary = rs.getString("summary") ?: "",
                                     source = rs.getString("source") ?: "",
                                     url = rs.getString("url") ?: "",
-                                    createdAt = rs.getLong("created_at")
+                                    createdAt = rs.getLong("created_at"),
+                                    imageUrl = rs.getString("image_url")
                                 )
                             )
                         }
