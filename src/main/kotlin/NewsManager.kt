@@ -257,9 +257,23 @@ object NewsManager {
         // AÇIKLAMA metninde ("...Voleybol Takımı'nın başantrenörü...") geçiyor.
         // Şimdi ikisine birden bakıyoruz.
         val sportFiltered = candidates.filter { c ->
-            offSportKeywords.none { kw ->
+            val keywordOk = offSportKeywords.none { kw ->
                 c.title.contains(kw, ignoreCase = true) || c.description.contains(kw, ignoreCase = true)
             }
+            // 🎯 YENİ, DAHA GÜVENİLİR SİNYAL: haberin linki genelde spor dalını
+            // zaten belli ediyor (örn. sporx.com/futbol/superlig/... ya da
+            // sporx.com/basketbol/...) — bazı haberler (örn. "Talisca'dan flaş
+            // paylaşım", "Italiano ilk derbiyi kazandı") ne başlıkta ne
+            // açıklamada spora özgü kelime geçirmiyor, ama LİNK yolu doğru
+          // spor dalını gösteriyor. Kelime kontrolü zaten geçtiyse, URL'de
+            // ZIT bir yol varsa yine de eliyoruz.
+            val urlLower = c.url.lowercase()
+            val urlOk = if (sport == "basketball") {
+                !urlLower.contains("/futbol/")
+            } else {
+                !urlLower.contains("/basketbol/")
+            }
+            keywordOk && urlOk
         }
 
         // 🛡️ DÜZELTME: "Vanspor - Batman Petrolspor maçı ne zaman, saat kaçta,
