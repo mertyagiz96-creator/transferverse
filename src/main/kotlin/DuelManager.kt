@@ -12,6 +12,11 @@ private const val OPPONENT_LEFT_THRESHOLD_SECONDS = 8 // ~5-6 kaçırılmış po
 private const val EASY_PHASE_ROUND_COUNT = 5 // 🟢 ısınma turu sayısı
 private const val MEDIUM_EASY_PHASE_ROUND_COUNT = 7 // 🟡 6-7. turlar "orta-kolay" — bir kolay + bir orta kulüp
 private const val MEDIUM_PHASE_ROUND_COUNT = 10 // 🟠 8-10. turlar "orta-zor" — iki orta kulüp, hardClubPool hariç
+// 🎯 YENİ: "3,2,1" modu — oyuncuların KENDİ kulüplerini yazdığı, klasik sözlü
+// oyunun dijital hali. İki ayrı süre var: kulüp yazma fazı (kısa) ve tahmin
+// fazı (biraz daha uzun, çünkü hem düşünmek hem yazmak gerekiyor).
+private const val CLUB_ENTRY_DURATION_MS = 30_000L
+private const val DUEL_321_GUESS_DURATION_MS = 45_000L
 
 @Serializable
 data class DuelClubInfo(val club: String, val season: String)
@@ -44,7 +49,12 @@ data class DuelState(
     val bothPassed: Boolean,
     val maskingHintEnabled: Boolean,
     val maskedName: String?,
-    val isCountryMix: Boolean
+    val isCountryMix: Boolean,
+    // 🎯 YENİ: "3,2,1" modu için — diğer modlarda kullanılmıyor (varsayılan değerlerinde kalıyor).
+    val duelMode: String = "genel",
+    val phase: String = "guessing",
+    val club1Submitted: Boolean = false,
+    val club2Submitted: Boolean = false
 )
 
 @Serializable
@@ -79,6 +89,19 @@ class DuelRoom(val roomCode: String, val player1Name: String, val winTarget: Int
     val recentPlayerNames = mutableListOf<String>()
     var isCountryMix = false
     val lock = Any()
+    // 🎯 YENİ: "3,2,1" modu durumu — diğer modlarda hiç kullanılmıyor.
+    var phase: String = "club_entry"
+    var club1Input: String? = null
+    var club2Input: String? = null
+    var clubEntryStartTime: Long = System.currentTimeMillis()
+    // 🎯 YENİ: iki kulüp belli olunca BİR KEZ hesaplanan tüm geçerli
+    // cevaplar — her "Gönder"de veritabanına gitmeden hafızadan kontrol
+    // yapabilmek için.
+    var validPlayersForRound: List<DatabaseClient.SimplePlayerMatch> = emptyList()
+    // 🎯 YENİ: doğru tahmin bulununca, tur sonucunda göstermek için kazanan
+    // oyuncunun (temizlenmiş) ismini burada tutuyoruz — artık tek bir
+    // "önceden seçilmiş currentQuestion" olmadığı için gerekli.
+    var winningPlayerDisplayName321: String? = null
 }
 
 object DuelManager {
@@ -174,7 +197,7 @@ object DuelManager {
             code = generateCode()
         } while (rooms.containsKey(code))
         val validTarget = if (winTarget == 10) 10 else 5
-        val validMode = if (duelMode == "turkiye") "turkiye" else "genel"
+        val validMode = if (duelMode == "turkiye") "turkiye" else if (duelMode == "321") "321" else "genel"
         val room = DuelRoom(code, player1Name.ifBlank { "Oyuncu 1" }, validTarget, maskingHintEnabled, validMode)
         rooms[code] = room
         return room
@@ -241,6 +264,118 @@ object DuelManager {
             startNewRound(room)
         }
         return room
+    }
+
+    // 🎯 YENİ: "3,2,1" modunda oyuncu kendi kulübünü gönderir. İki taraf da
+    // gönderince, o iki kulüp arasındaki ortak oyuncuyu hesaplayıp asıl
+    // "tahmin" fazına geçiyoruz — buradan sonrası (submitAnswer, checkTimeout
+    // vb.) Genel Mod'la AYNI mekanizmayı kullanıyor, tekrar yazmıyoruz.
+    fun submitClub321(code: String, playerName: String, club: String): DuelState? {
+        val room = rooms[code.uppercase()] ?: return null
+        val trimmedClub = club.trim()
+        if (trimmedClub.isBlank()) return toState(room)
+
+        synchronized(room.lock) {
+            room.lastActivityAt = System.currentTimeMillis()
+            when (playerName) {
+                room.player1Name -> room.player1LastSeen = System.currentTimeMillis()
+                room.player2Name -> room.player2LastSeen = System.currentTimeMillis()
+            }
+
+            if (room.duelMode != "321" || room.phase != "club_entry" || room.gameOver) {
+                return toState(room)
+            }
+
+            when (playerName) {
+                room.player1Name -> if (room.club1Input == null) room.club1Input = trimmedClub
+                room.player2Name -> if (room.club2Input == null) room.club2Input = trimmedClub
+            }
+
+            tryStartGuessingPhase321(room)
+            return toState(room)
+        }
+    }
+
+    // 🛡️ Süre dolduğunda VE hâlâ eksik kulüp varsa, oyunun tıkanmaması için
+    // rastgele bir kulüp otomatik atanıyor — kullanıcı deneyimi kesintiye
+    // uğramasın diye. Çağıran fonksiyon zaten room.lock içinde olmalı.
+    private fun tryStartGuessingPhase321(room: DuelRoom) {
+        if (room.club1Input == null || room.club2Input == null) return
+
+        // 🎯 DÜZELTME (performans): eskiden fetchPlayerAcrossClubs ile sadece
+        // TEK bir rastgele cevap seçiliyordu VE her "Gönder"de tekrar
+        // veritabanına gidiliyordu. Şimdi TÜM geçerli cevapları BİR KEZ
+        // çekip odada hafızada tutuyoruz — sonraki her tahmin, veritabanına
+        // hiç gitmeden bu listeye bakarak anında kontrol ediliyor.
+        val validPlayers = DatabaseClient.fetchAllPlayersAcrossTwoClubs(room.club1Input!!, room.club2Input!!)
+        room.validPlayersForRound = validPlayers
+        room.currentQuestion = null // 🎯 artık tek bir "önceden seçilmiş cevap" yok
+        room.noMatchFound = validPlayers.isEmpty()
+        room.phase = "guessing"
+        room.roundStartTime = System.currentTimeMillis() // 🎯 tahmin fazının SÜRESİ burada başlıyor
+        if (validPlayers.isEmpty()) {
+            // Ortak oyuncu yoksa bu turu direkt "biten tur" (kazanansız) sayıyoruz
+            // — frontend zaten "noMatchFound" durumunu biliyor, "sıradaki tur"
+            // deyip club_entry fazına dönmelerini sağlayacak.
+            room.roundOver = true
+        }
+    }
+
+    // 🎲 YENİ: "3,2,1" modunun asıl tahmin kontrolü — submitAnswer'daki gibi
+    // ÖNCEDEN seçilmiş TEK bir isimle karşılaştırmıyoruz. Bunun yerine,
+    // kullanıcının yazdığı HER ismi gerçek zamanlı olarak veritabanında
+    // doğruluyoruz: bu oyuncu GERÇEKTEN bu iki kulüpte oynamış mı? Böylece
+    // o iki kulüpte oynamış birden fazla oyuncu varsa, hangisini bilirse
+    // bilsin doğru sayılıyor — klasik sözlü oyundaki gibi.
+    fun submitGuess321(code: String, playerName: String, guess: String): DuelAnswerResult? {
+        val room = rooms[code.uppercase()] ?: return null
+
+        synchronized(room.lock) {
+            checkTimeout(room)
+            room.lastActivityAt = System.currentTimeMillis()
+            when (playerName) {
+                room.player1Name -> room.player1LastSeen = System.currentTimeMillis()
+                room.player2Name -> room.player2LastSeen = System.currentTimeMillis()
+            }
+
+            if (room.duelMode != "321" || room.phase != "guessing" || room.roundOver || room.gameOver) {
+                return DuelAnswerResult(correct = false, state = toState(room))
+            }
+
+            val club1 = room.club1Input ?: return DuelAnswerResult(correct = false, state = toState(room))
+            val club2 = room.club2Input ?: return DuelAnswerResult(correct = false, state = toState(room))
+
+            // 🎯 DÜZELTME (performans): artık veritabanına HİÇ gitmiyoruz —
+            // tryStartGuessingPhase321'de bir kez hesaplanan validPlayersForRound
+            // listesine bakıyoruz. Bu, milisaniyeler içinde cevap veriyor,
+            // kullanıcının 45 saniyesinden hiç zaman çalmıyor.
+            val normalizedGuess = normalizeForDuel(guess)
+            val match = room.validPlayersForRound.firstOrNull { candidate ->
+                val cleanNameStd = candidate.nameStd.replace(Regex("\\s*\\(\\d+\\)\\s*$"), "").trim()
+                val surnameStd = cleanNameStd.split(Regex("\\s+")).lastOrNull() ?: ""
+                normalizedGuess.isNotEmpty() && (normalizedGuess == cleanNameStd || normalizedGuess == surnameStd)
+            }
+            val isCorrect = match != null
+
+            if (isCorrect) {
+                // 🎯 Tur sonucunda göstermek için kazanan ismi (temizlenmiş
+                // haliyle) saklıyoruz.
+                room.winningPlayerDisplayName321 = match!!.playerName.replace(Regex("\\s*\\(\\d+\\)\\s*$"), "").trim()
+                room.roundOver = true
+                room.roundWinner = playerName
+                if (playerName == room.player1Name) room.player1Score++ else room.player2Score++
+
+                if (room.player1Score >= room.winTarget) {
+                    room.gameOver = true
+                    room.gameWinner = room.player1Name
+                } else if (room.player2Score >= room.winTarget) {
+                    room.gameOver = true
+                    room.gameWinner = room.player2Name
+                }
+            }
+
+            return DuelAnswerResult(correct = isCorrect, state = toState(room))
+        }
     }
 
     fun submitAnswer(code: String, playerName: String, guess: String): DuelAnswerResult? {
@@ -312,16 +447,40 @@ object DuelManager {
     }
 
     fun toState(room: DuelRoom): DuelState {
-        val clubs = room.currentQuestion?.clubs?.map { DuelClubInfo(it.club, it.season) } ?: emptyList()
+        // 🎯 DÜZELTME: "3,2,1" modunda artık currentQuestion hep null (tek bir
+        // önceden seçilmiş cevap yok) — kulüpleri doğrudan oyuncuların kendi
+        // girdiği isimlerden, kazanan ismi ise winningPlayerDisplayName321'den
+        // gösteriyoruz.
+        val clubs = if (room.duelMode == "321") {
+            listOfNotNull(room.club1Input, room.club2Input).map { DuelClubInfo(it, "") }
+        } else {
+            room.currentQuestion?.clubs?.map { DuelClubInfo(it.club, it.season) } ?: emptyList()
+        }
         val revealedName = if (room.roundOver) {
-            room.currentQuestion?.playerName?.replace(Regex("\\s*\\(\\d+\\)\\s*$"), "")?.trim()
+            if (room.duelMode == "321") {
+                room.winningPlayerDisplayName321
+            } else {
+                room.currentQuestion?.playerName?.replace(Regex("\\s*\\(\\d+\\)\\s*$"), "")?.trim()
+            }
         } else null
 
-        val remaining = if (!room.roundOver && room.currentQuestion != null) {
+        // 🎯 YENİ: "3,2,1" modunda süre, hangi fazda olduğumuza göre değişiyor
+        // (kulüp girişi: 30 sn, tahmin: 45 sn) — diğer modlarda eskisi gibi 30 sn.
+        val remaining = if (room.duelMode == "321" && room.phase == "club_entry" && !room.roundOver) {
+            val elapsed = System.currentTimeMillis() - room.clubEntryStartTime
+            maxOf(0L, (CLUB_ENTRY_DURATION_MS - elapsed) / 1000).toInt()
+        } else if (!room.roundOver && (if (room.duelMode == "321") room.phase == "guessing" else room.currentQuestion != null)) {
+            // 🎯 DÜZELTME (BUG): 321 modunda currentQuestion hep null olduğu
+            // için bu şart eskiden hiç sağlanmıyordu — her poll'da "else"
+            // dalına düşüp süreyi HEP 45'te sabit gösteriyordu (senin
+            // gözlemlediğin "yanlış cevaptan sonra süre sıfırlanıyor" hissi
+            // buradan geliyordu, aslında sıfırlanmıyordu ama hiç sayılmıyordu).
+            val duration = if (room.duelMode == "321") DUEL_321_GUESS_DURATION_MS else ROUND_DURATION_MS
             val elapsed = System.currentTimeMillis() - room.roundStartTime
-            maxOf(0L, (ROUND_DURATION_MS - elapsed) / 1000).toInt()
+            maxOf(0L, (duration - elapsed) / 1000).toInt()
         } else {
-            (ROUND_DURATION_MS / 1000).toInt()
+            val duration = if (room.duelMode == "321") DUEL_321_GUESS_DURATION_MS else ROUND_DURATION_MS
+            (duration / 1000).toInt()
         }
 
         val now = System.currentTimeMillis()
@@ -356,7 +515,11 @@ object DuelManager {
                 val cleanName = room.currentQuestion!!.playerName.replace(Regex("\\s*\\(\\d+\\)\\s*$"), "").trim()
                 maskNameForHint(cleanName)
             } else null,
-            isCountryMix = room.isCountryMix
+            isCountryMix = room.isCountryMix,
+            duelMode = room.duelMode,
+            phase = room.phase,
+            club1Submitted = room.club1Input != null,
+            club2Submitted = room.club2Input != null
         )
     }
 
@@ -375,9 +538,36 @@ object DuelManager {
     }
 
     private fun checkTimeout(room: DuelRoom) {
-        if (!room.roundOver && room.currentQuestion != null && !room.gameOver) {
+        if (room.gameOver) return
+
+        // 🎯 YENİ: "3,2,1" modunun KULÜP GİRİŞİ fazı — 30 sn içinde eksik
+        // kalan taraf(lar) için rastgele bir kulüp otomatik atanıp tahmin
+        // fazına geçiliyor, oyun tıkanmasın diye.
+        if (room.duelMode == "321" && room.phase == "club_entry" && !room.roundOver) {
+            val elapsed = System.currentTimeMillis() - room.clubEntryStartTime
+            if (elapsed > CLUB_ENTRY_DURATION_MS) {
+                if (room.club1Input == null) room.club1Input = clubPool.random()
+                if (room.club2Input == null) room.club2Input = clubPool.random()
+                tryStartGuessingPhase321(room)
+            }
+            return
+        }
+
+        // 🎯 DÜZELTME (BUG): "3,2,1" modunda artık currentQuestion hep null
+        // (tek önceden seçilmiş cevap yok) — bu yüzden aşağıdaki eski kontrol
+        // (currentQuestion != null) 321 modunda ASLA doğru olmuyordu, yani
+        // tahmin fazı HİÇ zaman aşımına uğramıyordu (sonsuza kadar sürerdi).
+        // 321 modunda artık "phase == guessing" şartına bakıyoruz.
+        val inGuessingPhase = if (room.duelMode == "321") {
+            room.phase == "guessing"
+        } else {
+            room.currentQuestion != null
+        }
+        if (!room.roundOver && inGuessingPhase) {
+            // 🎯 "3,2,1" modunda tahmin fazı 45 sn, diğer modlarda 30 sn.
+            val duration = if (room.duelMode == "321") DUEL_321_GUESS_DURATION_MS else ROUND_DURATION_MS
             val elapsed = System.currentTimeMillis() - room.roundStartTime
-            if (elapsed > ROUND_DURATION_MS) {
+            if (elapsed > duration) {
                 room.roundOver = true
                 room.roundWinner = null
                 room.timedOut = true
@@ -395,6 +585,22 @@ object DuelManager {
         room.player2Passed = false
         room.bothPassed = false
         room.roundStartTime = System.currentTimeMillis()
+
+        // 🎯 YENİ: "3,2,1" Modu — tamamen ayrı, basit bir dal: rastgele kulüp
+        // seçmiyoruz, oyunculara kendi kulüplerini YAZDIRIYORUZ. Bu round henüz
+        // bir soru sormuyor, sadece "kulüp yazma" fazını başlatıyor — asıl soru
+        // (currentQuestion), ikisi de kulübünü girdikten SONRA hesaplanıyor
+        // (bkz. tryStartGuessingPhase321). Genel Mod'un mantığına hiç dokunmuyor.
+        if (room.duelMode == "321") {
+            room.phase = "club_entry"
+            room.club1Input = null
+            room.club2Input = null
+            room.clubEntryStartTime = System.currentTimeMillis()
+            room.currentQuestion = null
+            room.validPlayersForRound = emptyList()
+            room.winningPlayerDisplayName321 = null
+            return
+        }
 
         // 🇹🇷 Türkiye Ligi Modu — tamamen ayrı, basit bir dal: ilk 3 tur 5
         // şampiyon kulüpten, sonrası tüm Türkiye Ligi havuzundan. Ülke karışımı

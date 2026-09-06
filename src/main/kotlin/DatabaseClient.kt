@@ -2477,6 +2477,123 @@ object DatabaseClient {
         )
     }
 
+    // 🎲 YENİ: "3,2,1" modu için — önceden TEK bir "doğru cevap" seçmek yerine,
+    // kullanıcının YAZDIĞI ismi gerçek zamanlı olarak veritabanında kontrol
+    // ediyoruz: bu oyuncu GERÇEKTEN bu iki kulüpte oynamış mı? Böylece o iki
+    // kulüpte oynamış BİRDEN FAZLA oyuncu varsa, kullanıcı hangisini bilirse
+    // bilsin doğru sayılıyor — tıpkı klasik sözlü oyundaki gibi.
+    // 🎯 YENİ: performans için — "3,2,1" modunda kulüpler girilir girilmez
+    // BİR KEZ çağrılıp, o iki kulüpteki TÜM ortak oyuncuları getiriyor.
+    // DuelManager bunu odada hafızada tutup, her "Gönder"de veritabanına HİÇ
+    // gitmeden (sadece bu listeye bakarak) anında kontrol yapabiliyor —
+    // kullanıcının 45 saniyesinden veritabanı gecikmesi çalmıyor.
+    data class SimplePlayerMatch(val playerId: Int, val playerName: String, val nameStd: String)
+
+    fun fetchAllPlayersAcrossTwoClubs(club1Raw: String, club2Raw: String): List<SimplePlayerMatch> {
+        val club1Std = resolveClubSearchTerm(club1Raw)
+        val club2Std = resolveClubSearchTerm(club2Raw)
+        if (club1Std.isBlank() || club2Std.isBlank()) return emptyList()
+
+        return withConnection { conn ->
+            val sql = """
+                SELECT p.id, p.name, p.name_std
+                FROM players p
+                WHERE p.id IN (
+                    SELECT transfer_id FROM transfers WHERE from_club_std LIKE ? OR to_club_std LIKE ?
+                    INTERSECT
+                    SELECT transfer_id FROM transfers WHERE from_club_std LIKE ? OR to_club_std LIKE ?
+                )
+            """.trimIndent()
+            conn.prepareStatement(sql).use { stmt ->
+                stmt.setString(1, "%$club1Std%")
+                stmt.setString(2, "%$club1Std%")
+                stmt.setString(3, "%$club2Std%")
+                stmt.setString(4, "%$club2Std%")
+                stmt.executeQuery().use { rs ->
+                    val results = mutableListOf<SimplePlayerMatch>()
+                    while (rs.next()) {
+                        results.add(
+                            SimplePlayerMatch(
+                                playerId = rs.getInt("id"),
+                                playerName = rs.getString("name") ?: "",
+                                nameStd = rs.getString("name_std") ?: ""
+                            )
+                        )
+                    }
+                    results
+                }
+            }
+        }
+    }
+
+    fun verifyPlayerPlayedForBothClubs(playerNameQuery: String, club1Raw: String, club2Raw: String): MultiClubPlayerResult? {
+        val club1Std = resolveClubSearchTerm(club1Raw)
+        val club2Std = resolveClubSearchTerm(club2Raw)
+        val nameStd = playerNameQuery.toStandardSearch()
+        if (nameStd.isBlank()) return null
+
+        // 🎯 DÜZELTME: withConnection inline olmadığı için lambda içinden düz
+        // "return" kullanılamıyor — "return@withConnection" (etiketli return)
+        // kullanıyoruz, dış fonksiyon da bunun sonucunu return ediyor.
+        return withConnection { conn ->
+            conn.prepareStatement(
+                "SELECT id, name, position, nationality, birthdate, image_url, slug FROM players WHERE name_std LIKE ? LIMIT 15"
+            ).use { stmt ->
+                stmt.setString(1, "%$nameStd%")
+                stmt.executeQuery().use { rs ->
+                    while (rs.next()) {
+                        val pid = rs.getInt("id")
+                        val clubsList = mutableListOf<ClubSeason>()
+                        var hasClub1 = false
+                        var hasClub2 = false
+
+                        conn.prepareStatement(
+                            "SELECT from_club, to_club, from_club_std, to_club_std, season FROM transfers WHERE transfer_id = ?"
+                        ).use { stmt2 ->
+                            stmt2.setInt(1, pid)
+                            stmt2.executeQuery().use { rs2 ->
+                                while (rs2.next()) {
+                                    val fc = rs2.getString("from_club") ?: ""
+                                    val tc = rs2.getString("to_club") ?: ""
+                                    val fcStd = rs2.getString("from_club_std") ?: ""
+                                    val tcStd = rs2.getString("to_club_std") ?: ""
+                                    val season = rs2.getString("season") ?: ""
+
+                                    // 🛡️ Youth (altyapı) kulüpleri saymıyoruz — asıl kariyer
+                                    // ortaklığını arıyoruz, U19 gibi bir örtüşme değil.
+                                    if (!isYouthClub(fc)) {
+                                        if (fcStd.contains(club1Std)) hasClub1 = true
+                                        if (fcStd.contains(club2Std)) hasClub2 = true
+                                        clubsList.add(ClubSeason(fc, season))
+                                    }
+                                    if (!isYouthClub(tc)) {
+                                        if (tcStd.contains(club1Std)) hasClub1 = true
+                                        if (tcStd.contains(club2Std)) hasClub2 = true
+                                        clubsList.add(ClubSeason(tc, season))
+                                    }
+                                }
+                            }
+                        }
+
+                        if (hasClub1 && hasClub2) {
+                            return@withConnection MultiClubPlayerResult(
+                                playerName = rs.getString("name") ?: playerNameQuery,
+                                position = rs.getString("position") ?: "",
+                                clubs = clubsList,
+                                imageUrl = rs.getString("image_url"),
+                                nationality = rs.getString("nationality"),
+                                birthDate = rs.getString("birthdate"),
+                                playerId = pid,
+                                slug = rs.getString("slug")
+                            )
+                        }
+                    }
+                }
+            }
+            null
+        }
+    }
+
     fun fetchPlayerAcrossClubs(terms: List<Pair<String, Boolean>>, minYear: Int? = null, seed: Long? = null): MultiClubPlayerResult? {
         if (terms.size < 2) return null
 

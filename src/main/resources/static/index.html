@@ -2629,7 +2629,7 @@
 
         <h3 id="i18n-h3-duel" style="font-size: 1rem; font-weight: 700; color: rgb(var(--fg-rgb)); margin-bottom: 8px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="vertical-align:-2px; margin-right:5px;"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>Arkadaşla Yarış</h3>
         <p id="i18n-p-duel" style="margin-bottom: 20px;">
-            Yalnız oynamak istemeyenler için tasarlanan bu mod, bir arkadaşınızla gerçek zamanlı, karşılıklı bir yarışma sunar. Oda kurduğunuzda size 4 haneli bir kod verilir; bu kodu arkadaşınıza gönderirsiniz, o da "Odaya Katıl" ile aynı odaya girer. İkiniz de aynı soruyu aynı anda görür, kim önce doğru bilirse o turu kazanır. İlk 5'e ya da ilk 10'a yarışma seçeneği, isteğe bağlı maskeleme ipucu ve Genel/Türkiye Ligi havuz seçimi mevcuttur. Hesap açmaya, uygulama indirmeye gerek yoktur — link paylaşır paylaşmaz oynamaya başlayabilirsiniz.
+            Yalnız oynamak istemeyenler için tasarlanan bu mod, bir arkadaşınızla gerçek zamanlı, karşılıklı bir yarışma sunar. Oda kurduğunuzda size 4 haneli bir kod verilir; bu kodu arkadaşınıza gönderirsiniz, o da "Odaya Katıl" ile aynı odaya girer. "Genel Ligler" ya da "Türkiye Ligi" modunda ikiniz de aynı soruyu (rastgele seçilen iki kulüp) aynı anda görür, kim önce doğru bilirse o turu kazanır. "3, 2, 1" modunda ise klasik sözlü oyunun dijital hali oynanır — kulüpleri sistem seçmez, her oyuncu 30 saniye içinde kendi belirlediği bir kulübü yazar; ardından iki kulüp arasında ortak oynamış bir oyuncuyu ilk bilen turu kazanır. İlk 5'e ya da ilk 10'a yarışma seçeneği ve isteğe bağlı maskeleme ipucu mevcuttur. Hesap açmaya, uygulama indirmeye gerek yoktur — link paylaşır paylaşmaz oynamaya başlayabilirsiniz.
         </p>
 
         <h3 id="i18n-h3-daily" style="font-size: 1rem; font-weight: 700; color: rgb(var(--fg-rgb)); margin-bottom: 8px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="vertical-align:-2px; margin-right:5px;"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Günün Sorusu</h3>
@@ -3624,7 +3624,7 @@
         'i18n-bavi-subtitle': { en: 'Can you guess which transfer cost more in 10 questions?' },
         'i18n-bavi-reset': { en: '🔄 Restart' },
         'i18n-h3-duel': { en: '🏆 Race a Friend' },
-        'i18n-p-duel': { en: `Designed for those who don't want to play alone, this mode offers a real-time, head-to-head competition with a friend. When you create a room, you get a 4-digit code; send it to your friend, who joins the same room via "Join Room". Both of you see the same question at the same time — whoever answers correctly first wins the round. Options include racing to 5 or 10 points first, an optional masking hint, and choosing the General or Turkish League pool. No account or app download needed — you can start playing the moment you share the link.` },
+        'i18n-p-duel': { en: `Designed for those who don't want to play alone, this mode offers a real-time, head-to-head competition with a friend. When you create a room, you get a 4-digit code; send it to your friend, who joins the same room via "Join Room". In "General Leagues" or "Turkish League" mode, both of you see the same question (a randomly picked pair of clubs) at the same time — whoever answers correctly first wins the round. In "3, 2, 1" mode, you play the digital version of the classic verbal game — the system doesn't pick the clubs; each player types in their own club within 30 seconds, then whoever first names a player who played for both entered clubs wins the round. Options include racing to 5 or 10 points first and an optional masking hint. No account or app download needed — you can start playing the moment you share the link.` },
         'i18n-h3-daily': { en: '📅 Question of the Day' },
         'i18n-p-daily': { en: `A special question that changes every day and is shown identically to everyone — available for both football and basketball. Every time you visit the site, you'll see that day's two teams and try to guess the player who played for both. You can track your personal best time (a real number stored on your device — never a fabricated one) and compare yourself day to day. On the football side, you can also see a visual card of the correctly-guessed player's photo and career timeline.` },
         'i18n-h3-random': { en: '🎲 Random Match and 🎭 Masking Mode' },
@@ -9256,11 +9256,15 @@
                             <button id="duelTarget10Btn" class="toolbar-btn" data-target="10">İlk 10'a Yarış</button>
                         </div>
                         <div style="font-size: 0.68rem; text-transform: uppercase; letter-spacing: 1px; color: rgba(var(--fg-rgb), 0.5); margin-bottom: 8px;">
-                            Hangi kulüp havuzu?
+                            Hangi mod?
                         </div>
                         <div class="player-mode-hint-row" style="margin-bottom: 16px;">
                             <button id="duelModeGenelBtn" class="toolbar-btn active" data-mode="genel">⚽ Genel Ligler</button>
                             <button id="duelModeTurkiyeBtn" class="toolbar-btn" data-mode="turkiye">⚽ Türkiye Ligi</button>
+                            <button id="duelMode321Btn" class="toolbar-btn" data-mode="321">🎲 3, 2, 1</button>
+                        </div>
+                        <div id="duel321InfoBox" style="display: none; font-size: 0.72rem; color: rgba(var(--fg-rgb), 0.6); background: rgba(var(--fg-rgb), 0.04); border-radius: 8px; padding: 10px 12px; margin-bottom: 16px;">
+                            💡 Bu modda kulüp havuzu yok — her iki oyuncu da kendi kulübünü kendisi yazar, klasik "3, 2, 1" oyununun dijital hali.
                         </div>
                         <button id="duelMaskingToggleBtn" class="toolbar-btn" style="width: 100%; margin-bottom: 16px;">🎭 Maskeleme Yardımı: Kapalı</button>
                         <button id="duelCreateBtn" class="btn-search" style="width: 100%; margin-bottom: 20px;">Yeni Oda Kur</button>
@@ -9299,15 +9303,28 @@
         let selectedDuelMode = 'genel';
         const modeGenelBtn = document.getElementById('duelModeGenelBtn');
         const modeTurkiyeBtn = document.getElementById('duelModeTurkiyeBtn');
+        const mode321Btn = document.getElementById('duelMode321Btn');
+        const duel321InfoBox = document.getElementById('duel321InfoBox');
+        function setActiveDuelModeBtn(activeBtn) {
+            [modeGenelBtn, modeTurkiyeBtn, mode321Btn].forEach(b => b.classList.remove('active'));
+            activeBtn.classList.add('active');
+            duel321InfoBox.style.display = (activeBtn === mode321Btn) ? 'block' : 'none';
+            // 🎯 YENİ: "3,2,1" modunda maskeleme yardımının hiçbir anlamı yok
+            // (bu modda zaten fotoğraf/ipucu sistemi hiç yok) — gizliyoruz.
+            const maskingBtn = document.getElementById('duelMaskingToggleBtn');
+            if (maskingBtn) maskingBtn.style.display = (activeBtn === mode321Btn) ? 'none' : '';
+        }
         modeGenelBtn.addEventListener('click', () => {
             selectedDuelMode = 'genel';
-            modeGenelBtn.classList.add('active');
-            modeTurkiyeBtn.classList.remove('active');
+            setActiveDuelModeBtn(modeGenelBtn);
         });
         modeTurkiyeBtn.addEventListener('click', () => {
             selectedDuelMode = 'turkiye';
-            modeTurkiyeBtn.classList.add('active');
-            modeGenelBtn.classList.remove('active');
+            setActiveDuelModeBtn(modeTurkiyeBtn);
+        });
+        mode321Btn.addEventListener('click', () => {
+            selectedDuelMode = '321';
+            setActiveDuelModeBtn(mode321Btn);
         });
 
         let selectedMaskingHint = false;
@@ -9336,7 +9353,7 @@
                 const res = await fetch('/duel/create', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ playerName: name, winTarget: selectedWinTarget, maskingHintEnabled: selectedMaskingHint, duelMode: selectedDuelMode })
+                    body: JSON.stringify({ playerName: name, winTarget: selectedWinTarget, maskingHintEnabled: (selectedDuelMode === '321' ? false : selectedMaskingHint), duelMode: selectedDuelMode })
                 });
                 const state = await res.json();
                 duelRoomCode = state.roomCode;
@@ -9441,6 +9458,11 @@
     function renderDuelStateScreen(state) {
         const prevWaiting = duelLastState ? duelLastState.waitingForOpponent : true;
         const prevRound = duelLastState ? duelLastState.roundNumber : -1;
+        // 🎯 YENİ: "3,2,1" modunda round numarası, kulüp girişi → tahmin
+        // geçişinde DEĞİŞMİYOR (aynı tur içinde iki faz var) — bu yüzden
+        // faz değişikliğini AYRICA takip etmemiz lazım, yoksa ekran hiç
+        // yenilenmez, kullanıcı sonsuza kadar eski ekranda kalır.
+        const prevPhase = duelLastState ? duelLastState.phase : null;
         duelLastState = state;
 
         if (state.waitingForOpponent) {
@@ -9448,10 +9470,36 @@
             return;
         }
 
-        // Rakip yeni katıldıysa ya da yeni tur başladıysa ekranı YENİDEN kuruyoruz.
+        // 🎯 YENİ: 321 modunda kulüp girişi fazındaysak, kendi ayrı ekranımızı
+        // gösteriyoruz — Genel Mod'un soru/countdown akışına hiç girmiyoruz.
+        if (state.duelMode === '321' && state.phase === 'club_entry') {
+            if (prevWaiting || prevRound !== state.roundNumber || prevPhase !== 'club_entry') {
+                buildClubEntryScreen321(state);
+            } else {
+                updateClubEntryScreen321(state);
+            }
+            return;
+        }
+
+        // Rakip yeni katıldıysa, yeni tur başladıysa, ya da 321 modunda kulüp
+        // girişinden yeni çıkıp tahmin fazına geçtiysek ekranı YENİDEN kuruyoruz.
         // Aksi halde sadece skoru güncelliyoruz — kullanıcı yazarken input'a dokunmuyoruz.
-        if (prevWaiting || prevRound !== state.roundNumber) {
-            showDuelCountdownThenQuestion(state);
+        if (prevWaiting || prevRound !== state.roundNumber || (state.duelMode === '321' && prevPhase !== state.phase)) {
+            if (state.duelMode === '321') {
+                // 🎲 321 modunda sahte "3,2,1 hazır ol" countdown'ına gerek yok
+                // (oyuncular zaten kendi kulüplerini yazdı) VE Genel Mod'un
+                // fotoğraflı/ipuçlu soru ekranına da hiç girmiyoruz — kendi
+                // sade ekranımız var (sadece kulüpler + tahmin kutusu).
+                buildDuel321GuessScreen(state);
+            } else {
+                showDuelCountdownThenQuestion(state);
+            }
+            return;
+        }
+
+        // 🎲 321 modunda skor/süre güncellemesi de kendi fonksiyonuyla.
+        if (state.duelMode === '321') {
+            updateDuel321GuessScreen(state);
             return;
         }
 
@@ -9482,9 +9530,9 @@
     // yavaşlatılabiliyor (throttling) — iki oyuncunun süresi bu yüzden
     // birbirinden kopabiliyordu. Her poll'da sunucudaki gerçek süreyle
     // düzeltip, iki tarafı da senkron tutuyoruz.
-    function resyncDuelTimer(state) {
+    function resyncDuelTimer(state, timerElId = 'duelTimer') {
         if (state.roundOver) return;
-        const timerEl = document.getElementById('duelTimer');
+        const timerEl = document.getElementById(timerElId);
         if (!timerEl) return;
 
         const displayed = parseInt(timerEl.textContent, 10);
@@ -9497,6 +9545,374 @@
             // güncelliyoruz — yoksa bir sonraki yerel tik bu düzeltmeyi kendi
             // (eski) sayısıyla ezip karışık rakamlar göstermeye devam ederdi.
             duelLocalSecondsLeft = state.remainingSeconds;
+        }
+    }
+
+    // 🎲 YENİ: "3,2,1" modunun kulüp giriş kutusuna, Kehanet'teki (1./2. Kulüp
+    // arama kutularıyla AYNI) öneri/otomatik-tamamlama mantığını bağlıyoruz —
+    // Lyon→Olympique Lyon gibi alias genişletme, Türkçe karakter normalizasyonu,
+    // ve bilinen kulüplerin (Inter, Milan vb.) üstte çıkması dahil. Ekran her
+    // yeniden çizildiğinde input yeniden oluştuğu için, dinleyicileri her
+    // seferinde YENİDEN bağlıyoruz (Kehanet'teki "dataset.wired" kontrolü
+    // tek seferlik kurulum için, burada ise ekran kendisi tek kullanımlık).
+    function setupDuel321ClubAutocomplete(input) {
+        const box = document.getElementById('duel321ClubSuggestions');
+        if (!input || !box) return;
+
+        input.addEventListener('input', () => {
+            const q = input.value.trim();
+            if (!q) { box.style.display = 'none'; return; }
+            const normalizedQuery = normalize(q);
+            const aliasExpansion = expandQueryWithAliases(normalizedQuery);
+            const matches = dedupeSuggestions(
+                (allSuggestions || []).filter(s => normalize(s).includes(normalizedQuery) || (aliasExpansion && normalize(s).includes(aliasExpansion)))
+            ).sort((a, b) => {
+                const aCore = coreNameFor(a);
+                const bCore = coreNameFor(b);
+                const aPriority = priorityClubsSet.has(aCore) ? 0 : 1;
+                const bPriority = priorityClubsSet.has(bCore) ? 0 : 1;
+                if (aPriority !== bPriority) return aPriority - bPriority;
+                return a.localeCompare(b);
+            }).slice(0, 8);
+            if (matches.length === 0) { box.style.display = 'none'; return; }
+            box.innerHTML = matches.map(n => {
+                const logoUrl = getClubLogo(n);
+                const logoHtml = logoUrl ? `<img src="${logoUrl}" alt="" style="width:18px; height:18px; object-fit:contain; margin-right:8px; vertical-align:-4px;" onerror="this.remove()">` : '';
+                return `<div class="pred-suggestion-item" style="padding:10px 14px; cursor:pointer; font-size:0.86rem;" onmouseover="this.style.background='rgba(var(--accent-gold-rgb),0.12)'" onmouseout="this.style.background=''">${logoHtml}${escapeHtml(n)}</div>`;
+            }).join('');
+            box.style.display = 'block';
+            Array.from(box.children).forEach((el, i) => {
+                el.onclick = () => {
+                    input.value = matches[i];
+                    box.style.display = 'none';
+                };
+            });
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!input.contains(e.target) && !box.contains(e.target)) box.style.display = 'none';
+        });
+    }
+
+    // 🎲 YENİ: "3,2,1" modu — kulüp girişi ekranı. Her oyuncu KENDİ kulübünü
+    // yazar, rakibin ne yazdığını GÖREMEZ (sürpriz bozulmasın diye) — sadece
+    // "gönderdi mi göndermedi mi" bilgisini görür.
+    // 🎲 YENİ: "3,2,1" modunun TAHMİN ekranı — Genel Mod'un fotoğraflı/ipuçlu
+    // soru ekranından TAMAMEN AYRI ve SADE: sadece kulüpler + Kehanet
+    // tarzı bir oyuncu giriş kutusu + Gönder butonu. Fotoğraf, mevki ipucu,
+    // pas geçme YOK — bu modun mantığı zaten "hiçbir ipucu olmadan hafızadan
+    // bilme" olduğu için.
+    function buildDuel321GuessScreen(state) {
+        duelGuessLocked = false;
+        clearInterval(duelLocalTimerInterval);
+        const resultsTable = document.getElementById("resultsTable");
+
+        const clubsHtml = state.clubs.map(c => {
+            const flag = getFlagEmoji(c.club);
+            let iconHtml = '';
+            if (flag) {
+                iconHtml = `<span class="input-flag-icon">${flag}</span>`;
+            } else {
+                const logoUrl = getClubLogo(c.club);
+                iconHtml = logoUrl ? `<img src="${logoUrl}" class="club-logo-icon" alt="" onerror="this.remove()">` : '';
+            }
+            const seasonBadge = (c.season && c.season !== '-') ? `<span class="badge-season">${escapeHtml(c.season)}</span>` : '';
+            const safeClubName = c.club.replace(/"/g, '&quot;');
+            return `<div class="player-mode-club"><span class="duel-club-icon-box" data-club-name="${safeClubName}">${iconHtml}</span>${escapeHtml(c.club)} ${seasonBadge}</div>`;
+        }).join('');
+
+        resultsTable.innerHTML = `
+            <tr>
+                <td colspan="5" style="padding: 24px;">
+                    <div class="player-mode-card">
+                        <div class="quiz-stats-bar">
+                            <div class="quiz-stat-box">
+                                <span class="quiz-stat-label">${escapeHtml(state.player1Name)}</span>
+                                <span class="quiz-stat-value" id="duelScore1">${state.player1Score}</span>
+                            </div>
+                            <div class="quiz-stat-box">
+                                <span class="quiz-stat-label">${escapeHtml(state.player2Name || '')}</span>
+                                <span class="quiz-stat-value" id="duelScore2">${state.player2Score}</span>
+                            </div>
+                            <div class="quiz-stat-box">
+                                <span class="quiz-stat-label">Süre</span>
+                                <span class="quiz-stat-value" id="duelTimer">${state.remainingSeconds}</span>
+                            </div>
+                        </div>
+                        <div id="duelOpponentWarning" style="display: none; font-size: 0.78rem; color: rgba(220, 90, 90, 0.9); margin-bottom: 12px;">
+                            ⚠️ Rakibinin bağlantısı kesilmiş gibi görünüyor...
+                        </div>
+                        <div class="player-mode-clubs">${clubsHtml}</div>
+                        <div class="player-mode-guess-row" style="position: relative; margin-top: 16px;">
+                            <input type="text" id="duel321GuessInput" placeholder="Oyuncu adı yaz..." autocomplete="off">
+                            <div id="duel321GuessSuggestions" style="display: none; position: absolute; top: 100%; left: 0; right: 0; margin-top: 4px; background: rgba(var(--card-tint-rgb), 1); border: 1px solid rgba(var(--fg-rgb), 0.15); border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,0.2); max-height: 220px; overflow-y: auto; z-index: 500;"></div>
+                        </div>
+                        <button id="duel321SubmitGuessBtn" class="btn-search" style="width: 100%; margin-top: 10px;">Gönder</button>
+                        <button id="duel321PassBtn" class="toolbar-btn" style="width: 100%; margin-top: 10px;">🏳️ Pas Geç</button>
+                        <div id="duelRoundStatus"></div>
+                    </div>
+                </td>
+            </tr>
+        `;
+
+        // 🎯 YENİ: kulüpler girilir girilmez backend anında "ortak oyuncu var
+        // mı" kontrolü yapıyor — yoksa round zaten "bitmiş" olarak geliyor.
+        // HTML iskeleti kurulduktan HEMEN SONRA bu durumu yakalayıp direkt
+        // sonuç ekranına geçiyoruz — tahmin kutusu görünüp kaybolmasın,
+        // 45 saniyelik süre hiç işlemesin diye.
+        if (state.roundOver) {
+            showDuelRoundResult(state);
+            return;
+        }
+
+        checkOpponentLeft(state);
+
+        // ⏱️ Yerel geri sayım — mevcut mantıkla aynı, paylaşılan değişkeni kullanıyor.
+        duelLocalSecondsLeft = state.remainingSeconds;
+        duelLocalTimerInterval = setInterval(() => {
+            duelLocalSecondsLeft = Math.max(0, duelLocalSecondsLeft - 1);
+            const timerEl = document.getElementById('duelTimer');
+            if (timerEl) {
+                timerEl.textContent = String(duelLocalSecondsLeft);
+            } else {
+                clearInterval(duelLocalTimerInterval);
+            }
+        }, 1000);
+
+        const guessInput = document.getElementById('duel321GuessInput');
+        const submitBtn = document.getElementById('duel321SubmitGuessBtn');
+        const suggestBox = document.getElementById('duel321GuessSuggestions');
+
+        // 🎯 Kehanet'teki gibi: EXPLICIT "Gönder" — her tuşta otomatik kontrol
+        // YOK, kullanıcı ismi seçer/yazar, sonra kendisi gönderir.
+        const doSubmitGuess = async () => {
+            if (duelGuessLocked) return;
+            const guess = guessInput.value.trim();
+            if (!guess) { flashInputError(guessInput); return; }
+            submitBtn.disabled = true;
+            const requestRoomCode = duelRoomCode; // 🛡️ yarış durumu koruması — mevcut desenle aynı
+            try {
+                const res = await fetch('/duel/submitGuess321', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ roomCode: requestRoomCode, playerName: duelPlayerName, guess })
+                });
+                if (!duelActive || duelRoomCode !== requestRoomCode) return;
+                const result = await res.json();
+                if (!duelActive || duelRoomCode !== requestRoomCode) return;
+
+                if (result.correct) {
+                    duelGuessLocked = true;
+                    guessInput.disabled = true;
+                    playCorrectSound();
+                } else {
+                    submitBtn.disabled = false;
+                    showToast('❌ Doğru değil, tekrar dene');
+                }
+
+                duelLastState = result.state;
+                updateDuelScoreDisplay(result.state);
+
+                if (result.state.roundOver) {
+                    showDuelRoundResult(result.state);
+                }
+            } catch (e) {
+                if (!duelActive || duelRoomCode !== requestRoomCode) return;
+                submitBtn.disabled = false;
+                showToast('❌ Gönderilemedi, tekrar dene');
+            }
+        };
+        submitBtn.addEventListener('click', doSubmitGuess);
+        guessInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') doSubmitGuess(); });
+
+        // 🏳️ YENİ: diğer Arkadaşla Yarış modlarındaki "Pas Geç" ile aynı —
+        // backend zaten mod-bağımsız çalışıyor, sadece burada bağlıyoruz.
+        const passBtn = document.getElementById('duel321PassBtn');
+        if (passBtn) {
+            passBtn.addEventListener('click', async () => {
+                passBtn.disabled = true;
+                passBtn.textContent = '🏳️ Rakibini bekliyorsun...';
+                const requestRoomCode = duelRoomCode;
+                try {
+                    const res = await fetch('/duel/pass', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ roomCode: requestRoomCode, playerName: duelPlayerName })
+                    });
+                    if (!duelActive || duelRoomCode !== requestRoomCode) return;
+                    const state = await res.json();
+                    if (!duelActive || duelRoomCode !== requestRoomCode) return;
+                    duelLastState = state;
+                    updateDuelScoreDisplay(state);
+                    if (state.roundOver) showDuelRoundResult(state);
+                } catch (e) {
+                    if (!duelActive || duelRoomCode !== requestRoomCode) return;
+                    showToast('❌ Pas geçilemedi, tekrar deneyin');
+                    passBtn.disabled = false;
+                    passBtn.textContent = '🏳️ Pas Geç';
+                }
+            });
+        }
+
+        // 🎯 Kehanet'teki oyuncu arama kutusuyla AYNI öneri mekanizması —
+        // "Perisic" yazınca "Ivan Perišić" gibi aksanlı doğru ismi önerip
+        // seçtiriyor. Öneriye tıklamak sadece kutuya YAZIYOR, otomatik
+        // göndermiyor — kullanıcı yine kendi "Gönder"e basıyor.
+        let guessDebounce;
+        guessInput.addEventListener('input', () => {
+            clearTimeout(guessDebounce);
+            const q = guessInput.value.trim();
+            if (q.length < 2) { suggestBox.style.display = 'none'; return; }
+            guessDebounce = setTimeout(async () => {
+                try {
+                    const res = await fetch(`/playerNameSuggestions?q=${encodeURIComponent(q)}`);
+                    const names = await res.json();
+                    if (!Array.isArray(names) || names.length === 0) { suggestBox.style.display = 'none'; return; }
+                    suggestBox.innerHTML = names.slice(0, 8).map(n => `<div class="pred-suggestion-item" style="padding:10px 14px; cursor:pointer; font-size:0.86rem;" onmouseover="this.style.background='rgba(var(--accent-gold-rgb),0.12)'" onmouseout="this.style.background=''">${escapeHtml(n)}</div>`).join('');
+                    suggestBox.style.display = 'block';
+                    Array.from(suggestBox.children).forEach((el, i) => {
+                        el.onclick = () => {
+                            guessInput.value = names[i];
+                            suggestBox.style.display = 'none';
+                        };
+                    });
+                } catch (e) { suggestBox.style.display = 'none'; }
+            }, 200);
+        });
+        document.addEventListener('click', (e) => {
+            if (!guessInput.contains(e.target) && !suggestBox.contains(e.target)) suggestBox.style.display = 'none';
+        });
+    }
+
+    // 🎲 321 tahmin ekranındayken gelen her poll'da skoru/süreyi güncelliyoruz
+    // ve rakip ayrılmış mı diye bakıyoruz — kendi input'umuza dokunmuyoruz.
+    function updateDuel321GuessScreen(state) {
+        updateDuelScoreDisplay(state);
+        checkOpponentLeft(state);
+        resyncDuelTimer(state, 'duelTimer');
+
+        if (state.roundOver && !document.getElementById('duelRoundResultBox')) {
+            showDuelRoundResult(state);
+        }
+    }
+
+
+    function buildClubEntryScreen321(state) {
+        clearInterval(duelLocalTimerInterval);
+        const resultsTable = document.getElementById("resultsTable");
+        const amIPlayer1 = duelPlayerName === state.player1Name;
+        const mySubmitted = amIPlayer1 ? state.club1Submitted : state.club2Submitted;
+        const oppSubmitted = amIPlayer1 ? state.club2Submitted : state.club1Submitted;
+        const oppName = amIPlayer1 ? (state.player2Name || 'Rakip') : state.player1Name;
+
+        resultsTable.innerHTML = `
+            <tr>
+                <td colspan="5" style="padding: 24px;">
+                    <div class="player-mode-card">
+                        <div class="quiz-stats-bar">
+                            <div class="quiz-stat-box">
+                                <span class="quiz-stat-label">${escapeHtml(state.player1Name)}</span>
+                                <span class="quiz-stat-value">${state.player1Score}</span>
+                            </div>
+                            <div class="quiz-stat-box">
+                                <span class="quiz-stat-label">${escapeHtml(state.player2Name || '')}</span>
+                                <span class="quiz-stat-value">${state.player2Score}</span>
+                            </div>
+                            <div class="quiz-stat-box">
+                                <span class="quiz-stat-label">Süre</span>
+                                <span class="quiz-stat-value" id="duel321Timer">${state.remainingSeconds}</span>
+                            </div>
+                        </div>
+                        <div class="player-mode-title">🎲 Kendi kulübünü yaz! (Rakibin ne yazdığını göremez)</div>
+                        <div id="duel321EntryArea">
+                            ${mySubmitted
+                                ? `<div style="font-size: 0.9rem; color: var(--light-green); font-weight: 700; margin: 16px 0;">✅ Kulübünü gönderdin, rakibini bekliyoruz...</div>`
+                                : `<div class="player-mode-guess-row" style="position: relative;">
+                                       <input type="text" id="duel321ClubInput" placeholder="Bir kulüp yaz (örn: Galatasaray)" autocomplete="off">
+                                       <div id="duel321ClubSuggestions" style="display: none; position: absolute; top: 100%; left: 0; right: 0; margin-top: 4px; background: rgba(var(--card-tint-rgb), 1); border: 1px solid rgba(var(--fg-rgb), 0.15); border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,0.2); max-height: 220px; overflow-y: auto; z-index: 500;"></div>
+                                   </div>
+                                   <button id="duel321SubmitClubBtn" class="btn-search" style="width: 100%; margin-top: 8px;">Gönder</button>`
+                            }
+                        </div>
+                        <div id="duel321OppStatus" style="font-size: 0.8rem; color: rgba(var(--fg-rgb), 0.6); margin-top: 14px;">
+                            ${oppSubmitted ? `✅ ${escapeHtml(oppName)} kulübünü gönderdi` : `⏳ ${escapeHtml(oppName)} yazıyor...`}
+                        </div>
+                    </div>
+                </td>
+            </tr>
+        `;
+
+        if (!mySubmitted) {
+            const input = document.getElementById('duel321ClubInput');
+            const submitBtn = document.getElementById('duel321SubmitClubBtn');
+            setupDuel321ClubAutocomplete(input);
+            const doSubmit = async () => {
+                const club = input.value.trim();
+                if (!club) { flashInputError(input); return; }
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Gönderiliyor...';
+                const requestRoomCode = duelRoomCode; // 🛡️ isteği anlık odaya sabitliyoruz
+                const requestPlayerName = duelPlayerName;
+                try {
+                    const res = await fetch('/duel/submitClub321', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ roomCode: requestRoomCode, playerName: requestPlayerName, club })
+                    });
+                    // 🛡️ Cevap gelene kadar kullanıcı zaten ana menüye dönmüş
+                    // (duelActive=false) ya da farklı bir odaya geçmiş olabilir —
+                    // bu durumda ESKİ cevabı hiç işlemiyoruz, az önce temizlenmiş
+                    // ekranı geri bozmasın diye (aynı polling'deki korumayla aynı desen).
+                    if (!duelActive || duelRoomCode !== requestRoomCode) return;
+                    if (!res.ok) {
+                        submitBtn.disabled = false;
+                        submitBtn.textContent = 'Gönder';
+                        showToast('❌ Gönderilemedi, tekrar dene');
+                        return;
+                    }
+                    const newState = await res.json();
+                    if (!duelActive || duelRoomCode !== requestRoomCode) return;
+                    renderDuelStateScreen(newState);
+                } catch (e) {
+                    if (!duelActive || duelRoomCode !== requestRoomCode) return;
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Gönder';
+                    showToast('❌ Gönderilemedi, tekrar dene');
+                }
+            };
+            submitBtn.addEventListener('click', doSubmit);
+            input.addEventListener('keydown', (e) => { if (e.key === 'Enter') doSubmit(); });
+        }
+
+        // ⏱️ Yerel geri sayım — soru ekranındaki mantıkla aynı.
+        duelLocalSecondsLeft = state.remainingSeconds;
+        duelLocalTimerInterval = setInterval(() => {
+            duelLocalSecondsLeft = Math.max(0, duelLocalSecondsLeft - 1);
+            const timerEl = document.getElementById('duel321Timer');
+            if (timerEl) {
+                timerEl.textContent = String(duelLocalSecondsLeft);
+            } else {
+                clearInterval(duelLocalTimerInterval);
+            }
+        }, 1000);
+    }
+
+    // 🎲 Kulüp girişi ekranındayken gelen her poll'da sadece rakip durumunu ve
+    // süreyi güncelliyoruz — kendi input'umuza HİÇ dokunmuyoruz, kullanıcı
+    // yazarken ekran altından değişip onu rahatsız etmesin diye.
+    function updateClubEntryScreen321(state) {
+        resyncDuelTimer(state, 'duel321Timer');
+        checkOpponentLeft(state);
+
+        const amIPlayer1 = duelPlayerName === state.player1Name;
+        const oppSubmitted = amIPlayer1 ? state.club2Submitted : state.club1Submitted;
+        const oppName = amIPlayer1 ? (state.player2Name || 'Rakip') : state.player1Name;
+
+        const statusEl = document.getElementById('duel321OppStatus');
+        if (statusEl) {
+            statusEl.innerHTML = oppSubmitted
+                ? `✅ ${escapeHtml(oppName)} kulübünü gönderdi`
+                : `⏳ ${escapeHtml(oppName)} yazıyor...`;
         }
     }
 
@@ -9704,6 +10120,19 @@
         const guessInput = document.getElementById('duelGuessInput');
         if (guessInput) guessInput.disabled = true;
 
+        // 🎯 DÜZELTME: "3,2,1" modunun kendi ID'li elemanları (Genel Mod'unkinden
+        // farklı) burada hiç kapatılmıyordu — bu yüzden "eşleşme yok, yeni
+        // kulüp giriliyor" mesajı gösterilirken 3 saniye boyunca eski tahmin
+        // kutusu/butonları hâlâ tıklanabilir görünüyordu. Şimdi hepsini kapatıyoruz.
+        const guessInput321 = document.getElementById('duel321GuessInput');
+        if (guessInput321) guessInput321.disabled = true;
+        const submitBtn321 = document.getElementById('duel321SubmitGuessBtn');
+        if (submitBtn321) submitBtn321.disabled = true;
+        const passBtn321 = document.getElementById('duel321PassBtn');
+        if (passBtn321) passBtn321.disabled = true;
+        const suggestBox321 = document.getElementById('duel321GuessSuggestions');
+        if (suggestBox321) suggestBox321.style.display = 'none';
+
         const statusEl = document.getElementById('duelRoundStatus');
         if (!statusEl || document.getElementById('duelRoundResultBox')) return;
 
@@ -9754,7 +10183,13 @@
             return;
         }
 
-        const winnerText = state.bothPassed
+        // 🎲 YENİ: "3,2,1" modunda, iki kulüp arasında HİÇ ortak oyuncu yoksa
+        // (backend bunu kulüpler girilir girilmez anında kontrol ediyor,
+        // 45 saniye boşuna beklenmiyor) — bunu net bir mesajla gösterip
+        // doğrudan yeni kulüp seçimine yönlendiriyoruz.
+        const winnerText = state.noMatchFound
+            ? '🤷 Bu iki kulüpte hiç ortak oyuncu bulunamadı! Yeni kulüpler seçelim.'
+            : state.bothPassed
             ? '🏳️ İkiniz de pas geçti, kimse bilemedi!'
             : state.timedOut
             ? '⏱️ Süre doldu, kimse bilemedi!'
@@ -9764,10 +10199,10 @@
 
         statusEl.innerHTML = `
             <div class="quiz-win-title" style="font-size: 1.1rem; margin-top: 16px;">${winnerText}</div>
-            <div style="color: var(--light-green); font-weight: 600; margin-bottom: 14px;">
+            ${state.noMatchFound ? '' : `<div style="color: var(--light-green); font-weight: 600; margin-bottom: 14px;">
                 Cevap: ${escapeHtml(state.revealedPlayerName || '-')}
-            </div>
-            <div style="font-size: 0.78rem; color: rgba(var(--fg-rgb), 0.5);">Sonraki soru birazdan geliyor...</div>
+            </div>`}
+            <div style="font-size: 0.78rem; color: rgba(var(--fg-rgb), 0.5);">${state.noMatchFound ? 'Yeni kulüpler için 30 saniyeniz olacak...' : 'Sonraki soru birazdan geliyor...'}</div>
         `;
 
         // 💡 Otomatik geçiş — ama sadece oda kurucusu (player1) tetikliyor, yoksa

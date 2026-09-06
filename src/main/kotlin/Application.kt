@@ -25,6 +25,7 @@ import java.nio.file.StandardCopyOption
 @Serializable data class JoinRoomRequest(val roomCode: String, val playerName: String)
 @Serializable data class DuelAnswerRequest(val roomCode: String, val playerName: String, val guess: String)
 @Serializable data class DuelPassRequest(val roomCode: String, val playerName: String)
+@Serializable data class SubmitClub321Request(val roomCode: String, val playerName: String, val club: String)
 @Serializable data class NextRoundRequest(val roomCode: String)
 @Serializable data class QuizScoreSubmission(val score: Int, val mode: String = "genel")
 
@@ -2052,6 +2053,30 @@ fun main() {
                     call.respond(HttpStatusCode.NotFound, mapOf("error" to "Oda bulunamadı"))
                 } else {
                     call.respond(state)
+                }
+            }
+
+            // 🎯 YENİ: "3,2,1" modunda oyuncunun kendi girdiği kulübü kaydeder.
+            post("/duel/submitClub321") {
+                val body = call.receive<SubmitClub321Request>()
+                val state = DuelManager.submitClub321(body.roomCode, body.playerName, body.club)
+                if (state == null) {
+                    call.respond(HttpStatusCode.NotFound, mapOf("error" to "Oda bulunamadı"))
+                } else {
+                    call.respond(state)
+                }
+            }
+
+            // 🎲 YENİ: "3,2,1" modunun asıl tahmin kontrolü — /duel/answer'dan
+            // AYRI, çünkü bu mod önceden tek bir cevap seçmiyor, her tahmini
+            // gerçek zamanlı doğruluyor.
+            post("/duel/submitGuess321") {
+                val body = call.receive<DuelAnswerRequest>()
+                val result = DuelManager.submitGuess321(body.roomCode, body.playerName, body.guess)
+                if (result == null) {
+                    call.respond(HttpStatusCode.NotFound, mapOf("error" to "Oda bulunamadı"))
+                } else {
+                    call.respond(result)
                 }
             }
 
