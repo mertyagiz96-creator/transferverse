@@ -148,7 +148,12 @@ object DatabaseClient {
         "dinamo kiev" to "dynamo kyiv",
         "dynamo kiev" to "dynamo kyiv",
         "newells old boys" to "newell's",
-        "newells" to "newell's"
+        "newells" to "newell's",
+        // 🎯 YENİ: kullanıcılar kısaca "Lyon" yazabiliyor ama veritabanında
+        // kulüp "Olympique Lyon" olarak kayıtlı — köprü kuruyoruz.
+        "lyon" to "olympique lyon",
+        // 🎯 YENİ: "Marsilya" — Marseille'in Türkçe yaygın adı
+        "marsilya" to "marseille"
     )
 
     private fun resolveClubSearchTerm(raw: String): String {
