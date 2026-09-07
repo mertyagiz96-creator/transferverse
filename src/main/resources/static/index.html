@@ -4226,7 +4226,10 @@
             } else {
                 club1 = pickRandom(luckyClubs);
 
-                if (Math.random() < 0.6) {
+                // 🎯 DÜZELTME: eskiden %40 ülke ihtimali vardı (%90 × %40 = ~%36
+                // toplam), çok sık geliyordu. Arkadaşla Yarış'la aynı orana
+                // (%5) çekildi.
+                if (Math.random() < 0.95) {
                     let candidate;
                     do {
                         candidate = pickRandom(luckyClubs);
@@ -4860,11 +4863,12 @@
         const currentClubPool = inEasyPhase ? easyClubs : (inMediumPhase ? mediumClubs : luckyClubs);
 
         for (let i = 0; i < maxAttempts; i++) {
-            // 💡 %20 ihtimalle takım+ülke karışımı, %80 ihtimalle iki takım.
+            // 💡 %10 ihtimalle takım+ülke karışımı, %90 ihtimalle iki takım.
             // Takım+ülke seçilirse: %10 Süper Lig (sadece tam fazda), %90 mevcut
             // fazın havuzundan TEK takım + rastgele bir ülke.
             let pick, isCountryFlags;
-            if (!inEasyPhase && Math.random() < 0.2) {
+            // 🎯 DÜZELTME: %20'den %10'a düşürüldü.
+            if (!inEasyPhase && Math.random() < 0.1) {
                 const clubPool = (!inMediumPhase && Math.random() < 0.1) ? superLigClubs : currentClubPool;
                 const club = clubPool[Math.floor(Math.random() * clubPool.length)];
                 const country = luckyCountries[Math.floor(Math.random() * luckyCountries.length)];
