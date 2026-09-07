@@ -5370,7 +5370,13 @@
         stopQuizQuestionTimer();
         document.querySelector('.search-card').style.display = '';
         const dqcExit = document.getElementById('dailyQuestionCard');
-        if (dqcExit && dqcExit.innerHTML) dqcExit.style.display = 'flex';
+        // 🎯 KÖK SEBEP DÜZELTMESİ: "innerHTML dolu mu" kontrolü her zaman doğru
+        // çıkıyordu çünkü başlangıçtaki statik "hazırlanıyor..." yazısı da
+        // dolu bir HTML — gerçekten yüklenip yüklenmediğine hiç bakmıyordu.
+        // localStorage zaten günlük önbellek tuttuğu için (aynı gün içinde
+        // ağ isteği yapmadan anında gösterir), burada doğrudan yeniden
+        // çağırmak güvenli ve ucuz.
+        if (dqcExit) loadDailyQuestion();
         const sportToggleExit1 = document.getElementById('sportToggleWrapper');
         if (sportToggleExit1) sportToggleExit1.style.display = 'flex';
         const heroExit1 = document.getElementById('heroSection');
@@ -7200,6 +7206,24 @@
                 // sessizce geç, bir sonraki denemeye geç
             }
         }
+
+        // 🎯 KÖK SEBEP DÜZELTMESİ: eskiden 10 deneme de başarısız olursa
+        // fonksiyon sessizce bitiyordu — ekran sonsuza kadar "hazırlanıyor..."
+        // yazısında TAKILI kalıyordu (senin fark ettiğin bug). Artık en
+        // azından görünür, tekrar denenebilir bir durum gösteriyoruz.
+        if (currentSport !== 'football') return;
+        const failContainer = document.getElementById('dailyQuestionCard');
+        if (failContainer) {
+            failContainer.innerHTML = `
+                <div class="daily-question-box">
+                    <div style="font-size: 0.68rem; text-transform: uppercase; letter-spacing: 1.2px; color: rgba(var(--fg-rgb), 0.5); font-weight: 700; margin-bottom: 10px;">
+                        📅 Günün Sorusu
+                    </div>
+                    <div style="font-size: 0.85rem; color: rgba(var(--fg-rgb), 0.65); margin-bottom: 10px;">Şu an yüklenemedi, bağlantı sorunu olabilir.</div>
+                    <button onclick="loadDailyQuestion()" class="toolbar-btn" style="font-size: 0.78rem;">🔄 Tekrar Dene</button>
+                </div>
+            `;
+        }
     }
 
     // 🏀 Günün Sorusu — Basketbol versiyonu. Aynı ruhta: tarihi tohum olarak
@@ -7262,6 +7286,21 @@
             } catch (e) {
                 // sessizce geç, bir sonraki denemeye geç
             }
+        }
+
+        // 🎯 Aynı kök sebep düzeltmesi — bkz. futbol versiyonundaki yorum.
+        if (currentSport !== 'basketball') return;
+        const failContainerBb = document.getElementById('dailyQuestionCard');
+        if (failContainerBb) {
+            failContainerBb.innerHTML = `
+                <div class="daily-question-box">
+                    <div style="font-size: 0.68rem; text-transform: uppercase; letter-spacing: 1.2px; color: rgba(var(--fg-rgb), 0.5); font-weight: 700; margin-bottom: 10px;">
+                        📅 Günün Sorusu
+                    </div>
+                    <div style="font-size: 0.85rem; color: rgba(var(--fg-rgb), 0.65); margin-bottom: 10px;">Şu an yüklenemedi, bağlantı sorunu olabilir.</div>
+                    <button onclick="loadDailyQuestionBasketball()" class="toolbar-btn" style="font-size: 0.78rem;">🔄 Tekrar Dene</button>
+                </div>
+            `;
         }
     }
 
@@ -9297,7 +9336,8 @@
         document.getElementById('duelModeBtn').classList.remove('active');
         document.querySelector('.search-card').style.display = '';
         const dqcDuelExit = document.getElementById('dailyQuestionCard');
-        if (dqcDuelExit && dqcDuelExit.innerHTML) dqcDuelExit.style.display = 'flex';
+        // 🎯 Aynı kök sebep düzeltmesi — bkz. yukarıdaki dqcExit yorumu.
+        if (dqcDuelExit) loadDailyQuestion();
         const sportToggleExit2 = document.getElementById('sportToggleWrapper');
         if (sportToggleExit2) sportToggleExit2.style.display = 'flex';
         const heroExit2 = document.getElementById('heroSection');
