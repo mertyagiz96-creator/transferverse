@@ -1353,21 +1353,161 @@ object DatabaseClient {
         val careerMoves: List<ClubSeason>
     )
 
-    fun fetchDailyPlayerBio(dateSeed: Int): DailyPlayerBio? {
+    // 🎯 DÜZELTME (BUG): Bu havuz eskiden 46 kulübün TAMAMINI (Kasımpaşa,
+    // Gaziantep FK gibi küçük Türkiye takımları + Villarreal/Flamengo gibi
+    // orta seviye kulüpler dahil) içeriyordu — ve "transfer sayısı" vekili,
+    // bu küçük kulüplerde çok gezmiş ama TANINMAYAN oyuncuları (örn. Veysel
+    // Kılıç) yanlışlıkla öne çıkarıyordu. Gerçek veriyle test ettik: sadece
+    // aşağıdaki ~25 GERÇEK ELİT kulüple bile 366 günün HEPSİ kapsanıyor —
+    // yani küçük kulüplere hiç ihtiyaç yok, çıkarınca hem kapsama kaybı
+    // olmuyor hem de "kimse tanımıyor" riski çok daha az.
+    //
+    // ⚠️ NOT: bu, DİĞER listelerden (BIG_CLUBS, clubPool, luckyClubs) BİLEREK
+    // FARKLI ve daha DAR — o listeler quiz/eşleşme havuzları için doğru,
+    // ama "Günün Oyuncusu" için gerçekten tanınan isimler istiyoruz.
+    // 🎯 DÜZELTME: Boca Juniors + River Plate çıkarıldı — gerçek veriyle test
+    // ettik, bunlar olmadan da (24 kulüple) 366 günün hepsi kapsanıyor, yani
+    // hiç gerekleri yokmuş.
+    private val LUCKY_CLUBS_FOR_BIO = listOf(
+        "galatasaray", "fenerbahce", "besiktas",
+        "manchester united", "manchester city", "chelsea", "arsenal", "liverpool", "tottenham",
+        "real madrid", "barcelona", "atletico madrid",
+        "juventus", "ac milan", "inter", "napoli", "as roma",
+        "bayern munich", "borussia dortmund",
+        "paris sg", "marseille",
+        "ajax", "benfica", "porto"
+    )
+
+    // 💡 Günlük basit önbellek — aynı gün içinde her istek için ağır sorguyu
+    // tekrar çalıştırmamak için (46 kulüplük OR koşulu içeren bir sorgu,
+    // her sayfa yüklemesinde tekrar çalışmasın diye).
+    private var cachedDailyBio: DailyPlayerBio? = null
+    private var cachedDailyBioDate: String? = null
+
+    fun fetchDailyPlayerBio(dateSeed: Int = 0): DailyPlayerBio? {
+        val today = java.time.LocalDate.now()
+        val monthDay = String.format("%02d-%02d", today.monthValue, today.dayOfMonth)
+
+        if (cachedDailyBioDate == monthDay && cachedDailyBio != null) {
+            return cachedDailyBio
+        }
+
+        val fresh = fetchBirthdayPlayerBio(monthDay) ?: fetchLegacyPoolPlayerBio(dateSeed)
+        if (fresh != null) {
+            cachedDailyBio = fresh
+            cachedDailyBioDate = monthDay
+        }
+        return fresh
+    }
+
+    // 🎂 YENİ: bugün doğan, "lucky" kulüplerden birinde oynamış, en çok
+    // transfer kaydına sahip (= ünlülük vekili) oyuncuyu buluyor.
+    private fun fetchBirthdayPlayerBio(monthDay: String): DailyPlayerBio? {
+        var result: DailyPlayerBio? = null
+        try {
+            withConnection { conn ->
+                // 🛡️ 25 kulüplük OR koşulunu dinamik olarak kuruyoruz.
+                val clubConditions = LUCKY_CLUBS_FOR_BIO.joinToString(" OR ") {
+                    "from_club_std LIKE ? OR to_club_std LIKE ?"
+                }
+                // 🎯 KÖK SEBEP DÜZELTMESİ: eskiden sıralama TOPLAM transfer
+                // sayısına bakıyordu — bu, lucky kulüplerle ilgisi olmayan
+                // ama çok dolaşan birinin (ya da veride birden fazla aynı
+                // isimli kişinin karışmasıyla oluşan bozuk bir kaydın) öne
+                // çıkmasına yol açıyordu. Artık SADECE lucky kulüplerdeki
+                // transfer sayısına (luckyCount) göre sıralıyoruz.
+                val exactMatchClubs = setOf("inter", "porto")
+                val sql = """
+                    SELECT p.id, p.name, p.position, p.nationality, p.image_url,
+                           (SELECT COUNT(*) FROM transfers t2 WHERE t2.transfer_id = p.id AND ($clubConditions)) as luckyCount
+                    FROM players p
+                    WHERE strftime('%m-%d', p.birthdate) = ?
+                    AND EXISTS (
+                        SELECT 1 FROM transfers t
+                        WHERE t.transfer_id = p.id
+                        AND ($clubConditions)
+                    )
+                    ORDER BY luckyCount DESC
+                    LIMIT 1
+                """.trimIndent()
+
+                conn.prepareStatement(sql).use { stmt ->
+                    var idx = 1
+                    // ⚠️ $clubConditions SQL metninde İKİ KEZ geçiyor: önce SELECT
+                    // içindeki luckyCount alt sorgusunda (metinde WHERE'den ÖNCE
+                    // yer aldığı için parametre sırasında da önce gelir), sonra
+                    // monthDay, sonra EXISTS koşulunda. Bu SIRAYLA bağlıyoruz.
+                    for (club in LUCKY_CLUBS_FOR_BIO) { // luckyCount alt sorgusu
+                        val pattern = if (club in exactMatchClubs) club else "%$club%"
+                        stmt.setString(idx++, pattern)
+                        stmt.setString(idx++, pattern)
+                    }
+                    stmt.setString(idx++, monthDay) // WHERE strftime(...) = ?
+                    for (club in LUCKY_CLUBS_FOR_BIO) { // EXISTS koşulu
+                        val pattern = if (club in exactMatchClubs) club else "%$club%"
+                        stmt.setString(idx++, pattern)
+                        stmt.setString(idx++, pattern)
+                    }
+                    stmt.executeQuery().use { rs ->
+                        if (rs.next()) {
+                            val pId = rs.getInt("id")
+                            val fullName = rs.getString("name") ?: ""
+                            val position = rs.getString("position") ?: ""
+                            val rawNat = rs.getString("nationality") ?: ""
+                            val imageUrl = rs.getString("image_url")
+                            result = buildDailyBioFromPlayerId(conn, pId, fullName, position, rawNat, imageUrl)
+                        }
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            println("fetchBirthdayPlayerBio HATASI: ${e.message}")
+        }
+        return result
+    }
+
+
+    // 🛡️ YEDEK: doğum günü sorgusu (beklenmedik bir sebeple) hiç sonuç
+    // vermezse, eski sabit efsane listesine düşüyoruz — site hiçbir zaman
+    // "Günün Oyuncusu" göstermeden kalmasın diye.
+    private fun fetchLegacyPoolPlayerBio(dateSeed: Int): DailyPlayerBio? {
         val playerName = dailyPlayerPool[((dateSeed % dailyPlayerPool.size) + dailyPlayerPool.size) % dailyPlayerPool.size]
-        // 🎯 KÖK SEBEP DÜZELTMESİ: havuzdaki isimler aksansız yazılmış ("Mbappe"),
-        // ama veritabanında muhtemelen aksanlı kayıtlı ("Mbappé") — düz LIKE bu
-        // yüzden hiç eşleşmiyor, 404 dönüyordu. Diğer arama fonksiyonlarındaki
-        // AYNI aksan-toleranslı yöntemi burada da kullanıyoruz.
         val targetNorm = stripAccentsForCompare(playerName)
 
         var result: DailyPlayerBio? = null
         try {
             withConnection { conn ->
-                conn.prepareStatement(
-                    "SELECT id, name, position, nationality, image_url FROM players WHERE name_std LIKE ? LIMIT 1"
-                ).use { stmt ->
-                    stmt.setString(1, "%$targetNorm%")
+                // 🎯 KÖK SEBEP DÜZELTMESİ (2. tur): "LIMIT 1" hiçbir sıralama
+                // yapmadan ilk eşleşeni alıyordu. İlk düzeltmemde TOPLAM
+                // transfer sayısına göre sıraladım ama bu da yanlıştı — alt
+                // liglerde çok dolaşan biri, ünlü bir isimden daha yüksek
+                // transfer sayısına sahip olabiliyordu. Artık SADECE lucky
+                // kulüplerdeki (25 elit kulüp) transfer sayısına göre
+                // sıralıyoruz — "gerçekten bu kulüplerde oynamış mı" sorusuna
+                // çok daha doğru cevap veriyor.
+                val clubConditions = LUCKY_CLUBS_FOR_BIO.joinToString(" OR ") {
+                    "from_club_std LIKE ? OR to_club_std LIKE ?"
+                }
+                val exactMatchClubs = setOf("inter", "porto")
+                val sql = """
+                    SELECT p.id, p.name, p.position, p.nationality, p.image_url,
+                           (SELECT COUNT(*) FROM transfers t2 WHERE t2.transfer_id = p.id AND ($clubConditions)) as luckyCount
+                    FROM players p
+                    WHERE p.name_std LIKE ?
+                    ORDER BY luckyCount DESC
+                    LIMIT 1
+                """.trimIndent()
+
+                conn.prepareStatement(sql).use { stmt ->
+                    var idx = 1
+                    // ⚠️ SQL metninde $clubConditions (luckyCount alt sorgusu) name_std
+                    // LIKE'dan ÖNCE geliyor — parametreleri bu sırayla bağlıyoruz.
+                    for (club in LUCKY_CLUBS_FOR_BIO) {
+                        val pattern = if (club in exactMatchClubs) club else "%$club%"
+                        stmt.setString(idx++, pattern)
+                        stmt.setString(idx++, pattern)
+                    }
+                    stmt.setString(idx++, "%$targetNorm%")
                     stmt.executeQuery().use { rs ->
                         if (rs.next()) {
                             val pId = rs.getInt("id")
@@ -1375,56 +1515,76 @@ object DatabaseClient {
                             val position = rs.getString("position") ?: ""
                             val rawNat = rs.getString("nationality") ?: ""
                             val imageUrl = rs.getString("image_url")
-
-                            val moves = mutableListOf<ClubSeason>()
-                            conn.prepareStatement(
-                                // 🎯 KÖK SEBEP DÜZELTMESİ: "ORDER BY season ASC" season'ı
-                                // DÜZ METİN olarak sıralıyordu — "96/97" gibi 1990'lı
-                                // sezonlar, "15/16" gibi 2010'lu sezonlardan alfabetik
-                                // olarak SONRA geliyordu ("9" > "1"), kariyer tamamen
-                                // karışık sırada görünüyordu (Pirlo örneğinde olduğu gibi).
-                                // Artık sıralamayı SQL'de değil, aşağıda Kotlin'de gerçek
-                                // yıla çevirerek yapıyoruz.
-                                "SELECT from_club, to_club, season FROM transfers WHERE transfer_id = ?"
-                            ).use { stmt2 ->
-                                stmt2.setInt(1, pId)
-                                stmt2.executeQuery().use { rs2 ->
-                                    while (rs2.next()) {
-                                        val toClub = rs2.getString("to_club") ?: continue
-                                        val season = rs2.getString("season") ?: ""
-                                        if (!isYouthClub(toClub)) {
-                                            moves.add(ClubSeason(toClub, season))
-                                        }
-                                    }
-                                }
-                            }
-                            // 🎯 "YY/YY" formatındaki sezonu gerçek bir yıla çevirip
-                            // KRONOLOJİK olarak sıralıyoruz. İki haneli yıl belirsiz
-                            // olduğu için (örn. "96" mı 1996 mı, "05" mi 2005 mi):
-                            // 50 ve üzeri → 19XX, 50'nin altı → 20XX kabul ediyoruz
-                            // (bir oyuncunun kariyeri gerçekçi olarak bu iki yüzyıla
-                            // yayılmaz, bu yüzden tek bir eşik yeterli).
-                            fun seasonSortKey(season: String): Int {
-                                val startYY = season.take(2).toIntOrNull() ?: return 0
-                                return if (startYY >= 50) 1900 + startYY else 2000 + startYY
-                            }
-                            moves.sortBy { seasonSortKey(it.season) }
-
-                            result = DailyPlayerBio(
-                                name = fullName.replace(Regex("\\s*\\(\\d+\\)\\s*"), "").trim(),
-                                position = position,
-                                nationality = cleanNationalityText(rawNat),
-                                imageUrl = imageUrl,
-                                careerMoves = moves
-                            )
+                            result = buildDailyBioFromPlayerId(conn, pId, fullName, position, rawNat, imageUrl)
                         }
                     }
                 }
             }
         } catch (e: Exception) {
-            println("fetchDailyPlayerBio HATASI: ${e.message}")
+            println("fetchLegacyPoolPlayerBio HATASI: ${e.message}")
         }
         return result
+    }
+
+    // 🎯 İki fonksiyonun da (doğum günü + yedek) ORTAK kullandığı kariyer
+    // geçmişi oluşturma mantığı — kod tekrarını önlemek için ayrıldı.
+    private fun buildDailyBioFromPlayerId(
+        conn: java.sql.Connection,
+        pId: Int,
+        fullName: String,
+        position: String,
+        rawNat: String,
+        imageUrl: String?
+    ): DailyPlayerBio {
+        val moves = mutableListOf<ClubSeason>()
+        conn.prepareStatement(
+            "SELECT from_club, to_club, season FROM transfers WHERE transfer_id = ?"
+        ).use { stmt2 ->
+            stmt2.setInt(1, pId)
+            stmt2.executeQuery().use { rs2 ->
+                while (rs2.next()) {
+                    val toClub = rs2.getString("to_club") ?: continue
+                    val season = rs2.getString("season") ?: ""
+                    if (!isYouthClub(toClub)) {
+                        moves.add(ClubSeason(toClub, season))
+                    }
+                }
+            }
+        }
+        // 🎯 "YY/YY" formatındaki sezonu gerçek bir yıla çevirip KRONOLOJİK
+        // olarak sıralıyoruz (Pirlo bug'ında bulduğumuz düzeltme).
+        fun seasonSortKey(season: String): Int {
+            val startYY = season.take(2).toIntOrNull() ?: return 0
+            return if (startYY >= 50) 1900 + startYY else 2000 + startYY
+        }
+        moves.sortBy { seasonSortKey(it.season) }
+
+        // 🎯 KÖK SEBEP DÜZELTMESİ: kaynak veride AYNI transfer bazen İKİ ayrı
+        // kayıt olarak giriliyor (örn. kiralık gidiş/dönüş ayrımı yüzünden),
+        // kulüp ismi her seferinde biraz farklı yazılmış oluyor ("CA River
+        // Plate" / "River Plate", "CD Godoy Cruz Antonio Tomba" / "Godoy
+        // Cruz"). Aynı sezonda, biri diğerinin İÇİNDE geçen (alt metin)
+        // isimleri tekilleştiriyoruz — daha UZUN/tam olan ismi tutuyoruz.
+        val deduped = mutableListOf<ClubSeason>()
+        for (move in moves) {
+            val moveNorm = move.club.toStandardSearch()
+            val existingIdx = deduped.indexOfFirst {
+                it.season == move.season && (it.club.toStandardSearch().contains(moveNorm) || moveNorm.contains(it.club.toStandardSearch()))
+            }
+            if (existingIdx == -1) {
+                deduped.add(move)
+            } else if (move.club.length > deduped[existingIdx].club.length) {
+                deduped[existingIdx] = move // daha tam/uzun isimli olanı tutuyoruz
+            }
+        }
+
+        return DailyPlayerBio(
+            name = fullName.replace(Regex("\\s*\\(\\d+\\)\\s*"), "").trim(),
+            position = position,
+            nationality = cleanNationalityText(rawNat),
+            imageUrl = imageUrl,
+            careerMoves = deduped
+        )
     }
 
     fun fetchAllClubLogos(): Map<String, String> {

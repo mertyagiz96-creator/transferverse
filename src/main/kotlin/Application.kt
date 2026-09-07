@@ -1766,6 +1766,12 @@ fun main() {
 
             // 📰 Günün Oyuncusu — tarihe göre sabit (herkese aynı gün aynı), gerçek veri
             get("/dailyPlayerBio") {
+                // 🎯 YENİ: bu endpoint'in URL'i (seed) gün boyunca sabit kaldığı
+                // için tarayıcı bunu önbelleğe alabiliyordu — biz kod tarafında
+                // bir düzeltme yapıp deploy etsek bile, kullanıcı eski (hatalı)
+                // cevabı görmeye devam edebiliyordu. Artık açıkça "önbelleğe
+                // alma" diyoruz.
+                call.response.headers.append("Cache-Control", "no-store, no-cache, must-revalidate")
                 val dateSeed = call.request.queryParameters["seed"]?.toIntOrNull() ?: 0
                 val bio = DatabaseClient.fetchDailyPlayerBio(dateSeed)
                 if (bio == null) {
