@@ -5441,7 +5441,11 @@
         target: '<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>'
     };
     function duelIcon(name, size = 14) {
-        return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; margin-right:5px;">${DUEL_ICONS[name] || ''}</svg>`;
+        // 🎯 DÜZELTME: sabit -2px hizalama, büyük ikonlarda (örn. başlıklardaki
+        // 18px+) yetersiz kalıp ikonu metne göre orantısız küçük/hizasız
+        // gösteriyordu. Artık boyutla orantılı hizalanıyor.
+        const valign = Math.round(size * -0.18);
+        return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:${valign}px; margin-right:5px;">${DUEL_ICONS[name] || ''}</svg>`;
     }
     let duelPlayerName = null;
     let duelPollInterval = null;
@@ -9273,7 +9277,7 @@
             <tr>
                 <td colspan="5" style="padding: 24px;">
                     <div class="player-mode-card">
-                        <div class="quiz-win-title">${duelIcon('trophy', 18)}Arkadaşla Yarış</div>
+                        <div class="quiz-win-title">${duelIcon('trophy', 28)}Arkadaşla Yarış</div>
                         <div class="player-mode-guess-row">
                             <input type="text" id="duelNameInput" placeholder="Adını yaz..." autocomplete="off">
                         </div>
