@@ -5380,7 +5380,14 @@
         const blogExit = document.getElementById('blogLinkSection');
         if (blogExit) blogExit.style.display = '';
         const bioExit = document.getElementById('dailyPlayerBioSection');
-        if (bioExit && bioExit.dataset.hasContent) bioExit.style.display = 'block';
+        // 🎯 KÖK SEBEP DÜZELTMESİ: "dataset.hasContent" bayrağına güvenmek
+        // kırılgandı — eğer bir önceki yükleme, tam o anda başka bir mod aktif
+        // olduğu için (yarış durumu koruması) bu bayrağı hiç set edemediyse,
+        // bölüm bir daha ASLA geri gelmiyordu (birkaç mod gir-çık sonrası
+        // "Günün Oyuncusu kayboldu" şikayeti buradan geliyordu). Artık
+        // bayrağa bakmadan DOĞRUDAN yeniden yüklüyoruz — loadDailyPlayerBio
+        // zaten kendi güvenlik kontrollerini yapıyor.
+        if (bioExit) loadDailyPlayerBio();
         loadChampionshipPoll(); // 🗳️ ana ekrana dönünce güncel oylarla göster
         loadBasketballPoll(); // 🏀 ana ekrana dönünce güncel oylarla göster
         loadTransferFeeQuiz(); // 💰 ana ekrana dönünce göster
@@ -6920,6 +6927,16 @@
         if (!section || !content) return;
         if (playerModeActive || duelActive || transfermatikActive || currentSport !== 'basketball') return;
 
+        // 🎯 DÜZELTME: bu başlık ("Bugün Doğdu!") sadece futbol tarafı için
+        // doğru — orada GERÇEK doğum günü verisi kullanıyoruz. Basketbol
+        // tarafında (nba_players/bb_players tablolarında) doğum tarihi hiç
+        // yok, hâlâ sabit bir isim havuzundan seçiyoruz. Yanlış bir iddiada
+        // bulunmamak için basketbolda eski, nötr başlığa dönüyoruz.
+        const bioTitleEl = document.getElementById('i18n-bioTitle');
+        if (bioTitleEl) {
+            bioTitleEl.innerHTML = currentLang === 'en' ? '📰 Player of the Day' : '📰 Günün Oyuncusu';
+        }
+
         const today = getTodayDateString();
         const seed = seededHash(today + '-bb-player-bio');
 
@@ -7009,6 +7026,13 @@
         const section = document.getElementById('dailyPlayerBioSection');
         const content = document.getElementById('dailyPlayerBioContent');
         if (!section || !content) return;
+        // 🎯 DÜZELTME: basketboldan futbola dönüldüğünde başlık, basketbolun
+        // nötr haline ("Günün Oyuncusu") kalmış olabilir — burada gerçek
+        // doğum günü versiyonuna geri çeviriyoruz.
+        const bioTitleElFootball = document.getElementById('i18n-bioTitle');
+        if (bioTitleElFootball) {
+            bioTitleElFootball.innerHTML = currentLang === 'en' ? '🎂 Player of the Day — Born Today!' : '🎂 Günün Oyuncusu — Bugün Doğdu!';
+        }
         // 🛡️ ÖNCE gizle — basketboldan kalan ESKİ içerik, futbol tarafı bir hata
         // alırsa (ağ vb.) ekranda TAKILI kalmasın diye.
         section.style.display = 'none';
@@ -9283,7 +9307,8 @@
         const blogDuelExit = document.getElementById('blogLinkSection');
         if (blogDuelExit) blogDuelExit.style.display = '';
         const bioDuelExit = document.getElementById('dailyPlayerBioSection');
-        if (bioDuelExit && bioDuelExit.dataset.hasContent) bioDuelExit.style.display = 'block';
+        // 🎯 Aynı kök sebep düzeltmesi — bkz. yukarıdaki bioExit yorumu.
+        if (bioDuelExit) loadDailyPlayerBio();
         loadChampionshipPoll(); // 🗳️ ana ekrana dönünce güncel oylarla göster
         loadBasketballPoll(); // 🏀 ana ekrana dönünce güncel oylarla göster
         loadTransferFeeQuiz(); // 💰 ana ekrana dönünce göster
