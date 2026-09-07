@@ -161,6 +161,12 @@ object DatabaseClient {
         return clubAliasMap[std] ?: std
     }
 
+    // 🎯 YENİ: DuelManager gibi dışarıdaki kodların, kulüp ismini bizim
+    // kullandığımız AYNI standart forma çevirebilmesi için genel bir kapı —
+    // "3,2,1" modunda aynı kulübün (Lyon / Olympique Lyon gibi farklı
+    // yazılışlarıyla bile) tekrar girilmesini engellemek için gerekiyor.
+    fun normalizeClubForComparison(raw: String): String = resolveClubSearchTerm(raw)
+
     private const val POOL_SIZE = 6
     private val connectionPool: java.util.concurrent.BlockingQueue<Connection> by lazy { createConnectionPool() }
 

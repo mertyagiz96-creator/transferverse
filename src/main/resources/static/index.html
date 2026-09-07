@@ -9486,11 +9486,11 @@
         // Aksi halde sadece skoru güncelliyoruz — kullanıcı yazarken input'a dokunmuyoruz.
         if (prevWaiting || prevRound !== state.roundNumber || (state.duelMode === '321' && prevPhase !== state.phase)) {
             if (state.duelMode === '321') {
-                // 🎲 321 modunda sahte "3,2,1 hazır ol" countdown'ına gerek yok
-                // (oyuncular zaten kendi kulüplerini yazdı) VE Genel Mod'un
-                // fotoğraflı/ipuçlu soru ekranına da hiç girmiyoruz — kendi
-                // sade ekranımız var (sadece kulüpler + tahmin kutusu).
-                buildDuel321GuessScreen(state);
+                // 🎲 DÜZELTME: kullanıcı geri bildirimiyle eklendi — tahmin
+                // ekranı aniden gelmesin diye, diğer modlardaki AYNI "3, 2, 1
+                // hazır ol" geçişini biz de kullanıyoruz (zaten modun adıyla
+                // da tam uyumlu).
+                showDuelCountdownThenQuestion(state, () => buildDuel321GuessScreen(state));
             } else {
                 showDuelCountdownThenQuestion(state);
             }
@@ -9870,9 +9870,23 @@
                         showToast('❌ Gönderilemedi, tekrar dene');
                         return;
                     }
-                    const newState = await res.json();
+                    const result = await res.json();
                     if (!duelActive || duelRoomCode !== requestRoomCode) return;
-                    renderDuelStateScreen(newState);
+
+                    // 🎯 YENİ: bu kulüp oyun boyunca zaten kullanılmışsa backend
+                    // reddediyor (accepted: false) — sadece BU kişiye net bir
+                    // mesaj gösterip tekrar denemesini sağlıyoruz, rakibi hiç
+                    // etkilemiyoruz.
+                    if (!result.accepted) {
+                        submitBtn.disabled = false;
+                        submitBtn.textContent = 'Gönder';
+                        showToast('❌ Bu kulüp zaten kullanıldı, başka bir kulüp yaz');
+                        input.value = '';
+                        input.focus();
+                        return;
+                    }
+
+                    renderDuelStateScreen(result.state);
                 } catch (e) {
                     if (!duelActive || duelRoomCode !== requestRoomCode) return;
                     submitBtn.disabled = false;
@@ -9920,9 +9934,10 @@
     // yakalanmasın diye. Sunucudaki 60 saniyelik süre bu sırada zaten işlemeye
     // başlıyor (~2 saniyelik makul bir pay), ama bu, iki tarafa da net bir
     // "şimdi başlıyor" hissi veriyor.
-    function showDuelCountdownThenQuestion(state) {
+    function showDuelCountdownThenQuestion(state, onComplete) {
         const resultsTable = document.getElementById("resultsTable");
         let count = 3;
+        const completeFn = onComplete || (() => buildDuelQuestionScreen(state));
 
         resultsTable.innerHTML = `
             <tr>
@@ -9942,7 +9957,7 @@
                 if (el) el.textContent = String(count);
             } else {
                 clearInterval(countdownInterval);
-                buildDuelQuestionScreen(state);
+                completeFn();
             }
         }, 700);
     }

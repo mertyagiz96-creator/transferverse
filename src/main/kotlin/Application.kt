@@ -2059,11 +2059,11 @@ fun main() {
             // 🎯 YENİ: "3,2,1" modunda oyuncunun kendi girdiği kulübü kaydeder.
             post("/duel/submitClub321") {
                 val body = call.receive<SubmitClub321Request>()
-                val state = DuelManager.submitClub321(body.roomCode, body.playerName, body.club)
-                if (state == null) {
+                val result = DuelManager.submitClub321(body.roomCode, body.playerName, body.club)
+                if (result == null) {
                     call.respond(HttpStatusCode.NotFound, mapOf("error" to "Oda bulunamadı"))
                 } else {
-                    call.respond(state)
+                    call.respond(result)
                 }
             }
 

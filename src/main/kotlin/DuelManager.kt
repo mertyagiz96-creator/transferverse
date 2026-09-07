@@ -102,6 +102,9 @@ class DuelRoom(val roomCode: String, val player1Name: String, val winTarget: Int
     // oyuncunun (temizlenmiş) ismini burada tutuyoruz — artık tek bir
     // "önceden seçilmiş currentQuestion" olmadığı için gerekli.
     var winningPlayerDisplayName321: String? = null
+    // 🎯 YENİ: oyun boyunca (rematch'e kadar) hangi kulüplerin zaten
+    // kullanıldığını tutuyoruz — aynı kulübün tekrar girilmesini engellemek için.
+    val usedClubsStd321: MutableSet<String> = mutableSetOf()
 }
 
 object DuelManager {
@@ -261,6 +264,7 @@ object DuelManager {
             room.gameOver = false
             room.gameWinner = null
             room.recentPlayerNames.clear()
+            room.usedClubsStd321.clear() // 🎯 YENİ: yeniden maç, kullanılan kulüpler de sıfırlansın
             startNewRound(room)
         }
         return room
@@ -270,10 +274,16 @@ object DuelManager {
     // gönderince, o iki kulüp arasındaki ortak oyuncuyu hesaplayıp asıl
     // "tahmin" fazına geçiyoruz — buradan sonrası (submitAnswer, checkTimeout
     // vb.) Genel Mod'la AYNI mekanizmayı kullanıyor, tekrar yazmıyoruz.
-    fun submitClub321(code: String, playerName: String, club: String): DuelState? {
+    // 🎯 YENİ: reddedilme durumunu (tekrar eden kulüp) sadece o kişiye
+    // iletebilmek için ayrı bir sonuç tipi — genel state'e karışmıyor,
+    // rakip bunu hiç görmüyor.
+    @Serializable
+    data class SubmitClub321Result(val accepted: Boolean, val state: DuelState)
+
+    fun submitClub321(code: String, playerName: String, club: String): SubmitClub321Result? {
         val room = rooms[code.uppercase()] ?: return null
         val trimmedClub = club.trim()
-        if (trimmedClub.isBlank()) return toState(room)
+        if (trimmedClub.isBlank()) return SubmitClub321Result(false, toState(room))
 
         synchronized(room.lock) {
             room.lastActivityAt = System.currentTimeMillis()
@@ -283,16 +293,31 @@ object DuelManager {
             }
 
             if (room.duelMode != "321" || room.phase != "club_entry" || room.gameOver) {
-                return toState(room)
+                return SubmitClub321Result(false, toState(room))
+            }
+
+            // 🛡️ YENİ: bu kulüp (Lyon / Olympique Lyon gibi farklı yazılışlarıyla
+            // bile) bu oyun boyunca daha önce kullanıldıysa REDDEDİYORUZ —
+            // sadece gönderen kişiye "başka bir kulüp yaz" diyoruz, rakibi
+            // etkilemiyor, kendi hakkı hâlâ duruyor.
+            val normalizedClub = DatabaseClient.normalizeClubForComparison(trimmedClub)
+            if (room.usedClubsStd321.contains(normalizedClub)) {
+                return SubmitClub321Result(false, toState(room))
             }
 
             when (playerName) {
-                room.player1Name -> if (room.club1Input == null) room.club1Input = trimmedClub
-                room.player2Name -> if (room.club2Input == null) room.club2Input = trimmedClub
+                room.player1Name -> if (room.club1Input == null) {
+                    room.club1Input = trimmedClub
+                    room.usedClubsStd321.add(normalizedClub)
+                }
+                room.player2Name -> if (room.club2Input == null) {
+                    room.club2Input = trimmedClub
+                    room.usedClubsStd321.add(normalizedClub)
+                }
             }
 
             tryStartGuessingPhase321(room)
-            return toState(room)
+            return SubmitClub321Result(true, toState(room))
         }
     }
 
@@ -546,8 +571,23 @@ object DuelManager {
         if (room.duelMode == "321" && room.phase == "club_entry" && !room.roundOver) {
             val elapsed = System.currentTimeMillis() - room.clubEntryStartTime
             if (elapsed > CLUB_ENTRY_DURATION_MS) {
-                if (room.club1Input == null) room.club1Input = clubPool.random()
-                if (room.club2Input == null) room.club2Input = clubPool.random()
+                // 🎯 Otomatik atama da daha önce kullanılmış bir kulübü tekrar
+                // seçmesin diye aynı kurala uyuyor.
+                fun pickUnusedRandomClub(): String {
+                    repeat(20) {
+                        val candidate = clubPool.random()
+                        if (!room.usedClubsStd321.contains(DatabaseClient.normalizeClubForComparison(candidate))) return candidate
+                    }
+                    return clubPool.random() // 🛡️ 20 denemede bulunamazsa (çok nadir) yine de devam et
+                }
+                if (room.club1Input == null) {
+                    room.club1Input = pickUnusedRandomClub()
+                    room.usedClubsStd321.add(DatabaseClient.normalizeClubForComparison(room.club1Input!!))
+                }
+                if (room.club2Input == null) {
+                    room.club2Input = pickUnusedRandomClub()
+                    room.usedClubsStd321.add(DatabaseClient.normalizeClubForComparison(room.club2Input!!))
+                }
                 tryStartGuessingPhase321(room)
             }
             return
