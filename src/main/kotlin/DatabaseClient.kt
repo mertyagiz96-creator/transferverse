@@ -153,7 +153,10 @@ object DatabaseClient {
         // kulüp "Olympique Lyon" olarak kayıtlı — köprü kuruyoruz.
         "lyon" to "olympique lyon",
         // 🎯 YENİ: "Marsilya" — Marseille'in Türkçe yaygın adı
-        "marsilya" to "marseille"
+        "marsilya" to "marseille",
+        // 🎯 YENİ: "PSG" — Paris Saint-Germain'in yaygın kısaltması, veritabanında
+        // "Paris SG" olarak kayıtlı, hiç eşleşmiyordu.
+        "psg" to "paris sg"
     )
 
     private fun resolveClubSearchTerm(raw: String): String {

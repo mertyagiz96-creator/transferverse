@@ -9892,7 +9892,17 @@
             if (q.length < 2) { suggestBox.style.display = 'none'; return; }
             guessDebounce = setTimeout(async () => {
                 try {
-                    const res = await fetch(`/playerNameSuggestions?q=${encodeURIComponent(q)}`);
+                    // 🎯 KÖK SEBEP DÜZELTMESİ: bu istek kulüp bağlamını (clubs=)
+                    // HİÇ göndermiyordu — bu yüzden sunucu, girilen iki kulüple
+                    // gerçekten alakalı adayları önceliklendiremiyordu. Aynı
+                    // isimde (örn. "Pepe") 30'dan fazla oyuncu varsa, gerçek
+                    // cevap ("Real Madrid + Beşiktaş"de oynayan Pepe) alakasız
+                    // ama daha çok transferi olan başka "Pepe"lerin gerisinde
+                    // kalıp hiç önerilmiyordu.
+                    const clubsParam321 = state.clubs && state.clubs.length > 0
+                        ? `&clubs=${encodeURIComponent(state.clubs.map(c => c.club).join(','))}`
+                        : '';
+                    const res = await fetch(`/playerNameSuggestions?q=${encodeURIComponent(q)}${clubsParam321}`);
                     const names = await res.json();
                     if (!Array.isArray(names) || names.length === 0) { suggestBox.style.display = 'none'; return; }
                     suggestBox.innerHTML = names.slice(0, 8).map(n => `<div class="pred-suggestion-item" style="padding:10px 14px; cursor:pointer; font-size:0.86rem;" onmouseover="this.style.background='rgba(var(--accent-gold-rgb),0.12)'" onmouseout="this.style.background=''">${escapeHtml(n)}</div>`).join('');
