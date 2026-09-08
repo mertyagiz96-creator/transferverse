@@ -10352,7 +10352,7 @@
         statusEl.innerHTML = `
             <div class="quiz-win-title" style="font-size: 1.1rem; margin-top: 16px;">${winnerText}</div>
             ${state.noMatchFound ? '' : `<div style="color: var(--light-green); font-weight: 600; margin-bottom: 14px;">
-                Cevap: ${escapeHtml(state.revealedPlayerName || '-')}
+                ${(state.timedOut || state.bothPassed) ? 'Örnek cevap' : 'Cevap'}: ${escapeHtml(state.revealedPlayerName || '-')}
             </div>`}
             <div style="font-size: 0.78rem; color: rgba(var(--fg-rgb), 0.5);">${state.noMatchFound ? 'Yeni kulüpler için 30 saniyeniz olacak...' : 'Sonraki soru birazdan geliyor...'}</div>
         `;

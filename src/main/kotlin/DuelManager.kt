@@ -465,6 +465,11 @@ object DuelManager {
                 room.roundOver = true
                 room.roundWinner = null
                 room.bothPassed = true
+                // 🎯 YENİ: aynı mantık — bkz. checkTimeout'taki yorum.
+                if (room.duelMode == "321" && room.validPlayersForRound.isNotEmpty()) {
+                    val example = room.validPlayersForRound.random()
+                    room.winningPlayerDisplayName321 = example.playerName.replace(Regex("\\s*\\(\\d+\\)\\s*$"), "").trim()
+                }
             }
 
             return toState(room)
@@ -611,6 +616,14 @@ object DuelManager {
                 room.roundOver = true
                 room.roundWinner = null
                 room.timedOut = true
+                // 🎯 YENİ: "3,2,1" modunda kimse bilemese bile, elimizde
+                // zaten geçerli cevaplar var (validPlayersForRound) — bunlardan
+                // rastgele birini "örnek cevap" olarak gösteriyoruz, kullanıcı
+                // "meğer bu kadar basitmiş" diye öğrensin.
+                if (room.duelMode == "321" && room.validPlayersForRound.isNotEmpty()) {
+                    val example = room.validPlayersForRound.random()
+                    room.winningPlayerDisplayName321 = example.playerName.replace(Regex("\\s*\\(\\d+\\)\\s*$"), "").trim()
+                }
             }
         }
     }
