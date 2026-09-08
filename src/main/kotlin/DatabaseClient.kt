@@ -156,7 +156,13 @@ object DatabaseClient {
         "marsilya" to "marseille",
         // 🎯 YENİ: "PSG" — Paris Saint-Germain'in yaygın kısaltması, veritabanında
         // "Paris SG" olarak kayıtlı, hiç eşleşmiyordu.
-        "psg" to "paris sg"
+        "psg" to "paris sg",
+        // 🎯 KÖK SEBEP DÜZELTMESİ: sadece "psg" kısaltmasını çözmek yetmiyordu —
+        // biri tam adını ("Paris Saint-Germain") yazınca hiç eşleşmiyordu,
+        // sistem iki farklı kulüp sanıyordu (senin gösterdiğin ekran görüntüsü).
+        // Olası yazılış biçimlerinin hepsini ekliyoruz.
+        "paris saint-germain" to "paris sg",
+        "paris saint germain" to "paris sg"
     )
 
     private fun resolveClubSearchTerm(raw: String): String {
@@ -410,9 +416,33 @@ object DatabaseClient {
 
         try {
             withBbConnection { conn ->
-                val sql = "SELECT name, $teamColumn FROM $tableName WHERE name_std LIKE ? LIMIT 200"
+                // 🎯 KÖK SEBEP DÜZELTMESİ: futboldaki AYNI hata burada da vardı —
+                // "LIMIT 200" hiçbir sıralama olmadan kesiyordu, çok yaygın bir
+                // isimde (örn. "Smith") bağlam eşleşen oyuncu bu 200'ün dışında
+                // kalıp hiç değerlendirilemeyebilirdi. Artık takım eşleşmesini
+                // LIMIT'ten ÖNCE, SQL'in kendisinde hesaplayıp sıralıyoruz.
+                val sql: String
+                if (contextTeams.isEmpty()) {
+                    sql = "SELECT name, $teamColumn, 0 as team_context_match FROM $tableName WHERE name_std LIKE ? LIMIT 200"
+                } else {
+                    val teamConditions = contextTeams.joinToString(" OR ") { "$teamColumn LIKE ?" }
+                    sql = """
+                        SELECT name, $teamColumn,
+                               (CASE WHEN ($teamConditions) THEN 1 ELSE 0 END) as team_context_match
+                        FROM $tableName
+                        WHERE name_std LIKE ?
+                        ORDER BY team_context_match DESC
+                        LIMIT 200
+                    """.trimIndent()
+                }
                 conn.prepareStatement(sql).use { stmt ->
-                    stmt.setString(1, "%$targetNorm%")
+                    var idx = 1
+                    if (contextTeams.isNotEmpty()) {
+                        for (t in contextTeams) {
+                            stmt.setString(idx++, "%${t.toStandardSearch()}%")
+                        }
+                    }
+                    stmt.setString(idx++, "%$targetNorm%")
                     stmt.executeQuery().use { rs ->
                         while (rs.next()) {
                             val name = rs.getString("name") ?: continue
@@ -2122,7 +2152,7 @@ object DatabaseClient {
         val matched = mutableListOf<MatchedPlayer>()
         try {
             withConnection { conn ->
-                val sql1 = "SELECT id, name FROM players WHERE name_std LIKE ? LIMIT 30"
+                val sql1 = "SELECT id, name FROM players WHERE name_std LIKE ? ORDER BY (id >= 9999000) DESC LIMIT 30"
                 conn.prepareStatement(sql1).use { stmt ->
                     stmt.setString(1, "%$targetNorm%")
                     stmt.executeQuery().use { rs ->
@@ -2510,23 +2540,61 @@ object DatabaseClient {
         val cleanQuery = query.trim()
         if (cleanQuery.length < 3) return emptyList()
         val targetNorm = stripAccentsForCompare(cleanQuery)
-        val resolvedContextClubs = contextClubs.map { resolveClubSearchTerm(it) }
-        val sql = """
-            SELECT p.id, p.name, t.from_club, t.to_club, COUNT(t.transfer_id) OVER (PARTITION BY p.id) as transfer_count
-            FROM (
-                SELECT id, name FROM players
-                WHERE name_std LIKE ?
-                LIMIT 40
-            ) p
-            LEFT JOIN transfers t ON p.id = t.transfer_id
-            ORDER BY transfer_count DESC
-        """.trimIndent()
-        data class Cand(val name: String, val count: Int, var contextMatch: Boolean)
+        val resolvedContextClubs = contextClubs.map { resolveClubSearchTerm(it) }.filter { it.isNotBlank() }
 
-        fun runQuery(likePattern: String, candidates: MutableMap<Int, Cand>) {
+        // 🎯 KÖK SEBEP DÜZELTMESİ (2. tur): önceki düzeltmem sadece elle
+        // eklediğimiz özel kayıtları (9999xxx ID) korumaya alıyordu — ama
+        // yaygın soyadlı, NORMAL bir oyuncu için de AYNI sorun (40'lık rastgele
+        // havuzun dışında kalıp hiç değerlendirilememe) yaşanabilirdi. Artık
+        // bağlam eşleşmesini (context_count) LIMIT'TEN ÖNCE, SQL'in kendisinde
+        // hesaplayıp sıralıyoruz — bu iki kulüpte gerçekten oynamış HERKES,
+        // ismi ne kadar yaygın olursa olsun, artık havuza girebiliyor.
+        data class Cand(val name: String, val count: Int, var contextMatch: Boolean)
+        val candidates = mutableMapOf<Int, Cand>()
+
+        try {
             withConnection { conn ->
+                val sql: String
+
+                if (resolvedContextClubs.isEmpty()) {
+                    // Bağlam yoksa (örn. genel arama), eski davranış: sadece
+                    // toplam transfer sayısına göre sırala.
+                    sql = """
+                        SELECT p.id, p.name,
+                               (SELECT COUNT(*) FROM transfers t2 WHERE t2.transfer_id = p.id) as transfer_count,
+                               0 as context_count
+                        FROM players p
+                        WHERE p.name_std LIKE ?
+                        ORDER BY (p.id >= 9999000) DESC, transfer_count DESC
+                        LIMIT 40
+                    """.trimIndent()
+                } else {
+                    val contextConditions = resolvedContextClubs.joinToString(" OR ") {
+                        "from_club_std LIKE ? OR to_club_std LIKE ?"
+                    }
+                    sql = """
+                        SELECT p.id, p.name,
+                               (SELECT COUNT(*) FROM transfers t2 WHERE t2.transfer_id = p.id) as transfer_count,
+                               (SELECT COUNT(*) FROM transfers t3 WHERE t3.transfer_id = p.id AND ($contextConditions)) as context_count
+                        FROM players p
+                        WHERE p.name_std LIKE ?
+                        ORDER BY (p.id >= 9999000) DESC, context_count DESC, transfer_count DESC
+                        LIMIT 40
+                    """.trimIndent()
+                }
+
                 conn.prepareStatement(sql).use { stmt ->
-                    stmt.setString(1, likePattern)
+                    var idx = 1
+                    // ⚠️ SQL metninde context_count alt sorgusu (varsa) WHERE'den
+                    // ÖNCE geliyor — kulüp desenlerini bu sırayla bağlıyoruz.
+                    if (resolvedContextClubs.isNotEmpty()) {
+                        for (c in resolvedContextClubs) {
+                            stmt.setString(idx++, "%$c%")
+                            stmt.setString(idx++, "%$c%")
+                        }
+                    }
+                    stmt.setString(idx++, "%$targetNorm%")
+
                     stmt.executeQuery().use { rs ->
                         while (rs.next()) {
                             val pId = rs.getInt("id")
@@ -2535,30 +2603,16 @@ object DatabaseClient {
                             val nameNorm = stripAccentsForCompare(cleanName)
                             if (!nameNorm.contains(targetNorm)) continue
 
-                            val fromClub = rs.getString("from_club") ?: ""
-                            val toClub = rs.getString("to_club") ?: ""
-                            val clubMatch = resolvedContextClubs.any { c ->
-                                matchesOriginalClub(fromClub, c) || matchesOriginalClub(toClub, c)
-                            }
-
-                            val existing = candidates[pId]
-                            if (existing == null) {
-                                candidates[pId] = Cand(cleanName, rs.getInt("transfer_count"), clubMatch)
-                            } else if (clubMatch) {
-                                existing.contextMatch = true
-                            }
+                            val contextCount = rs.getInt("context_count")
+                            candidates[pId] = Cand(cleanName, rs.getInt("transfer_count"), contextCount > 0)
                         }
                     }
                 }
             }
-        }
-
-        val candidates = mutableMapOf<Int, Cand>()
-        try {
-            runQuery("%$targetNorm%", candidates)
         } catch (e: Exception) {
             println("fetchPlayerNameSuggestions HATASI: ${e.message}")
         }
+
         return candidates.values
             .sortedWith(compareByDescending<Cand> { it.contextMatch }.thenByDescending { it.count })
             .distinctBy { it.name }
