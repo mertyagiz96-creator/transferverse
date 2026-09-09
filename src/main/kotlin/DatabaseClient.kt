@@ -2553,7 +2553,7 @@ object DatabaseClient {
         // bağlam eşleşmesini (context_count) LIMIT'TEN ÖNCE, SQL'in kendisinde
         // hesaplayıp sıralıyoruz — bu iki kulüpte gerçekten oynamış HERKES,
         // ismi ne kadar yaygın olursa olsun, artık havuza girebiliyor.
-        data class Cand(val name: String, val count: Int, var contextMatch: Boolean)
+        data class Cand(val name: String, val count: Int, val contextCount: Int)
         val candidates = mutableMapOf<Int, Cand>()
 
         try {
@@ -2617,7 +2617,7 @@ object DatabaseClient {
                             if (!nameNorm.contains(targetNorm)) continue
 
                             val contextCount = rs.getInt("context_count")
-                            candidates[pId] = Cand(cleanName, rs.getInt("transfer_count"), contextCount > 0)
+                            candidates[pId] = Cand(cleanName, rs.getInt("transfer_count"), contextCount)
                         }
                     }
                 }
@@ -2627,7 +2627,7 @@ object DatabaseClient {
         }
 
         return candidates.values
-            .sortedWith(compareByDescending<Cand> { it.contextMatch }.thenByDescending { it.count })
+            .sortedWith(compareByDescending<Cand> { it.contextCount }.thenByDescending { it.count })
             .distinctBy { it.name }
             .take(12)
             .map { it.name }
