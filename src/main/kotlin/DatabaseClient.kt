@@ -2370,29 +2370,37 @@ object DatabaseClient {
                 // (Unicode NFD normalizasyonu kullanıyor) hem daha güvenli hem
                 // Türkçe/İspanyolca/Balkan dillerinin HEPSİNİ doğru işliyor.
                 val needsRepair = nullCount > 0
-                var repairedBalkanCount = 0
+                var repairedCount = 0
                 if (!needsRepair) {
-                    // Sütun zaten dolu — sadece Balkan karakterli (daha önce
-                    // yanlış hesaplanmış olabilecek) isimleri hedefli onarıyoruz.
+                    // 🎯 KÖK SEBEP DÜZELTMESİ: eskiden SADECE Balkan karakterleri
+                    // (Š/Č/Ž/Đ) hedefli onarılıyordu — ama "ë" (Gaël Clichy gibi)
+                    // dahil, aksan temizleme mantığı DAHA ÖNCE değiştiğinde
+                    // (eski SQL tabanlı REPLACE zincirinden Kotlin'e geçişte)
+                    // hesaplanmış TÜM diğer aksanlı isimler bu dar filtrenin
+                    // dışında kalıp SONSUZA KADAR bozuk kalabiliyordu. Artık
+                    // TÜM isimlerin name_std'sini, GÜNCEL fonksiyonla yeniden
+                    // hesaplayıp KARŞILAŞTIRIYORUZ — sadece FARKLI olanları
+                    // güncelliyoruz (çoğunluğu zaten doğru olduğu için hızlı).
                     try {
-                        val affectedNames = mutableSetOf<String>()
-                        conn.prepareStatement(
-                            "SELECT DISTINCT name FROM players WHERE name LIKE '%Š%' OR name LIKE '%š%' " +
-                            "OR name LIKE '%Č%' OR name LIKE '%č%' OR name LIKE '%Ž%' OR name LIKE '%ž%' " +
-                            "OR name LIKE '%Đ%' OR name LIKE '%đ%'"
-                        ).use { stmt ->
+                        val mismatches = mutableListOf<Pair<String, String>>() // (name, doğru name_std)
+                        conn.prepareStatement("SELECT DISTINCT name, name_std FROM players").use { stmt ->
                             stmt.executeQuery().use { rs ->
                                 while (rs.next()) {
-                                    rs.getString("name")?.let { affectedNames.add(it) }
+                                    val name = rs.getString("name") ?: continue
+                                    val storedStd = rs.getString("name_std") ?: ""
+                                    val correctStd = stripAccentsForCompare(name)
+                                    if (storedStd != correctStd) {
+                                        mismatches.add(name to correctStd)
+                                    }
                                 }
                             }
                         }
-                        if (affectedNames.isNotEmpty()) {
+                        if (mismatches.isNotEmpty()) {
                             conn.autoCommit = false
                             try {
                                 conn.prepareStatement("UPDATE players SET name_std = ? WHERE name = ?").use { stmt ->
-                                    for (name in affectedNames) {
-                                        stmt.setString(1, stripAccentsForCompare(name))
+                                    for ((name, correctStd) in mismatches) {
+                                        stmt.setString(1, correctStd)
                                         stmt.setString(2, name)
                                         stmt.addBatch()
                                     }
@@ -2402,13 +2410,13 @@ object DatabaseClient {
                             } finally {
                                 conn.autoCommit = true
                             }
-                            repairedBalkanCount = affectedNames.size
+                            repairedCount = mismatches.size
                         }
                     } catch (e: Exception) {
-                        println("⚠️ Balkan karakter onarımı hatası: ${e.message}")
+                        println("⚠️ name_std onarımı hatası: ${e.message}")
                     }
-                    if (repairedBalkanCount > 0) {
-                        println("✅ $repairedBalkanCount Balkan karakterli isim onarıldı.")
+                    if (repairedCount > 0) {
+                        println("✅ $repairedCount isim onarıldı (name_std uyuşmazlığı — aksan vb.).")
                     }
                     println("✅ name_std sütunu zaten mevcut ve dolu, performans migrasyonu atlanıyor.")
                     return@withConnection
@@ -2645,6 +2653,7 @@ object DatabaseClient {
             FROM (
                 SELECT id, name, position, nationality, birthdate FROM players
                 WHERE name_std LIKE ?
+                ORDER BY (id >= 9999000) DESC
                 LIMIT 30
             ) p
             LEFT JOIN transfers t ON p.id = t.transfer_id
@@ -2699,7 +2708,13 @@ object DatabaseClient {
             return null
         }
 
-        if (candidates.isEmpty()) return null
+        if (candidates.isEmpty()) {
+            // 🎯 YENİ: teşhis logu — bu isim neden bulunamadı, bir dahaki
+            // sefere Render loglarından kesin sebebi görebilelim (WHERE
+            // filtresine hiç girmedi mi, yoksa girdi ama isim eşleşmedi mi).
+            println("⚠️ fetchPlayerBasicInfoByName: '$cleanName' (normalize: '$targetNorm') için HİÇ aday bulunamadı.")
+            return null
+        }
 
         val best = candidates.values
             .sortedWith(compareByDescending<Candidate> { it.matchesClub }.thenByDescending { it.transferCount })
