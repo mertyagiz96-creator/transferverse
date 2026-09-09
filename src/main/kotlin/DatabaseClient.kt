@@ -1418,7 +1418,11 @@ object DatabaseClient {
     private var cachedDailyBioDate: String? = null
 
     fun fetchDailyPlayerBio(dateSeed: Int = 0): DailyPlayerBio? {
-        val today = java.time.LocalDate.now()
+        // 🎯 KÖK SEBEP DÜZELTMESİ: saat dilimi belirtilmemişti, sunucunun
+        // varsayılan (muhtemelen UTC) saatini kullanıyordu — Türkiye UTC+3
+        // olduğu için gün değişimi gece yarısı yerine sabah 03:00'te oluyordu.
+        // /serverDate endpoint'indeki AYNI düzeltmeyi burada da uyguluyoruz.
+        val today = java.time.LocalDate.now(java.time.ZoneId.of("Europe/Istanbul"))
         val monthDay = String.format("%02d-%02d", today.monthValue, today.dayOfMonth)
 
         if (cachedDailyBioDate == monthDay && cachedDailyBio != null) {
@@ -2569,13 +2573,22 @@ object DatabaseClient {
                         LIMIT 40
                     """.trimIndent()
                 } else {
-                    val contextConditions = resolvedContextClubs.joinToString(" OR ") {
-                        "from_club_std LIKE ? OR to_club_std LIKE ?"
+                    // 🎯 KÖK SEBEP DÜZELTMESİ (3. tur): "context_count" eskiden
+                    // İKİ kulüpten HERHANGİ BİRİNE değse bile eşit sayılıyordu —
+                    // bu yüzden sadece Real Madrid'de oynamış biri (Beşiktaş'la
+                    // hiç alakası olmayan), her İKİSİNDE de oynamış gerçek Guti'nin
+                    // önüne geçebiliyordu (toplam transfer sayısı fazlaysa). Artık
+                    // her bağlam kulübünü AYRI AYRI kontrol edip, KAÇ FARKLI
+                    // kulüple eşleştiğini (0, 1, 2...) sayıyoruz — ikisiyle de
+                    // eşleşen her zaman sadece biriyle eşleşenin önüne geçiyor.
+                    val perClubMatchExprs = resolvedContextClubs.mapIndexed { i, _ ->
+                        "(CASE WHEN EXISTS(SELECT 1 FROM transfers tc$i WHERE tc$i.transfer_id = p.id AND (from_club_std LIKE ? OR to_club_std LIKE ?)) THEN 1 ELSE 0 END)"
                     }
+                    val clubsMatchedExpr = perClubMatchExprs.joinToString(" + ")
                     sql = """
                         SELECT p.id, p.name,
                                (SELECT COUNT(*) FROM transfers t2 WHERE t2.transfer_id = p.id) as transfer_count,
-                               (SELECT COUNT(*) FROM transfers t3 WHERE t3.transfer_id = p.id AND ($contextConditions)) as context_count
+                               ($clubsMatchedExpr) as context_count
                         FROM players p
                         WHERE p.name_std LIKE ?
                         ORDER BY (p.id >= 9999000) DESC, context_count DESC, transfer_count DESC
@@ -2952,9 +2965,16 @@ object DatabaseClient {
     }
 
     private fun cleanNationalityText(rawNat: String): String {
-        return rawNat.replace('\u00a0', ' ')
+        val cleaned = rawNat.replace('\u00a0', ' ')
             .replace(160.toChar(), ' ')
             .replace(Regex("Mevki|Uyruk|[0-9()]+"), "")
             .trim()
+        // 🎯 KÖK SEBEP DÜZELTMESİ: bazı oyuncular birden fazla uyruğa sahip
+        // (örn. "England  Nigeria", iki veya daha fazla boşlukla ayrılmış) —
+        // bu, isPrimaryCountryMatch'te zaten doğru şekilde ele alınıyordu
+        // (sadece BİRİNCİL/ilk uyruğa bakılıyordu) ama görüntülemede
+        // (Günün Oyuncusu gibi) ikisi de olduğu gibi gösteriliyordu. Artık
+        // burada da sadece birincil uyruğu gösteriyoruz.
+        return cleaned.split(Regex("\\s{2,}")).firstOrNull()?.trim() ?: cleaned
     }
 }
