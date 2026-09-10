@@ -10022,7 +10022,10 @@
                     if (!result.accepted) {
                         submitBtn.disabled = false;
                         submitBtn.textContent = 'Gönder';
-                        showToast('❌ Bu kulüp zaten kullanıldı, başka bir kulüp yaz');
+                        const msg = result.reason === 'not_found'
+                            ? '❌ Bu kulüp bulunamadı, listeden seçerek yaz'
+                            : '❌ Bu kulüp zaten kullanıldı, başka bir kulüp yaz';
+                        showToast(msg);
                         input.value = '';
                         input.focus();
                         return;

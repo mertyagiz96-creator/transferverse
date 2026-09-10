@@ -2740,6 +2740,30 @@ object DatabaseClient {
     // kullanıcının 45 saniyesinden veritabanı gecikmesi çalmıyor.
     data class SimplePlayerMatch(val playerId: Int, val playerName: String, val nameStd: String)
 
+    // 🎯 YENİ: "3,2,1" modunda, biri yazıp Enter'a basınca (dropdown'dan
+    // seçmeden) eksik/geçersiz bir metin ("bayern m" gibi) gönderebiliyordu —
+    // sistem bunu kabul edip turu boşa harcıyordu. Bu, kulübün veritabanında
+    // GERÇEKTEN var olup olmadığını (en az bir transfer kaydında geçip
+    // geçmediğini) ucuz bir şekilde kontrol ediyor.
+    fun clubExistsInData(clubRaw: String): Boolean {
+        val clubStd = resolveClubSearchTerm(clubRaw)
+        if (clubStd.isBlank()) return false
+        return try {
+            withConnection { conn ->
+                conn.prepareStatement(
+                    "SELECT 1 FROM transfers WHERE from_club_std LIKE ? OR to_club_std LIKE ? LIMIT 1"
+                ).use { stmt ->
+                    stmt.setString(1, "%$clubStd%")
+                    stmt.setString(2, "%$clubStd%")
+                    stmt.executeQuery().use { rs -> rs.next() }
+                }
+            }
+        } catch (e: Exception) {
+            println("clubExistsInData HATASI: ${e.message}")
+            true // 🛡️ hata durumunda GEÇERLİ say — yanlış reddetmektense kabul et
+        }
+    }
+
     fun fetchAllPlayersAcrossTwoClubs(club1Raw: String, club2Raw: String): List<SimplePlayerMatch> {
         val club1Std = resolveClubSearchTerm(club1Raw)
         val club2Std = resolveClubSearchTerm(club2Raw)

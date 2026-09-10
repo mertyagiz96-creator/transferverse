@@ -278,7 +278,7 @@ object DuelManager {
     // iletebilmek için ayrı bir sonuç tipi — genel state'e karışmıyor,
     // rakip bunu hiç görmüyor.
     @Serializable
-    data class SubmitClub321Result(val accepted: Boolean, val state: DuelState)
+    data class SubmitClub321Result(val accepted: Boolean, val state: DuelState, val reason: String? = null)
 
     fun submitClub321(code: String, playerName: String, club: String): SubmitClub321Result? {
         val room = rooms[code.uppercase()] ?: return null
@@ -302,7 +302,15 @@ object DuelManager {
             // etkilemiyor, kendi hakkı hâlâ duruyor.
             val normalizedClub = DatabaseClient.normalizeClubForComparison(trimmedClub)
             if (room.usedClubsStd321.contains(normalizedClub)) {
-                return SubmitClub321Result(false, toState(room))
+                return SubmitClub321Result(false, toState(room), reason = "duplicate")
+            }
+
+            // 🎯 YENİ: biri Enter'a basıp dropdown'dan seçmeden eksik/geçersiz
+            // bir metin ("bayern m" gibi) gönderebiliyordu — sistem bunu kabul
+            // edip turu boşa harcıyordu. Artık göndermeden ÖNCE, bu kulübün
+            // veritabanında gerçekten var olup olmadığını kontrol ediyoruz.
+            if (!DatabaseClient.clubExistsInData(trimmedClub)) {
+                return SubmitClub321Result(false, toState(room), reason = "not_found")
             }
 
             when (playerName) {
