@@ -9692,6 +9692,13 @@
         if (!input || !box) return;
 
         input.addEventListener('input', () => {
+            // 🎯 KÖK SEBEP DÜZELTMESİ: kullanıcı serbestçe yazdığı sürece,
+            // bu değer "listeden seçilmedi" sayılıyor — sadece aşağıdaki
+            // onclick ile bir öneriye tıklandığında "seçildi" oluyor. "bayern
+            // m" gibi yarım/eksik bir metnin gönderilmesini bu şekilde
+            // engelliyoruz (backend'deki "içeriyor mu" kontrolü yetersizdi,
+            // çünkü her yarım isim zaten gerçek bir ismin İÇİNDE geçiyor).
+            input.dataset.selected = 'false';
             const q = input.value.trim();
             if (!q) { box.style.display = 'none'; return; }
             const normalizedQuery = normalize(q);
@@ -9716,6 +9723,7 @@
             Array.from(box.children).forEach((el, i) => {
                 el.onclick = () => {
                     input.value = matches[i];
+                    input.dataset.selected = 'true';
                     box.style.display = 'none';
                 };
             });
@@ -9991,6 +9999,15 @@
             const doSubmit = async () => {
                 const club = input.value.trim();
                 if (!club) { flashInputError(input); return; }
+                // 🎯 KÖK SEBEP DÜZELTMESİ: kullanıcı listeden seçmeden, yarım
+                // bir isimle ("bayern m" gibi) Enter'a basıp/Gönder'e tıklayıp
+                // turu boşa harcayabiliyordu. Artık gerçekten bir öneriye
+                // TIKLANMADIYSA, sunucuya hiç istek atmadan burada durduruyoruz.
+                if (input.dataset.selected !== 'true') {
+                    flashInputError(input);
+                    showToast('❌ Lütfen listeden bir kulüp seç');
+                    return;
+                }
                 submitBtn.disabled = true;
                 submitBtn.textContent = 'Gönderiliyor...';
                 const requestRoomCode = duelRoomCode; // 🛡️ isteği anlık odaya sabitliyoruz
