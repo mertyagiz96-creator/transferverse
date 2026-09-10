@@ -1099,7 +1099,7 @@ object DatabaseClient {
         // Okoronkwo'nun (sadece Arsenal Tula'da kiralık oynamış, İngiliz
         // Arsenal'la hiç alakası olmayan) yanlışlıkla "Arsenal" cevabı
         // olarak çıkmasına sebep olmuştu.
-        if (resolvedTarget == "arsenal" && cleanClub.contains("tula")) {
+        if (resolvedTarget == "arsenal" && (cleanClub.contains("tula") || cleanClub.contains("kyiv") || cleanClub.contains("kiev"))) {
             return false
         }
         return cleanClub.contains(resolvedTarget)
@@ -2780,18 +2780,19 @@ object DatabaseClient {
         // 🎯 YENİ: matchesOriginalClub'taki AYNI çakışma istisnaları — bu
         // fonksiyon (özellikle "3,2,1" modu için) o fonksiyonu hiç
         // kullanmıyor, kendi ayrı SQL'i var, bu yüzden aynı düzeltmeyi
-        // burada da tekrarlıyoruz. "Arsenal" → "Arsenal Tula" (Rusya, ayrı
-        // kulüp), "Barcelona" → "Espanyol" (resmi adında "Barcelona" geçiyor
-        // ama farklı kulüp) yanlışlıkla eşleşmesin diye.
-        fun exclusionFor(std: String): String = when (std) {
-            "arsenal" -> "tula"
-            "barcelona" -> "espanyol"
-            else -> ""
+        // burada da tekrarlıyoruz. "Arsenal" → "Arsenal Tula" (Rusya) VE
+        // "Arsenal Kyiv" (Ukrayna) — ikisi de tamamen ayrı, gerçek kulüpler
+        // ama "arsenal" alt metniyle yanlışlıkla eşleşiyorlardı. "Barcelona"
+        // → "Espanyol" (resmi adında "Barcelona" geçiyor ama farklı kulüp).
+        fun exclusionsFor(std: String): List<String> = when (std) {
+            "arsenal" -> listOf("tula", "kyiv", "kiev")
+            "barcelona" -> listOf("espanyol")
+            else -> emptyList()
         }
-        val excl1 = exclusionFor(club1Std)
-        val excl2 = exclusionFor(club2Std)
-        val excl1Clause = if (excl1.isNotBlank()) "AND from_club_std NOT LIKE ? AND to_club_std NOT LIKE ?" else ""
-        val excl2Clause = if (excl2.isNotBlank()) "AND from_club_std NOT LIKE ? AND to_club_std NOT LIKE ?" else ""
+        val excl1 = exclusionsFor(club1Std)
+        val excl2 = exclusionsFor(club2Std)
+        val excl1Clause = if (excl1.isNotEmpty()) "AND " + excl1.joinToString(" AND ") { "(from_club_std NOT LIKE ? AND to_club_std NOT LIKE ?)" } else ""
+        val excl2Clause = if (excl2.isNotEmpty()) "AND " + excl2.joinToString(" AND ") { "(from_club_std NOT LIKE ? AND to_club_std NOT LIKE ?)" } else ""
 
         return withConnection { conn ->
             val sql = """
@@ -2807,15 +2808,15 @@ object DatabaseClient {
                 var idx = 1
                 stmt.setString(idx++, "%$club1Std%")
                 stmt.setString(idx++, "%$club1Std%")
-                if (excl1.isNotBlank()) {
-                    stmt.setString(idx++, "%$excl1%")
-                    stmt.setString(idx++, "%$excl1%")
+                for (e in excl1) {
+                    stmt.setString(idx++, "%$e%")
+                    stmt.setString(idx++, "%$e%")
                 }
                 stmt.setString(idx++, "%$club2Std%")
                 stmt.setString(idx++, "%$club2Std%")
-                if (excl2.isNotBlank()) {
-                    stmt.setString(idx++, "%$excl2%")
-                    stmt.setString(idx++, "%$excl2%")
+                for (e in excl2) {
+                    stmt.setString(idx++, "%$e%")
+                    stmt.setString(idx++, "%$e%")
                 }
                 stmt.executeQuery().use { rs ->
                     val results = mutableListOf<SimplePlayerMatch>()

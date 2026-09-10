@@ -4971,6 +4971,8 @@
         renderQuizQuestion(questionData, playSound);
     }
 
+    let quizHintsCurrentPanel = null;
+    let quizHintsOutsideClickListenerAdded = false;
     function renderQuizQuestion(questionData, playSound = true) {
         const { found, isCountryMix: lastQuestionIsCountryMix } = questionData;
         const resultsTable = document.getElementById("resultsTable");
@@ -5170,11 +5172,21 @@
             quizHintsBtn.addEventListener('click', () => {
                 quizHintsPanel.classList.toggle('open');
             });
-            document.addEventListener('click', (e) => {
-                if (!e.target.closest('#quizHintsWrapper')) {
-                    quizHintsPanel.classList.remove('open');
-                }
-            });
+            // 🎯 KÖK SEBEP DÜZELTMESİ (PERFORMANS): bu dinleyici, her yeni
+            // soruda (renderQuizQuestion her çağrıldığında) document'a
+            // TEKRAR ekleniyordu, eskisi hiç silinmeden — zamanla yüzlerce
+            // dinleyici birikip sayfayı yavaşlatıyordu ("3,2,1"deki AYNI
+            // hata sınıfı). Artık güncel paneli dinamik olarak takip eden,
+            // SADECE BİR KEZ kaydedilen tek bir dinleyici kullanıyoruz.
+            quizHintsCurrentPanel = quizHintsPanel;
+            if (!quizHintsOutsideClickListenerAdded) {
+                quizHintsOutsideClickListenerAdded = true;
+                document.addEventListener('click', (e) => {
+                    if (quizHintsCurrentPanel && !e.target.closest('#quizHintsWrapper')) {
+                        quizHintsCurrentPanel.classList.remove('open');
+                    }
+                });
+            }
         }
 
         const revealPositionBtn = document.getElementById('revealPositionBtn');
@@ -8699,6 +8711,8 @@
     // 💡 endpointBuilder: opsiyonel — verilmezse futboldaki varsayılan uç noktayı
     // kullanır (geriye dönük tam uyumlu). Basketbol gibi farklı bir kaynağa
     // bağlanmak isteyen çağıranlar, kendi URL'sini üreten bir fonksiyon verebilir.
+    let playerNameAutocompleteActiveRefs = null;
+    let playerNameAutocompleteOutsideClickAdded = false;
     function setupPlayerNameAutocomplete(inputId, dropdownId, getContextClubs, endpointBuilder) {
         const input = document.getElementById(inputId);
         const dropdown = document.getElementById(dropdownId);
@@ -8891,9 +8905,24 @@
         });
 
         input.addEventListener('blur', () => setTimeout(closeDropdown, 150));
-        document.addEventListener('click', (e) => {
-            if (!input.contains(e.target) && !dropdown.contains(e.target)) closeDropdown();
-        });
+        // 🎯 KÖK SEBEP DÜZELTMESİ (PERFORMANS): bu paylaşılan fonksiyon
+        // (Transfer Bağlantısı + Günün Sorusu'nda kullanılıyor) her
+        // çağrıldığında document'a YENİ bir dinleyici ekliyordu, eskisi hiç
+        // silinmeden — "3,2,1"deki AYNI hata sınıfı, ama muhtemelen DAHA SIK
+        // tetiklendiği için (Günün Sorusu her ana menüye dönüşte yeniden
+        // yükleniyor) etkisi daha büyüktü. Artık tek seferlik, dinamik
+        // referanslı bir dinleyici kullanıyoruz.
+        playerNameAutocompleteActiveRefs = { input, box: dropdown, close: closeDropdown };
+        if (!playerNameAutocompleteOutsideClickAdded) {
+            playerNameAutocompleteOutsideClickAdded = true;
+            document.addEventListener('click', (e) => {
+                const refs = playerNameAutocompleteActiveRefs;
+                if (!refs) return;
+                if (!refs.input.contains(e.target) && !refs.box.contains(e.target)) {
+                    refs.close();
+                }
+            });
+        }
     }
 
     function computeAgeFromBirthDate(birthDateStr) {
@@ -9687,9 +9716,19 @@
     // yeniden çizildiğinde input yeniden oluştuğu için, dinleyicileri her
     // seferinde YENİDEN bağlıyoruz (Kehanet'teki "dataset.wired" kontrolü
     // tek seferlik kurulum için, burada ise ekran kendisi tek kullanımlık).
+    // 🎯 KÖK SEBEP DÜZELTMESİ (PERFORMANS): eskiden setupDuel321ClubAutocomplete
+    // her çağrıldığında (ekran her yeniden çizildiğinde — bekleme sırasında
+    // sık sık oluyor) document'a YENİ bir "dışarı tıklayınca kapat" dinleyicisi
+    // ekleniyordu, ESKİSİ HİÇ SİLİNMEDEN. Zamanla yüzlerce dinleyici birikip
+    // HER tıklamada hepsi çalışıyordu — bu, "3,2,1"in inanılmaz yavaşlamasının
+    // sebebiydi. Artık bu dinleyici SADECE BİR KEZ kaydediliyor, güncel
+    // input/box'a dinamik olarak bakıyor.
+    let duel321ActiveAutocompleteRefs = null; // { input, box }
+    let duel321OutsideClickListenerAdded = false;
     function setupDuel321ClubAutocomplete(input) {
         const box = document.getElementById('duel321ClubSuggestions');
         if (!input || !box) return;
+        duel321ActiveAutocompleteRefs = { input, box };
 
         input.addEventListener('input', () => {
             // 🎯 KÖK SEBEP DÜZELTMESİ: kullanıcı serbestçe yazdığı sürece,
@@ -9729,9 +9768,16 @@
             });
         });
 
-        document.addEventListener('click', (e) => {
-            if (!input.contains(e.target) && !box.contains(e.target)) box.style.display = 'none';
-        });
+        if (!duel321OutsideClickListenerAdded) {
+            duel321OutsideClickListenerAdded = true;
+            document.addEventListener('click', (e) => {
+                const refs = duel321ActiveAutocompleteRefs;
+                if (!refs) return;
+                if (!refs.input.contains(e.target) && !refs.box.contains(e.target)) {
+                    refs.box.style.display = 'none';
+                }
+            });
+        }
     }
 
     // 🎲 YENİ: "3,2,1" modu — kulüp girişi ekranı. Her oyuncu KENDİ kulübünü
@@ -9742,6 +9788,8 @@
     // tarzı bir oyuncu giriş kutusu + Gönder butonu. Fotoğraf, mevki ipucu,
     // pas geçme YOK — bu modun mantığı zaten "hiçbir ipucu olmadan hafızadan
     // bilme" olduğu için.
+    let duel321GuessAutocompleteRefs = null;
+    let duel321GuessOutsideClickListenerAdded = false;
     function buildDuel321GuessScreen(state) {
         duelGuessLocked = false;
         clearInterval(duelLocalTimerInterval);
@@ -9822,6 +9870,7 @@
         const guessInput = document.getElementById('duel321GuessInput');
         const submitBtn = document.getElementById('duel321SubmitGuessBtn');
         const suggestBox = document.getElementById('duel321GuessSuggestions');
+        duel321GuessAutocompleteRefs = { input: guessInput, box: suggestBox };
 
         // 🎯 Kehanet'teki gibi: EXPLICIT "Gönder" — her tuşta otomatik kontrol
         // YOK, kullanıcı ismi seçer/yazar, sonra kendisi gönderir.
@@ -9929,9 +9978,16 @@
                 } catch (e) { suggestBox.style.display = 'none'; }
             }, 200);
         });
-        document.addEventListener('click', (e) => {
-            if (!guessInput.contains(e.target) && !suggestBox.contains(e.target)) suggestBox.style.display = 'none';
-        });
+        if (!duel321GuessOutsideClickListenerAdded) {
+            duel321GuessOutsideClickListenerAdded = true;
+            document.addEventListener('click', (e) => {
+                const refs = duel321GuessAutocompleteRefs;
+                if (!refs) return;
+                if (!refs.input.contains(e.target) && !refs.box.contains(e.target)) {
+                    refs.box.style.display = 'none';
+                }
+            });
+        }
     }
 
     // 🎲 321 tahmin ekranındayken gelen her poll'da skoru/süreyi güncelliyoruz
