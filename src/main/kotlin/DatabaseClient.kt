@@ -740,7 +740,8 @@ object DatabaseClient {
                     } ?: teams.firstOrNull()?.jsonObject
                     val badge = footballTeam?.get("strTeamBadge")?.jsonPrimitive?.contentOrNull
                         ?: footballTeam?.get("strBadge")?.jsonPrimitive?.contentOrNull
-                    if (!badge.isNullOrBlank()) {
+                    // 🎯 Aynı düzeltme — bkz. basketbol versiyonundaki yorum.
+                    if (!badge.isNullOrBlank() && badge.startsWith("http")) {
                         footballLogoFallbackCache[cacheKey] = badge
                         return badge
                     }
@@ -809,7 +810,14 @@ object DatabaseClient {
                         }
                         val badge = basketballTeam?.get("strTeamBadge")?.jsonPrimitive?.contentOrNull
                             ?: basketballTeam?.get("strBadge")?.jsonPrimitive?.contentOrNull
-                        if (!badge.isNullOrBlank()) {
+                        // 🎯 KÖK SEBEP DÜZELTMESİ: TheSportsDB bazen gerçek bir
+                        // URL yerine, base64 gömülü, tekrarlı/bozuk bir "resim
+                        // yok" placeholder'ı döndürüyor (Ratiopharm Ulm'da
+                        // fark edildi — 1418x1418, neredeyse boş bir görsel).
+                        // Sadece GERÇEK http(s) linklerini geçerli sayıp
+                        // önbelleğe alıyoruz, aksi halde site bir dahaki
+                        // sefere tekrar deneyebilsin diye hiç kaydetmiyoruz.
+                        if (!badge.isNullOrBlank() && badge.startsWith("http")) {
                             basketballLogoCache[cacheKey] = badge
                             try {
                                 withBbConnection { conn ->
@@ -1659,6 +1667,40 @@ object DatabaseClient {
             println("fetchAllClubLogos HATASI: ${e.message}")
         }
         return result
+    }
+
+    // 🔎 GEÇİCİ: belirli takımların bb_team_logos tablosunda ve
+    // bb_players/nba_players'ta TAM OLARAK nasıl kayıtlı olduğunu gösterip,
+    // eksik logoların gerçek sebebini (hiç denenmemiş mi, bulunamamış mı,
+    // isim uyuşmazlığı mı) netleştiriyor.
+    fun checkBasketballLogoStatus(teamName: String): String {
+        val sb = StringBuilder()
+        val std = teamName.trim().lowercase()
+        sb.appendLine("🔍 '$teamName' (normalize: '$std') için durum:")
+        try {
+            withBbConnection { conn ->
+                conn.prepareStatement("SELECT team_name_std, logo_url FROM bb_team_logos WHERE team_name_std LIKE ?").use { stmt ->
+                    stmt.setString(1, "%$std%")
+                    stmt.executeQuery().use { rs ->
+                        var found = false
+                        while (rs.next()) {
+                            found = true
+                            sb.appendLine("  bb_team_logos: key=\"${rs.getString("team_name_std")}\", logo_url=\"${rs.getString("logo_url")}\"")
+                        }
+                        if (!found) sb.appendLine("  ❌ bb_team_logos'ta HİÇ kayıt yok (bu isme benzer hiçbir key).")
+                    }
+                }
+                conn.prepareStatement("SELECT DISTINCT team_name FROM bb_players WHERE team_name_std LIKE ? LIMIT 5").use { stmt ->
+                    stmt.setString(1, "%$std%")
+                    stmt.executeQuery().use { rs ->
+                        while (rs.next()) sb.appendLine("  bb_players'daki gerçek yazılış: \"${rs.getString("team_name")}\"")
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            sb.appendLine("HATA: ${e.message}")
+        }
+        return sb.toString()
     }
 
     fun fetchAllBasketballLogos(): Map<String, String> {

@@ -194,6 +194,14 @@ fun main() {
                 call.respondText(report, ContentType.Text.Plain)
             }
 
+            // 🔎 GEÇİCİ: eksik/boş görünen basketbol logolarının gerçek
+            // sebebini gösteriyor. Örn: /admin/check-basketball-logo?name=Ratiopharm Ulm
+            get("/admin/check-basketball-logo") {
+                val nameQuery = call.request.queryParameters["name"] ?: ""
+                val report = DatabaseClient.checkBasketballLogoStatus(nameQuery)
+                call.respondText(report, ContentType.Text.Plain)
+            }
+
             // 🎯 YENİ: büyük kulüplerde (TR + Avrupa) geçen ama bizde hiç
             // olmayan oyuncuları TAM PROFİLLERİYLE oluşturuyor. Varsayılan
             // önizleme modunda — ?dryRun=false ile gerçekten yazar.
