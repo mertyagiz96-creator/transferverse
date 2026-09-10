@@ -10004,8 +10004,9 @@
                 // turu boşa harcayabiliyordu. Artık gerçekten bir öneriye
                 // TIKLANMADIYSA, sunucuya hiç istek atmadan burada durduruyoruz.
                 if (input.dataset.selected !== 'true') {
-                    flashInputError(input);
                     showToast('❌ Lütfen listeden bir kulüp seç');
+                    input.value = '';
+                    input.focus();
                     return;
                 }
                 submitBtn.disabled = true;
