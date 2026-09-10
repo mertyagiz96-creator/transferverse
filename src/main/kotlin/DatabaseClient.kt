@@ -2777,62 +2777,56 @@ object DatabaseClient {
         val club2Std = resolveClubSearchTerm(club2Raw)
         if (club1Std.isBlank() || club2Std.isBlank()) return emptyList()
 
-        // 🎯 YENİ: matchesOriginalClub'taki AYNI çakışma istisnaları — bu
-        // fonksiyon (özellikle "3,2,1" modu için) o fonksiyonu hiç
-        // kullanmıyor, kendi ayrı SQL'i var, bu yüzden aynı düzeltmeyi
-        // burada da tekrarlıyoruz. "Arsenal" → "Arsenal Tula" (Rusya) VE
-        // "Arsenal Kyiv" (Ukrayna) — ikisi de tamamen ayrı, gerçek kulüpler
-        // ama "arsenal" alt metniyle yanlışlıkla eşleşiyorlardı. "Barcelona"
-        // → "Espanyol" (resmi adında "Barcelona" geçiyor ama farklı kulüp).
-        fun exclusionsFor(std: String): List<String> = when (std) {
-            "arsenal" -> listOf("tula", "kyiv", "kiev")
-            "barcelona" -> listOf("espanyol")
-            else -> emptyList()
-        }
-        val excl1 = exclusionsFor(club1Std)
-        val excl2 = exclusionsFor(club2Std)
-        val excl1Clause = if (excl1.isNotEmpty()) "AND " + excl1.joinToString(" AND ") { "(from_club_std NOT LIKE ? AND to_club_std NOT LIKE ?)" } else ""
-        val excl2Clause = if (excl2.isNotEmpty()) "AND " + excl2.joinToString(" AND ") { "(from_club_std NOT LIKE ? AND to_club_std NOT LIKE ?)" } else ""
+        // 🎯 KÖK SEBEP DÜZELTMESİ (kalıcı): bu fonksiyon eskiden kendi ayrı,
+        // basit alt-metin eşleştirmesini kullanıyordu — bu yüzden ana
+        // aramadaki (fetchCommonPlayers) youth-kulüp filtresi VE Barcelona/
+        // Espanyol, Arsenal/Tula/Kyiv gibi istisnalar burada HİÇ
+        // uygulanmıyordu. Artık ana aramayla TAMAMEN AYNI, TEK kaynaktan
+        // (matchesOriginalClub + isExactClubMatch) besleniyor — ikisi bir
+        // daha asla birbirinden sapamaz, ayrı istisna listesi tutmuyoruz.
+        data class CandInfo(val name: String, val nameStd: String, val transfers: MutableList<Pair<String, String>>)
+        val candMap = mutableMapOf<Int, CandInfo>()
 
-        return withConnection { conn ->
-            val sql = """
-                SELECT p.id, p.name, p.name_std
-                FROM players p
-                WHERE p.id IN (
-                    SELECT transfer_id FROM transfers WHERE (from_club_std LIKE ? OR to_club_std LIKE ?) $excl1Clause
-                    INTERSECT
-                    SELECT transfer_id FROM transfers WHERE (from_club_std LIKE ? OR to_club_std LIKE ?) $excl2Clause
-                )
-            """.trimIndent()
-            conn.prepareStatement(sql).use { stmt ->
-                var idx = 1
-                stmt.setString(idx++, "%$club1Std%")
-                stmt.setString(idx++, "%$club1Std%")
-                for (e in excl1) {
-                    stmt.setString(idx++, "%$e%")
-                    stmt.setString(idx++, "%$e%")
-                }
-                stmt.setString(idx++, "%$club2Std%")
-                stmt.setString(idx++, "%$club2Std%")
-                for (e in excl2) {
-                    stmt.setString(idx++, "%$e%")
-                    stmt.setString(idx++, "%$e%")
-                }
+        withConnection { conn ->
+            conn.prepareStatement(
+                "SELECT p.id, p.name, p.name_std, t.from_club, t.to_club FROM players p JOIN transfers t ON p.id = t.transfer_id WHERE t.from_club_std LIKE ? OR t.to_club_std LIKE ? OR t.from_club_std LIKE ? OR t.to_club_std LIKE ?"
+            ).use { stmt ->
+                stmt.setString(1, "%$club1Std%")
+                stmt.setString(2, "%$club1Std%")
+                stmt.setString(3, "%$club2Std%")
+                stmt.setString(4, "%$club2Std%")
                 stmt.executeQuery().use { rs ->
-                    val results = mutableListOf<SimplePlayerMatch>()
                     while (rs.next()) {
-                        results.add(
-                            SimplePlayerMatch(
-                                playerId = rs.getInt("id"),
-                                playerName = rs.getString("name") ?: "",
-                                nameStd = rs.getString("name_std") ?: ""
-                            )
-                        )
+                        val pid = rs.getInt("id")
+                        val info = candMap.getOrPut(pid) {
+                            CandInfo(rs.getString("name") ?: "", rs.getString("name_std") ?: "", mutableListOf())
+                        }
+                        info.transfers.add((rs.getString("from_club") ?: "") to (rs.getString("to_club") ?: ""))
                     }
-                    results
                 }
             }
         }
+        if (candMap.isEmpty()) return emptyList()
+
+        // 🎯 Ana aramadaki BİREBİR aynı iki aşamalı mantık: önce gevşek
+        // (matchesOriginalClub — youth/Barcelona-Espanyol/Arsenal-Tula-Kyiv
+        // istisnaları dahil) eşleşme, sonra "tam eşleşme varsa sadece onu
+        // kabul et" önceliklendirmesi.
+        val loose = candMap.filter { (_, info) ->
+            val ok1 = info.transfers.any { (f, t) -> matchesOriginalClub(f, club1Std) || matchesOriginalClub(t, club1Std) }
+            val ok2 = info.transfers.any { (f, t) -> matchesOriginalClub(f, club2Std) || matchesOriginalClub(t, club2Std) }
+            ok1 && ok2
+        }
+        if (loose.isEmpty()) return emptyList()
+
+        val hasExact1 = loose.values.any { info -> info.transfers.any { (f, t) -> isExactClubMatch(f, club1Std) || isExactClubMatch(t, club1Std) } }
+        val hasExact2 = loose.values.any { info -> info.transfers.any { (f, t) -> isExactClubMatch(f, club2Std) || isExactClubMatch(t, club2Std) } }
+
+        return loose.entries.filter { (_, info) ->
+            val ok1 = if (hasExact1) info.transfers.any { (f, t) -> isExactClubMatch(f, club1Std) || isExactClubMatch(t, club1Std) } else true
+            val ok2 = if (hasExact2) info.transfers.any { (f, t) -> isExactClubMatch(f, club2Std) || isExactClubMatch(t, club2Std) } else true
+            ok1 && ok2
+        }.map { (id, info) -> SimplePlayerMatch(playerId = id, playerName = info.name, nameStd = info.nameStd) }
     }
 
     fun verifyPlayerPlayedForBothClubs(playerNameQuery: String, club1Raw: String, club2Raw: String): MultiClubPlayerResult? {
