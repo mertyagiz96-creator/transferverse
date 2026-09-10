@@ -676,23 +676,32 @@ object DatabaseClient {
             val nbaTeams = fetchAllNbaSuggestions()
             val allTeams = (europeTeams + nbaTeams).distinct()
 
-            val alreadyCachedCount = withBbConnection { conn ->
-                var count = 0
-                conn.prepareStatement("SELECT COUNT(*) as cnt FROM bb_team_logos").use { stmt ->
+            // 🎯 KÖK SEBEP DÜZELTMESİ: eskiden "toplam kayıt sayısı >= takım
+            // sayısı mı" diye bakılıyordu — ama bu, HANGİ takımların eksik
+            // olduğunu hiç kontrol etmiyordu. Eğer eski/silinmiş takımlardan
+            // kalma fazladan kayıtlar varsa (56 kayıt, 54 gerçek takım gibi),
+            // toplam sayı yeterli görünüp ön-yükleme TAMAMEN atlanıyordu —
+            // gerçekte eksik olan birkaç takım hiçbir zaman yeniden
+            // denenmiyordu. Artık HANGİ takımların gerçekten eksik olduğuna
+            // bakıp SADECE onları deniyoruz.
+            val cachedTeamStds = withBbConnection { conn ->
+                val set = mutableSetOf<String>()
+                conn.prepareStatement("SELECT team_name_std FROM bb_team_logos").use { stmt ->
                     stmt.executeQuery().use { rs ->
-                        if (rs.next()) count = rs.getInt("cnt")
+                        while (rs.next()) rs.getString("team_name_std")?.let { set.add(it) }
                     }
                 }
-                count
+                set
             }
-            if (alreadyCachedCount >= allTeams.size) {
-                println("Logolar zaten kalıcı veritabanında ($alreadyCachedCount/${allTeams.size}) — ön-yükleme atlandı.")
+            val missingTeams = allTeams.filter { it.trim().lowercase() !in cachedTeamStds }
+            if (missingTeams.isEmpty()) {
+                println("Logolar zaten kalıcı veritabanında (${allTeams.size}/${allTeams.size}) — ön-yükleme atlandı.")
                 return
             }
 
-            println("${allTeams.size} takımın logosu önceden yükleniyor...")
+            println("${missingTeams.size} eksik takımın logosu (yeniden) deneniyor...")
             var found = 0
-            for (team in allTeams) {
+            for (team in missingTeams) {
                 val callStart = System.currentTimeMillis()
                 val logo = fetchBasketballTeamLogo(team)
                 if (logo != null) found++
@@ -701,7 +710,7 @@ object DatabaseClient {
                     kotlinx.coroutines.delay(600)
                 }
             }
-            println("Logo ön-yükleme tamamlandı: $found / ${allTeams.size} bulundu.")
+            println("Logo ön-yükleme tamamlandı: $found / ${missingTeams.size} bulundu.")
         } catch (e: Exception) {
             println("preloadAllBasketballLogos HATASI: ${e.message}")
         }
