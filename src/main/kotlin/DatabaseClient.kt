@@ -1094,6 +1094,14 @@ object DatabaseClient {
         if (resolvedTarget == "barcelona" && cleanClub.contains("espanyol")) {
             return false
         }
+        // 🎯 YENİ: "Arsenal" araması, "PFK Arsenal Tula" (Rusya'da tamamen
+        // ayrı, gerçek bir kulüp) ile yanlışlıkla eşleşiyordu — Jonathan
+        // Okoronkwo'nun (sadece Arsenal Tula'da kiralık oynamış, İngiliz
+        // Arsenal'la hiç alakası olmayan) yanlışlıkla "Arsenal" cevabı
+        // olarak çıkmasına sebep olmuştu.
+        if (resolvedTarget == "arsenal" && cleanClub.contains("tula")) {
+            return false
+        }
         return cleanClub.contains(resolvedTarget)
     }
 
@@ -2769,21 +2777,46 @@ object DatabaseClient {
         val club2Std = resolveClubSearchTerm(club2Raw)
         if (club1Std.isBlank() || club2Std.isBlank()) return emptyList()
 
+        // 🎯 YENİ: matchesOriginalClub'taki AYNI çakışma istisnaları — bu
+        // fonksiyon (özellikle "3,2,1" modu için) o fonksiyonu hiç
+        // kullanmıyor, kendi ayrı SQL'i var, bu yüzden aynı düzeltmeyi
+        // burada da tekrarlıyoruz. "Arsenal" → "Arsenal Tula" (Rusya, ayrı
+        // kulüp), "Barcelona" → "Espanyol" (resmi adında "Barcelona" geçiyor
+        // ama farklı kulüp) yanlışlıkla eşleşmesin diye.
+        fun exclusionFor(std: String): String = when (std) {
+            "arsenal" -> "tula"
+            "barcelona" -> "espanyol"
+            else -> ""
+        }
+        val excl1 = exclusionFor(club1Std)
+        val excl2 = exclusionFor(club2Std)
+        val excl1Clause = if (excl1.isNotBlank()) "AND from_club_std NOT LIKE ? AND to_club_std NOT LIKE ?" else ""
+        val excl2Clause = if (excl2.isNotBlank()) "AND from_club_std NOT LIKE ? AND to_club_std NOT LIKE ?" else ""
+
         return withConnection { conn ->
             val sql = """
                 SELECT p.id, p.name, p.name_std
                 FROM players p
                 WHERE p.id IN (
-                    SELECT transfer_id FROM transfers WHERE from_club_std LIKE ? OR to_club_std LIKE ?
+                    SELECT transfer_id FROM transfers WHERE (from_club_std LIKE ? OR to_club_std LIKE ?) $excl1Clause
                     INTERSECT
-                    SELECT transfer_id FROM transfers WHERE from_club_std LIKE ? OR to_club_std LIKE ?
+                    SELECT transfer_id FROM transfers WHERE (from_club_std LIKE ? OR to_club_std LIKE ?) $excl2Clause
                 )
             """.trimIndent()
             conn.prepareStatement(sql).use { stmt ->
-                stmt.setString(1, "%$club1Std%")
-                stmt.setString(2, "%$club1Std%")
-                stmt.setString(3, "%$club2Std%")
-                stmt.setString(4, "%$club2Std%")
+                var idx = 1
+                stmt.setString(idx++, "%$club1Std%")
+                stmt.setString(idx++, "%$club1Std%")
+                if (excl1.isNotBlank()) {
+                    stmt.setString(idx++, "%$excl1%")
+                    stmt.setString(idx++, "%$excl1%")
+                }
+                stmt.setString(idx++, "%$club2Std%")
+                stmt.setString(idx++, "%$club2Std%")
+                if (excl2.isNotBlank()) {
+                    stmt.setString(idx++, "%$excl2%")
+                    stmt.setString(idx++, "%$excl2%")
+                }
                 stmt.executeQuery().use { rs ->
                     val results = mutableListOf<SimplePlayerMatch>()
                     while (rs.next()) {
