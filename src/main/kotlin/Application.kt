@@ -25,6 +25,7 @@ import java.nio.file.StandardCopyOption
 @Serializable data class JoinRoomRequest(val roomCode: String, val playerName: String)
 @Serializable data class DuelAnswerRequest(val roomCode: String, val playerName: String, val guess: String)
 @Serializable data class DuelPassRequest(val roomCode: String, val playerName: String)
+@Serializable data class SendQuickMessageRequest(val roomCode: String, val playerName: String, val message: String)
 @Serializable data class SubmitClub321Request(val roomCode: String, val playerName: String, val club: String)
 @Serializable data class NextRoundRequest(val roomCode: String)
 @Serializable data class QuizScoreSubmission(val score: Int, val mode: String = "genel")
@@ -2067,6 +2068,29 @@ fun main() {
                     call.respond(HttpStatusCode.NotFound, mapOf("error" to "Oda bulunamadı"))
                 } else {
                     call.respond(state)
+                }
+            }
+
+            // 🎯 YENİ: "3,2,1" tahmin ekranındaki hazır mesajlar — sadece
+            // bildirim, oyun mantığına dokunmuyor.
+            post("/duel/sendQuickMessage") {
+                val body = call.receive<SendQuickMessageRequest>()
+                val result = DuelManager.sendQuickMessage(body.roomCode, body.playerName, body.message)
+                if (result == null) {
+                    call.respond(HttpStatusCode.NotFound, mapOf("error" to "Oda bulunamadı"))
+                } else {
+                    call.respond(result)
+                }
+            }
+
+            get("/duel/pollQuickMessage") {
+                val code = call.request.queryParameters["roomCode"] ?: ""
+                val playerName = call.request.queryParameters["playerName"] ?: ""
+                val result = DuelManager.pollQuickMessage(code, playerName)
+                if (result == null) {
+                    call.respond(HttpStatusCode.NotFound, mapOf("error" to "Oda bulunamadı"))
+                } else {
+                    call.respond(result)
                 }
             }
 

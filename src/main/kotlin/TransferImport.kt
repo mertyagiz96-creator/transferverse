@@ -314,7 +314,7 @@ object TransferImport {
                            (transfer_id, from_club, to_club, season, from_club_std, to_club_std, transfer_date)
                            VALUES (?, ?, ?, ?, ?, ?, ?)"""
                     ).use { stmt ->
-                        stmt.setLong(1, matchedPlayerId!!)
+                        stmt.setLong(1, matchedPlayerId)
                         stmt.setString(2, row.fromClub)
                         stmt.setString(3, row.toClub)
                         stmt.setString(4, row.season)
@@ -851,6 +851,20 @@ object TransferImport {
             if (!dryRun) {
                 conn.prepareStatement("DELETE FROM transfers WHERE transfer_id = 380430").use { it.executeUpdate() }
                 conn.prepareStatement("DELETE FROM players WHERE id = 380430").use { it.executeUpdate() }
+            }
+            report.appendLine()
+
+            // 4️⃣ YENİ: gereksiz Guti kopyası (9999601) — gerçek Guti (id=7530)
+            // zaten veritabanında varmış (yanlış teşhisle elle ikinci bir kayıt
+            // eklenmişti), gereksiz kopyayı siliyoruz.
+            var fakeGutiTransfers = 0
+            conn.prepareStatement("SELECT COUNT(*) c FROM transfers WHERE transfer_id = 9999601").use { stmt ->
+                stmt.executeQuery().use { rs -> if (rs.next()) fakeGutiTransfers = rs.getInt("c") }
+            }
+            report.appendLine("🗑️ Gereksiz Guti kopyası (id=9999601, gerçek Guti zaten 7530'da vardı): $fakeGutiTransfers transfer satırı + 1 players satırı silinecek.")
+            if (!dryRun) {
+                conn.prepareStatement("DELETE FROM transfers WHERE transfer_id = 9999601").use { it.executeUpdate() }
+                conn.prepareStatement("DELETE FROM players WHERE id = 9999601").use { it.executeUpdate() }
             }
 
             report.toString()

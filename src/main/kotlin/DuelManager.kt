@@ -7,6 +7,12 @@ import kotlinx.serialization.Serializable
 
 private const val ROUND_DURATION_MS = 30_000L
 private const val ROOM_STALE_MS = 2 * 60 * 60 * 1000L // 2 saat hareketsizlik = terk edilmiş say
+// 🎯 YENİ: bu, ROOM_STALE_MS'den TAMAMEN farklı — o sadece "sekme kapatılmış
+// mı" (sorgulama bile durmuş mu) kontrolü. Bu ise "sekme AÇIK ama kimse
+// GERÇEKTEN bir şey yapmıyor mu" (örn. tur otomatik döngüde, ama oyuncular
+// gerçekten oynamıyor) durumunu 2 saat değil, çok daha kısa sürede yakalayıp
+// maçı düzgün bir şekilde sonlandırıyor.
+private const val INACTIVITY_TIMEOUT_MS = 5 * 60 * 1000L // 5 dakika gerçek eylemsizlik
 private const val CLEANUP_INTERVAL_MS = 30 * 60 * 1000L // 30 dakikada bir kontrol et
 private const val OPPONENT_LEFT_THRESHOLD_SECONDS = 8 // ~5-6 kaçırılmış polling turu
 private const val EASY_PHASE_ROUND_COUNT = 5 // 🟢 ısınma turu sayısı
@@ -54,7 +60,10 @@ data class DuelState(
     val duelMode: String = "genel",
     val phase: String = "guessing",
     val club1Submitted: Boolean = false,
-    val club2Submitted: Boolean = false
+    val club2Submitted: Boolean = false,
+    // 🎯 YENİ: maç, gerçek eylemsizlik yüzünden mi bitti (5 dk), yoksa
+    // normal şekilde mi (hedef skora ulaşıldı) — frontend farklı mesaj göstersin.
+    val endedDueToInactivity: Boolean = false
 )
 
 @Serializable
@@ -83,6 +92,14 @@ class DuelRoom(val roomCode: String, val player1Name: String, val winTarget: Int
     var player1LastSeen: Long = System.currentTimeMillis()
     var player2LastSeen: Long = System.currentTimeMillis()
     var lastActivityAt: Long = System.currentTimeMillis()
+    // 🎯 YENİ: lastActivityAt, sadece SORGULAMA (getRoom/polling) ile bile
+    // yenileniyordu — yani bir sekme unutulup açık kalsa, kimse GERÇEKTEN
+    // bir şey yapmasa bile oda "aktif" sayılmaya devam ediyordu. Bu, SADECE
+    // gerçek oyuncu eylemlerinde (kulüp/tahmin gönderme, pas geçme vb.)
+    // güncellenen AYRI bir zaman damgası — sonsuza kadar boşta dönen
+    // maçları tespit edip sonlandırmak için kullanılıyor.
+    var lastRealActionAt: Long = System.currentTimeMillis()
+    var endedDueToInactivity: Boolean = false
     var player1Passed = false
     var player2Passed = false
     var bothPassed = false
@@ -93,6 +110,13 @@ class DuelRoom(val roomCode: String, val player1Name: String, val winTarget: Int
     var phase: String = "club_entry"
     var club1Input: String? = null
     var club2Input: String? = null
+    // 🎯 YENİ: "3,2,1" tahmin ekranındaki hazır mesajlar (sadece bildirim,
+    // oyun mantığına hiç dokunmuyor) — oyun boyunca (rematch'e kadar) kişi
+    // başı en fazla 3 kez kullanılabiliyor.
+    var player1QuickMessagesUsed = 0
+    var player2QuickMessagesUsed = 0
+    var pendingMessageForPlayer1: String? = null
+    var pendingMessageForPlayer2: String? = null
     var clubEntryStartTime: Long = System.currentTimeMillis()
     // 🎯 YENİ: iki kulüp belli olunca BİR KEZ hesaplanan tüm geçerli
     // cevaplar — her "Gönder"de veritabanına gitmeden hafızadan kontrol
@@ -212,6 +236,7 @@ object DuelManager {
 
         synchronized(room.lock) {
             room.lastActivityAt = System.currentTimeMillis()
+            room.lastRealActionAt = System.currentTimeMillis()
 
             if (room.player2Name == null) {
                 room.player2Name = player2Name
@@ -247,6 +272,7 @@ object DuelManager {
         val room = rooms[code.uppercase()] ?: return null
         synchronized(room.lock) {
             room.lastActivityAt = System.currentTimeMillis()
+            room.lastRealActionAt = System.currentTimeMillis()
             if (!room.gameOver) {
                 startNewRound(room)
             }
@@ -258,13 +284,20 @@ object DuelManager {
         val room = rooms[code.uppercase()] ?: return null
         synchronized(room.lock) {
             room.lastActivityAt = System.currentTimeMillis()
+            room.lastRealActionAt = System.currentTimeMillis()
             room.player1Score = 0
             room.player2Score = 0
             room.roundNumber = 0 // 🟢 yeniden maç, ısınma turları da baştan başlasın
             room.gameOver = false
             room.gameWinner = null
+            room.endedDueToInactivity = false
+            room.lastRealActionAt = System.currentTimeMillis()
             room.recentPlayerNames.clear()
             room.usedClubsStd321.clear() // 🎯 YENİ: yeniden maç, kullanılan kulüpler de sıfırlansın
+            room.player1QuickMessagesUsed = 0
+            room.player2QuickMessagesUsed = 0
+            room.pendingMessageForPlayer1 = null
+            room.pendingMessageForPlayer2 = null
             startNewRound(room)
         }
         return room
@@ -287,6 +320,7 @@ object DuelManager {
 
         synchronized(room.lock) {
             room.lastActivityAt = System.currentTimeMillis()
+            room.lastRealActionAt = System.currentTimeMillis()
             when (playerName) {
                 room.player1Name -> room.player1LastSeen = System.currentTimeMillis()
                 room.player2Name -> room.player2LastSeen = System.currentTimeMillis()
@@ -366,6 +400,7 @@ object DuelManager {
         synchronized(room.lock) {
             checkTimeout(room)
             room.lastActivityAt = System.currentTimeMillis()
+            room.lastRealActionAt = System.currentTimeMillis()
             when (playerName) {
                 room.player1Name -> room.player1LastSeen = System.currentTimeMillis()
                 room.player2Name -> room.player2LastSeen = System.currentTimeMillis()
@@ -417,6 +452,7 @@ object DuelManager {
         synchronized(room.lock) {
             checkTimeout(room)
             room.lastActivityAt = System.currentTimeMillis()
+            room.lastRealActionAt = System.currentTimeMillis()
             when (playerName) {
                 room.player1Name -> room.player1LastSeen = System.currentTimeMillis()
                 room.player2Name -> room.player2LastSeen = System.currentTimeMillis()
@@ -457,6 +493,7 @@ object DuelManager {
         synchronized(room.lock) {
             checkTimeout(room)
             room.lastActivityAt = System.currentTimeMillis()
+            room.lastRealActionAt = System.currentTimeMillis()
 
             when (playerName) {
                 room.player1Name -> {
@@ -481,6 +518,56 @@ object DuelManager {
             }
 
             return toState(room)
+        }
+    }
+
+    @Serializable
+    data class QuickMessageResult(val success: Boolean, val remainingUses: Int, val reason: String? = null)
+
+    @Serializable
+    data class PendingMessageResult(val message: String?, val remainingUses: Int)
+
+    // 🎯 YENİ: "3,2,1" tahmin ekranındaki hazır mesajlar — SADECE bir
+    // bildirim, hiçbir oyun mantığına (tur, skor vb.) dokunmuyor. Kişi
+    // başı, oyun boyunca (rematch'e kadar) en fazla 3 kez kullanılabiliyor.
+    fun sendQuickMessage(code: String, playerName: String, message: String): QuickMessageResult? {
+        val room = rooms[code.uppercase()] ?: return null
+        synchronized(room.lock) {
+            room.lastActivityAt = System.currentTimeMillis()
+            room.lastRealActionAt = System.currentTimeMillis()
+            val isPlayer1 = playerName == room.player1Name
+            val usedCount = if (isPlayer1) room.player1QuickMessagesUsed else room.player2QuickMessagesUsed
+            if (usedCount >= 3) {
+                return QuickMessageResult(false, 0, reason = "limit_reached")
+            }
+            if (isPlayer1) {
+                room.player1QuickMessagesUsed++
+                room.pendingMessageForPlayer2 = message
+            } else {
+                room.player2QuickMessagesUsed++
+                room.pendingMessageForPlayer1 = message
+            }
+            val remaining = 3 - (if (isPlayer1) room.player1QuickMessagesUsed else room.player2QuickMessagesUsed)
+            return QuickMessageResult(true, remaining)
+        }
+    }
+
+    // 🎯 YENİ: rakipten gelen bekleyen bir mesaj var mı diye kontrol eder —
+    // varsa TESLİM EDER (bir daha gelmez), kendi kalan hakkını da döner.
+    fun pollQuickMessage(code: String, playerName: String): PendingMessageResult? {
+        val room = rooms[code.uppercase()] ?: return null
+        synchronized(room.lock) {
+            val isPlayer1 = playerName == room.player1Name
+            val msg: String?
+            if (isPlayer1) {
+                msg = room.pendingMessageForPlayer1
+                room.pendingMessageForPlayer1 = null
+            } else {
+                msg = room.pendingMessageForPlayer2
+                room.pendingMessageForPlayer2 = null
+            }
+            val remaining = 3 - (if (isPlayer1) room.player1QuickMessagesUsed else room.player2QuickMessagesUsed)
+            return PendingMessageResult(msg, remaining)
         }
     }
 
@@ -557,7 +644,8 @@ object DuelManager {
             duelMode = room.duelMode,
             phase = room.phase,
             club1Submitted = room.club1Input != null,
-            club2Submitted = room.club2Input != null
+            club2Submitted = room.club2Input != null,
+            endedDueToInactivity = room.endedDueToInactivity
         )
     }
 
@@ -577,6 +665,16 @@ object DuelManager {
 
     private fun checkTimeout(room: DuelRoom) {
         if (room.gameOver) return
+
+        // 🎯 YENİ: gerçek bir oyuncu eylemi üzerinden INACTIVITY_TIMEOUT_MS
+        // (5 dk) geçtiyse, sekme açık/sorgulama devam ediyor olsa bile
+        // maçı sonlandırıyoruz — sonsuza kadar boşta dönen sorular olmasın.
+        if (System.currentTimeMillis() - room.lastRealActionAt > INACTIVITY_TIMEOUT_MS) {
+            room.gameOver = true
+            room.endedDueToInactivity = true
+            room.roundOver = true
+            return
+        }
 
         // 🎯 YENİ: "3,2,1" modunun KULÜP GİRİŞİ fazı — 30 sn içinde eksik
         // kalan taraf(lar) için rastgele bir kulüp otomatik atanıp tahmin

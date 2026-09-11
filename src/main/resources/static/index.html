@@ -9451,12 +9451,12 @@
         const target5Btn = document.getElementById('duelTarget5Btn');
         const target10Btn = document.getElementById('duelTarget10Btn');
         target5Btn.addEventListener('click', () => {
-            selectedWinTarget = 5;
+            selectedWinTarget = parseInt(target5Btn.dataset.target, 10);
             target5Btn.classList.add('active');
             target10Btn.classList.remove('active');
         });
         target10Btn.addEventListener('click', () => {
-            selectedWinTarget = 10;
+            selectedWinTarget = parseInt(target10Btn.dataset.target, 10);
             target10Btn.classList.add('active');
             target5Btn.classList.remove('active');
         });
@@ -9474,6 +9474,24 @@
             // (bu modda zaten fotoğraf/ipucu sistemi hiç yok) — gizliyoruz.
             const maskingBtn = document.getElementById('duelMaskingToggleBtn');
             if (maskingBtn) maskingBtn.style.display = (activeBtn === mode321Btn) ? 'none' : '';
+            // 🎯 YENİ: "3,2,1" turları çok daha hızlı bittiği için (45 sn),
+            // 5/10 yerine 3/5'e yarışma seçeneği sunuyoruz — 10'a kadar
+            // oynamak bu modda çok uzun sürebiliyordu.
+            if (activeBtn === mode321Btn) {
+                target5Btn.textContent = "İlk 3'e Yarış";
+                target5Btn.dataset.target = '3';
+                target10Btn.textContent = "İlk 5'e Yarış";
+                target10Btn.dataset.target = '5';
+                if (target5Btn.classList.contains('active')) selectedWinTarget = 3;
+                else if (target10Btn.classList.contains('active')) selectedWinTarget = 5;
+            } else {
+                target5Btn.textContent = "İlk 5'e Yarış";
+                target5Btn.dataset.target = '5';
+                target10Btn.textContent = "İlk 10'a Yarış";
+                target10Btn.dataset.target = '10';
+                if (target5Btn.classList.contains('active')) selectedWinTarget = 5;
+                else if (target10Btn.classList.contains('active')) selectedWinTarget = 10;
+            }
         }
         modeGenelBtn.addEventListener('click', () => {
             selectedDuelMode = 'genel';
@@ -9605,6 +9623,25 @@
                 const state = await res.json();
                 if (!duelActive || duelRoomCode !== requestRoomCode) return;
                 renderDuelStateScreen(state);
+                // 🎯 YENİ: sadece "3,2,1" tahmin fazındaysak, rakipten gelen
+                // bekleyen bir hazır mesaj var mı diye AYRI bir zamanlayıcı
+                // açmadan, mevcut sorgu döngüsüne (piggyback) bakıyoruz.
+                if (state.duelMode === '321' && state.phase === 'guessing' && !state.roundOver) {
+                    try {
+                        const msgRes = await fetch(`/duel/pollQuickMessage?roomCode=${requestRoomCode}&playerName=${encodeURIComponent(duelPlayerName || '')}`);
+                        if (!duelActive || duelRoomCode !== requestRoomCode) return;
+                        if (msgRes.ok) {
+                            const msgResult = await msgRes.json();
+                            if (msgResult.message) showToast(`Rakip: "${msgResult.message}"`);
+                            const remEl = document.getElementById('duel321QuickMsgRemaining');
+                            if (remEl && document.querySelectorAll('.duel321-quickmsg-btn').length > 0) {
+                                remEl.textContent = msgResult.remainingUses > 0 ? `${msgResult.remainingUses} hazır mesaj hakkın kaldı` : 'Hazır mesaj hakkın bitti';
+                            }
+                        }
+                    } catch (e) {
+                        // sessizce geç, bir sonraki sorguda tekrar dene
+                    }
+                }
             } catch (e) {
                 // sessizce bir sonraki denemeye geç
             }
@@ -9730,6 +9767,26 @@
         if (!input || !box) return;
         duel321ActiveAutocompleteRefs = { input, box };
 
+        // 🎯 YENİ: ana menüdeki kutuların yanındaki AYNI mantık — TEK bir
+        // logo ikonu, 120ms gecikmeyle (her tuşta değil, durakladığında)
+        // güncelleniyor. Bu, "hangi Arsenal'i seçtim" gibi kafa
+        // karışıklığını önlerken, önceki 8x-anlık-arama yavaşlığına hiç
+        // geri dönmüyor — tek bir arama, gecikmeli.
+        const logoIcon = document.getElementById('duel321ClubLogoIcon');
+        let logoDebounceTimer = null;
+        function updateClub321LogoIcon() {
+            if (!logoIcon) return;
+            const value = input.value.trim();
+            if (value.length < 3) { logoIcon.innerHTML = ''; return; }
+            const logoUrl = getClubLogo(value);
+            logoIcon.innerHTML = logoUrl ? `<img src="${logoUrl}" alt="" onerror="if(this.parentElement) this.parentElement.innerHTML=''">` : '';
+        }
+        function scheduleClub321LogoUpdate() {
+            if (logoDebounceTimer) clearTimeout(logoDebounceTimer);
+            if (!input.value.trim()) { if (logoIcon) logoIcon.innerHTML = ''; return; }
+            logoDebounceTimer = setTimeout(updateClub321LogoIcon, 120);
+        }
+
         input.addEventListener('input', () => {
             // 🎯 KÖK SEBEP DÜZELTMESİ: kullanıcı serbestçe yazdığı sürece,
             // bu değer "listeden seçilmedi" sayılıyor — sadece aşağıdaki
@@ -9738,6 +9795,7 @@
             // engelliyoruz (backend'deki "içeriyor mu" kontrolü yetersizdi,
             // çünkü her yarım isim zaten gerçek bir ismin İÇİNDE geçiyor).
             input.dataset.selected = 'false';
+            scheduleClub321LogoUpdate();
             const q = input.value.trim();
             if (!q) { box.style.display = 'none'; return; }
             const normalizedQuery = normalize(q);
@@ -9753,10 +9811,16 @@
                 return a.localeCompare(b);
             }).slice(0, 8);
             if (matches.length === 0) { box.style.display = 'none'; return; }
+            // 🎯 KÖK SEBEP DÜZELTMESİ (PERFORMANS): her tuş vuruşunda, listedeki
+            // 8 öneri için 8 ayrı getClubLogo() çağrısı yapılıyordu — bazıları
+            // (az bilinen kulüpler) ~2000+ kaydı tek tek tarayan YAVAŞ bir
+            // yedek arama yoluna düşüyordu. Bu, özellikle geri tuşuyla hızlı
+            // yazarken gözle görülür donmalara yol açıyordu. Ana kulüp
+            // aramasında zaten logo YOK (sadece tek bir ikon güncelleniyor,
+            // 8 ayrı arama değil) — burada da aynı hıza kavuşmak için
+            // öneri kutusundan logoyu kaldırıyoruz, sadece metin gösteriyoruz.
             box.innerHTML = matches.map(n => {
-                const logoUrl = getClubLogo(n);
-                const logoHtml = logoUrl ? `<img src="${logoUrl}" alt="" style="width:18px; height:18px; object-fit:contain; margin-right:8px; vertical-align:-4px;" onerror="this.remove()">` : '';
-                return `<div class="pred-suggestion-item" style="padding:10px 14px; cursor:pointer; font-size:0.86rem;" onmouseover="this.style.background='rgba(var(--accent-gold-rgb),0.12)'" onmouseout="this.style.background=''">${logoHtml}${escapeHtml(n)}</div>`;
+                return `<div class="pred-suggestion-item" style="padding:10px 14px; cursor:pointer; font-size:0.86rem;" onmouseover="this.style.background='rgba(var(--accent-gold-rgb),0.12)'" onmouseout="this.style.background=''">${escapeHtml(n)}</div>`;
             }).join('');
             box.style.display = 'block';
             Array.from(box.children).forEach((el, i) => {
@@ -9764,6 +9828,8 @@
                     input.value = matches[i];
                     input.dataset.selected = 'true';
                     box.style.display = 'none';
+                    if (logoDebounceTimer) clearTimeout(logoDebounceTimer);
+                    updateClub321LogoIcon(); // 💡 tıklamada gecikmesiz, anında
                 };
             });
         });
@@ -9837,6 +9903,12 @@
                         </div>
                         <button id="duel321SubmitGuessBtn" class="btn-search" style="width: 100%; margin-top: 10px;">Gönder</button>
                         <button id="duel321PassBtn" class="toolbar-btn" style="width: 100%; margin-top: 10px;">${duelIcon('flag')}Pas Geç</button>
+                        <div id="duel321QuickMsgRow" style="display: flex; gap: 6px; margin-top: 10px;">
+                            <button class="toolbar-btn duel321-quickmsg-btn" data-msg="Zorlu ikili!" style="flex: 1; font-size: 0.76rem; padding: 8px 4px;">😅 Zorlu İkili</button>
+                            <button class="toolbar-btn duel321-quickmsg-btn" data-msg="Düşünüyorum..." style="flex: 1; font-size: 0.76rem; padding: 8px 4px;">🧠 Düşünüyorum</button>
+                            <button class="toolbar-btn duel321-quickmsg-btn" data-msg="Aynı lig!" style="flex: 1; font-size: 0.76rem; padding: 8px 4px;">🌍 Aynı Lig</button>
+                        </div>
+                        <div id="duel321QuickMsgRemaining" style="text-align: center; font-size: 0.68rem; color: rgba(var(--fg-rgb), 0.45); margin-top: 4px;">3 hazır mesaj hakkın kaldı</div>
                         <div id="duelRoundStatus"></div>
                     </div>
                 </td>
@@ -9943,7 +10015,42 @@
             });
         }
 
-        // 🎯 Kehanet'teki oyuncu arama kutusuyla AYNI öneri mekanizması —
+        // 🎯 YENİ: hazır mesajlar — sadece bildirim, oyun mantığına dokunmuyor.
+        // Kalan hakkı gösterip, tükenince butonları devre dışı bırakıyoruz.
+        function updateQuickMsgRemainingDisplay(remaining) {
+            const el = document.getElementById('duel321QuickMsgRemaining');
+            if (el) el.textContent = remaining > 0 ? `${remaining} hazır mesaj hakkın kaldı` : 'Hazır mesaj hakkın bitti';
+            document.querySelectorAll('.duel321-quickmsg-btn').forEach(btn => {
+                btn.disabled = remaining <= 0;
+            });
+        }
+        document.querySelectorAll('.duel321-quickmsg-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const msg = btn.dataset.msg;
+                const requestRoomCode = duelRoomCode;
+                document.querySelectorAll('.duel321-quickmsg-btn').forEach(b => b.disabled = true);
+                try {
+                    const res = await fetch('/duel/sendQuickMessage', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ roomCode: requestRoomCode, playerName: duelPlayerName, message: msg })
+                    });
+                    if (!duelActive || duelRoomCode !== requestRoomCode) return;
+                    const result = await res.json();
+                    if (result.success) {
+                        showToast(`Gönderildi: "${msg}"`);
+                        updateQuickMsgRemainingDisplay(result.remainingUses);
+                    } else {
+                        showToast('❌ Hazır mesaj hakkın kalmadı');
+                        updateQuickMsgRemainingDisplay(0);
+                    }
+                } catch (e) {
+                    if (!duelActive || duelRoomCode !== requestRoomCode) return;
+                    showToast('❌ Gönderilemedi, tekrar dene');
+                    document.querySelectorAll('.duel321-quickmsg-btn').forEach(b => b.disabled = false);
+                }
+            });
+        });
         // "Perisic" yazınca "Ivan Perišić" gibi aksanlı doğru ismi önerip
         // seçtiriyor. Öneriye tıklamak sadece kutuya YAZIYOR, otomatik
         // göndermiyor — kullanıcı yine kendi "Gönder"e basıyor.
@@ -10034,6 +10141,7 @@
                             ${mySubmitted
                                 ? `<div style="font-size: 0.9rem; color: var(--light-green); font-weight: 700; margin: 16px 0;">${duelIcon('checkCircle')}Kulübünü gönderdin, rakibini bekliyoruz...</div>`
                                 : `<div class="player-mode-guess-row" style="position: relative;">
+                                       <span id="duel321ClubLogoIcon" class="input-logo-icon"></span>
                                        <input type="text" id="duel321ClubInput" placeholder="Bir kulüp yaz (örn: Galatasaray)" autocomplete="off">
                                        <div id="duel321ClubSuggestions" style="display: none; position: absolute; top: 100%; left: 0; right: 0; margin-top: 4px; background: rgba(var(--card-tint-rgb), 1); border: 1px solid rgba(var(--fg-rgb), 0.15); border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,0.2); max-height: 220px; overflow-y: auto; z-index: 500;"></div>
                                    </div>
@@ -10374,6 +10482,53 @@
 
         // 🏆 Hedef skora ulaşıldıysa (oyun bitti) — farklı, kalıcı bir final ekranı
         if (state.gameOver) {
+            // 🎯 YENİ: maç normal şekilde (hedef skora ulaşılarak) değil,
+            // uzun süreli GERÇEK eylemsizlik yüzünden bittiyse — "kazandın/
+            // kaybettin" demek yanıltıcı olur, net ve ayrı bir mesaj gösteriyoruz.
+            if (state.endedDueToInactivity) {
+                statusEl.innerHTML = `
+                    <div class="quiz-win-title" style="font-size: 1.1rem; margin-top: 16px;">
+                        ${duelIcon('clock', 18)}Uzun süre işlem yapılmadığı için maç sonlandırıldı.
+                    </div>
+                    <div class="quiz-stats-bar" style="margin-bottom: 16px;">
+                        <div class="quiz-stat-box">
+                            <span class="quiz-stat-label">${escapeHtml(state.player1Name)}</span>
+                            <span class="quiz-stat-value">${state.player1Score}</span>
+                        </div>
+                        <div class="quiz-stat-box">
+                            <span class="quiz-stat-label">${escapeHtml(state.player2Name || '')}</span>
+                            <span class="quiz-stat-value">${state.player2Score}</span>
+                        </div>
+                    </div>
+                    <button id="duelRematchBtn" class="btn-search" style="width: 100%;">${duelIcon('refresh')}Tekrar Oyna</button>
+                `;
+                const rematchBtnInactive = document.getElementById('duelRematchBtn');
+                if (rematchBtnInactive) {
+                    rematchBtnInactive.addEventListener('click', async () => {
+                        rematchBtnInactive.disabled = true;
+                        rematchBtnInactive.innerHTML = duelIcon('refresh') + 'Başlatılıyor...';
+                        const requestRoomCode = duelRoomCode;
+                        try {
+                            const res = await fetch('/duel/rematch', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ roomCode: requestRoomCode })
+                            });
+                            if (!duelActive || duelRoomCode !== requestRoomCode) return;
+                            const newState = await res.json();
+                            if (!duelActive || duelRoomCode !== requestRoomCode) return;
+                            renderDuelStateScreen(newState);
+                        } catch (e) {
+                            if (!duelActive || duelRoomCode !== requestRoomCode) return;
+                            showToast('❌ Yeniden başlatılamadı, tekrar deneyin');
+                            rematchBtnInactive.disabled = false;
+                            rematchBtnInactive.innerHTML = duelIcon('refresh') + 'Tekrar Oyna';
+                        }
+                    });
+                }
+                return;
+            }
+
             const gameWinnerText = state.gameWinner === duelPlayerName
                 ? duelIcon('trophy', 18) + 'Tebrikler, YARIŞMAYI SEN kazandın!'
                 : duelIcon('trophy', 18) + `Yarışmayı ${escapeHtml(state.gameWinner)} kazandı.`;
