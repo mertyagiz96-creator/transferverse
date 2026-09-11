@@ -3465,13 +3465,34 @@
             if (clubLogos[key + suffix]) return clubLogos[key + suffix];
         }
 
-        // Tam eşleşme yoksa, "Barcelona" ↔ "FC Barcelona" gibi yazım farklarını
-        // yakalamak için esnek (substring) eşleşme deniyoruz — ama önce altyapı/
-        // yedek takım varyasyonlarını (Primavera, Next Gen, U21 vb.) ELİYORUZ,
-        // yoksa yanlışlıkla bir altyapı takımının logosu gelebiliyordu (Juventus'ta
-        // yaşanan sorun buydu). Birden fazla aday varsa EN KISA ismi (genelde
-        // A takımı) tercih ediyoruz.
-        //
+        return getClubLogoExpensiveFallback(key);
+    }
+
+    // 🎯 YENİ: "3,2,1" kulüp kutusunun yanındaki tek ikon gibi, mobilde
+    // hassas yerlerde kullanılıyor — AYNI hızlı yolları dener, ama
+    // bulamazsa pahalı taramaya HİÇ düşmeden sessizce null döner (ikon
+    // gösterilmez). Ana menüde bu kullanılmıyor, davranışı hiç değişmedi.
+    function getClubLogoFast(clubName) {
+        if (!clubName) return null;
+        const key = normalize(clubName);
+        if (sportsDbLogos[key]) return sportsDbLogos[key];
+        if (hardcodedPoolLogos[key]) return hardcodedPoolLogos[key];
+        if (clubLogoAliasMap[key] && clubLogos[clubLogoAliasMap[key]]) {
+            return clubLogos[clubLogoAliasMap[key]];
+        }
+        if (clubLogos[key]) return clubLogos[key];
+        for (const suffix of [' fc', ' cf', ' bc', ' cp', ' sk']) {
+            if (clubLogos[key + suffix]) return clubLogos[key + suffix];
+        }
+        return null; // 🛡️ pahalı taramaya hiç düşmüyor
+    }
+
+    // 🎯 YENİ: eski getClubLogo'nun PAHALI kısmı (2174 kaydı tek tek tarayan
+    // esnek/substring arama) buraya taşındı — "3,2,1"deki tek-ikon güncellemesi
+    // gibi mobilde hassas yerlerde bu kısmı ATLAYIP sadece yukarıdaki hızlı
+    // yolları kullanan getClubLogoFast() ile çağırabiliyoruz. Ana menüde hâlâ
+    // tam getClubLogo() (bu fallback dahil) kullanılıyor, davranışı değişmedi.
+    function getClubLogoExpensiveFallback(key) {
         // ⚡ HIZ İÇİN: eskiden bu iki arama (önce altyapı filtreli, sonra filtresiz
         // yedek) AYRI AYRI 2174 kaydı TEKRAR TEKRAR tarıyordu — her tuş vuruşunda
         // gözle görülür bir yavaşlığa yol açıyordu. Artık TEK GEÇİŞTE, ikisini de
@@ -9778,7 +9799,10 @@
             if (!logoIcon) return;
             const value = input.value.trim();
             if (value.length < 3) { logoIcon.innerHTML = ''; return; }
-            const logoUrl = getClubLogo(value);
+            // 🎯 KÖK SEBEP DÜZELTMESİ (mobil yavaşlık): getClubLogo yerine
+            // getClubLogoFast — bulamazsa pahalı ~2000+ kayıt taramasına hiç
+            // düşmüyor, sadece ikon boş kalıyor (buton/işlevsellik etkilenmiyor).
+            const logoUrl = getClubLogoFast(value);
             logoIcon.innerHTML = logoUrl ? `<img src="${logoUrl}" alt="" onerror="if(this.parentElement) this.parentElement.innerHTML=''">` : '';
         }
         function scheduleClub321LogoUpdate() {
@@ -9905,7 +9929,7 @@
                         <button id="duel321PassBtn" class="toolbar-btn" style="width: 100%; margin-top: 10px;">${duelIcon('flag')}Pas Geç</button>
                         <div id="duel321QuickMsgRow" style="display: flex; gap: 6px; margin-top: 10px;">
                             <button class="toolbar-btn duel321-quickmsg-btn" data-msg="Zorlu ikili!" style="flex: 1; min-width: 0; font-size: 0.68rem; padding: 8px 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">😅 Zorlu İkili</button>
-                            <button class="toolbar-btn duel321-quickmsg-btn" data-msg="Düşünüyorum..." style="flex: 1; min-width: 0; font-size: 0.68rem; padding: 8px 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">🧠 Düşünüyorum</button>
+                            <button class="toolbar-btn duel321-quickmsg-btn" data-msg="Hmm..." style="flex: 1; min-width: 0; font-size: 0.68rem; padding: 8px 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">🧠 Hmm...</button>
                             <button class="toolbar-btn duel321-quickmsg-btn" data-msg="Aynı lig!" style="flex: 1; min-width: 0; font-size: 0.68rem; padding: 8px 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">🌍 Aynı Lig</button>
                         </div>
                         <div id="duel321QuickMsgRemaining" style="text-align: center; font-size: 0.68rem; color: rgba(var(--fg-rgb), 0.45); margin-top: 4px;">3 hazır mesaj hakkın kaldı</div>
