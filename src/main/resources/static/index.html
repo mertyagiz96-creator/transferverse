@@ -9811,15 +9811,13 @@
             logoDebounceTimer = setTimeout(updateClub321LogoIcon, 120);
         }
 
-        input.addEventListener('input', () => {
-            // 🎯 KÖK SEBEP DÜZELTMESİ: kullanıcı serbestçe yazdığı sürece,
-            // bu değer "listeden seçilmedi" sayılıyor — sadece aşağıdaki
-            // onclick ile bir öneriye tıklandığında "seçildi" oluyor. "bayern
-            // m" gibi yarım/eksik bir metnin gönderilmesini bu şekilde
-            // engelliyoruz (backend'deki "içeriyor mu" kontrolü yetersizdi,
-            // çünkü her yarım isim zaten gerçek bir ismin İÇİNDE geçiyor).
-            input.dataset.selected = 'false';
-            scheduleClub321LogoUpdate();
+        // 🎯 KÖK SEBEP DÜZELTMESİ (asıl donma sebebi buymuş): ikonu 120ms
+        // geciktirmiştim ama ASIL öneri listesi (filtreleme+sıralama+render)
+        // hâlâ HER TUŞTA anında çalışıyordu — ana menüde ise TÜM bu işlem
+        // 120ms geciktiriliyor (renderMatchesTimer deseni). O fark buydu.
+        // Artık liste render'ı da aynı şekilde geciktiriliyor.
+        let listDebounceTimer = null;
+        function renderClub321Suggestions() {
             const q = input.value.trim();
             if (!q) { box.style.display = 'none'; return; }
             const normalizedQuery = normalize(q);
@@ -9856,6 +9854,24 @@
                     updateClub321LogoIcon(); // 💡 tıklamada gecikmesiz, anında
                 };
             });
+        }
+
+        function scheduleClub321ListRender() {
+            if (listDebounceTimer) clearTimeout(listDebounceTimer);
+            if (!input.value.trim()) { box.style.display = 'none'; return; }
+            listDebounceTimer = setTimeout(renderClub321Suggestions, 120);
+        }
+
+        input.addEventListener('input', () => {
+            // 🎯 KÖK SEBEP DÜZELTMESİ: kullanıcı serbestçe yazdığı sürece,
+            // bu değer "listeden seçilmedi" sayılıyor — sadece aşağıdaki
+            // onclick ile bir öneriye tıklandığında "seçildi" oluyor. "bayern
+            // m" gibi yarım/eksik bir metnin gönderilmesini bu şekilde
+            // engelliyoruz (backend'deki "içeriyor mu" kontrolü yetersizdi,
+            // çünkü her yarım isim zaten gerçek bir ismin İÇİNDE geçiyor).
+            input.dataset.selected = 'false';
+            scheduleClub321LogoUpdate();
+            scheduleClub321ListRender();
         });
 
         if (!duel321OutsideClickListenerAdded) {

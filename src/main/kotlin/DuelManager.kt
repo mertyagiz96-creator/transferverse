@@ -223,7 +223,12 @@ object DuelManager {
         do {
             code = generateCode()
         } while (rooms.containsKey(code))
-        val validTarget = if (winTarget == 10) 10 else 5
+        // 🎯 KÖK SEBEP DÜZELTMESİ: bu eski kontrol sadece 5 ve 10'u kabul
+        // ediyordu — "3,2,1" moduna "İlk 3'e Yarış" seçeneğini eklediğimizde
+        // bu satırı güncellemeyi unutmuşum. Frontend "3" gönderse bile burada
+        // SESSİZCE 5'e çevriliyordu, bu yüzden 3-0 olunca oyun bitmiyordu
+        // (backend'e göre hedef hâlâ 5'ti). Artık 3, 5 ve 10'un hepsi geçerli.
+        val validTarget = if (winTarget in setOf(3, 5, 10)) winTarget else 5
         val validMode = if (duelMode == "turkiye") "turkiye" else if (duelMode == "321") "321" else "genel"
         val room = DuelRoom(code, player1Name.ifBlank { "Oyuncu 1" }, validTarget, maskingHintEnabled, validMode)
         rooms[code] = room
