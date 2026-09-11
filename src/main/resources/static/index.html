@@ -5529,6 +5529,7 @@
     }
     let duelPlayerName = null;
     let duelPollInterval = null;
+    let duelPendingStateWhileTyping = null; // 🎯 YENİ: yazarken ertelenen güncelleme
     let duelLocalTimerInterval = null;
     let duelLastState = null;
     let duelGuessLocked = false;
@@ -9643,6 +9644,27 @@
                 if (!duelActive || duelRoomCode !== requestRoomCode) return;
                 const state = await res.json();
                 if (!duelActive || duelRoomCode !== requestRoomCode) return;
+                // 🎯 KÖK SEBEP DÜZELTMESİ (mobil yazma gecikmesi): "3,2,1" kulüp
+                // girişinde, kullanıcı input'a odaklanıp AKTİF yazıyorsa, bu
+                // sorgunun JSON ayrıştırma + ekran güncelleme işini (her 1.5
+                // saniyede bir tekrarlanan, küçük ama gerçek bir ana iş parçacığı
+                // yükü) ERTELİYORUZ — mobilde klavye tepkisiyle yarışmasın diye.
+                // Rakibin durumu en fazla birkaç saniye gecikmeli görünür, ama
+                // kendi yazman hiç bölünmez. Odak kalkınca normal akışa döner.
+                const club321Input = document.getElementById('duel321ClubInput');
+                const isTypingInClub321 = club321Input && document.activeElement === club321Input;
+                // 🛡️ GÜVENLİK: sadece "rutin, önemsiz" güncellemeleri (aynı faz,
+                // aynı tur) erteliyoruz — faz/tur GERÇEKTEN değiştiyse (örn. 30sn
+                // dolup tahmin fazına geçildiyse) kullanıcı eski ekranda takılı
+                // kalmasın diye HEMEN uyguluyoruz, yazıyor olsa bile.
+                const isRoutineUpdate = duelLastState &&
+                    duelLastState.phase === state.phase &&
+                    duelLastState.roundNumber === state.roundNumber &&
+                    !state.roundOver;
+                if (isTypingInClub321 && isRoutineUpdate) {
+                    duelPendingStateWhileTyping = state;
+                    return;
+                }
                 renderDuelStateScreen(state);
                 // 🎯 YENİ: sadece "3,2,1" tahmin fazındaysak, rakipten gelen
                 // bekleyen bir hazır mesaj var mı diye AYRI bir zamanlayıcı
@@ -9787,6 +9809,16 @@
         const box = document.getElementById('duel321ClubSuggestions');
         if (!input || !box) return;
         duel321ActiveAutocompleteRefs = { input, box };
+
+        // 🎯 YENİ: yazarken ertelenen sorgu güncellemesi varsa, odak kalkınca
+        // (yazmayı bitirince) hemen uyguluyoruz — rakip durumu çok gecikmiyor.
+        input.addEventListener('blur', () => {
+            if (duelPendingStateWhileTyping && duelActive) {
+                const pending = duelPendingStateWhileTyping;
+                duelPendingStateWhileTyping = null;
+                renderDuelStateScreen(pending);
+            }
+        });
 
         // 🎯 YENİ: ana menüdeki kutuların yanındaki AYNI mantık — TEK bir
         // logo ikonu, 120ms gecikmeyle (her tuşta değil, durakladığında)
