@@ -1783,9 +1783,16 @@ fun main() {
                 call.response.headers.append("Cache-Control", "no-store, no-cache, must-revalidate")
                 val dateSeed = call.request.queryParameters["seed"]?.toIntOrNull() ?: 0
                 val bio = DatabaseClient.fetchDailyPlayerBio(dateSeed)
+                // 🎯 KÖK SEBEP DÜZELTMESİ: Transfermarkt, gerçek fotoğrafı
+                // olmayan oyuncularda BOŞ bir alan yerine kendi "resim yok"
+                // placeholder'ının linkini (".../default.jpg") kaydediyor —
+                // bu, teknik olarak "boş" sayılmadığı için Wikipedia yedeği
+                // hiç denenmiyordu (Jonathan Obika'da tam bu oldu). Artık bu
+                // placeholder deseni de "fotoğraf yok" sayılıyor.
+                val isPlaceholderImage = bio?.imageUrl?.contains("default.jpg", ignoreCase = true) == true
                 if (bio == null) {
                     call.respond(HttpStatusCode.NotFound)
-                } else if (bio.imageUrl.isNullOrBlank()) {
+                } else if (bio.imageUrl.isNullOrBlank() || isPlaceholderImage) {
                     // 📸 YENİ: sonradan elle eklenen oyuncularda (örn.
                     // Sneijder) veritabanında fotoğraf boş kalabiliyor —
                     // SADECE Günün Oyuncusu için TheSportsDB'den canlı

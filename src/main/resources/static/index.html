@@ -2176,6 +2176,18 @@
         .fee-quiz-option:active {
             transform: translateY(-1px);
         }
+        /* 🎯 YENİ: öne çıkan yazılar — mobilde 1 sütun (zaten güzel
+           duruyordu, dokunmuyoruz), SADECE web'de (700px+) 2 sütun. */
+        .featured-articles-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 12px;
+        }
+        @media (min-width: 700px) {
+            .featured-articles-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
     </style>
     <!-- 💡 Microsoft Clarity — ziyaretçi istatistikleri için. Tamamen tarayıcı
          tarafında çalışan, asenkron bir script; backend'e ve arama performansına
@@ -2573,23 +2585,23 @@
     </div>
 
     <div id="blogLinkSection" style="margin-top: 40px; padding-top: 30px; border-top: 1px solid rgba(var(--fg-rgb), 0.09); text-align: center;">
-        <h2 style="font-size: 1.05rem; font-weight: 700; color: rgba(var(--fg-rgb), 0.85); margin-bottom: 18px;">📰 Öne Çıkan Transfer Hikayeleri</h2>
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; text-align: left; max-width: 900px; margin: 0 auto 20px auto;">
+        <h2 id="i18n-featuredArticlesTitle" style="font-size: 1.05rem; font-weight: 700; color: rgba(var(--fg-rgb), 0.85); margin-bottom: 18px;">📰 Öne Çıkan Transfer Hikayeleri</h2>
+        <div class="featured-articles-grid" style="text-align: left; max-width: 900px; margin: 0 auto 20px auto;">
             <a href="/blog/figo-barcelona-real-madrid-ihanet" style="display: block; padding: 16px; background: rgba(var(--fg-rgb), 0.05); border: 1px solid rgba(var(--fg-rgb), 0.1); border-radius: 10px; color: rgba(var(--fg-rgb), 0.85); text-decoration: none;">
-                <div style="font-size: 0.82rem; font-weight: 700; margin-bottom: 6px;">⚽ Kulüp Efsanesinden 'Hain'e: Figo'nun Real Madrid'e Geçişi</div>
-                <div style="font-size: 0.74rem; font-weight: 400; line-height: 1.5; color: rgba(var(--fg-rgb), 0.6);">1998'de Barcelona'nın gözdesi olan Figo, 2000 yazında rakip Real Madrid'e imza atarak La Liga tarihinin en tartışmalı transferlerinden birine imza attı. Kulübüne döndüğünde tribünlerden gelen tepki, futbol tarihine geçen anlardan biri oldu.</div>
+                <div id="i18n-featArt1Title" style="font-size: 0.82rem; font-weight: 700; margin-bottom: 6px;">⚽ Kulüp Efsanesinden 'Hain'e: Figo'nun Real Madrid'e Geçişi</div>
+                <div id="i18n-featArt1Desc" style="font-size: 0.74rem; font-weight: 400; line-height: 1.5; color: rgba(var(--fg-rgb), 0.6);">1998'de Barcelona'nın gözdesi olan Figo, 2000 yazında rakip Real Madrid'e imza atarak La Liga tarihinin en tartışmalı transferlerinden birine imza attı. Kulübüne döndüğünde tribünlerden gelen tepki, futbol tarihine geçen anlardan biri oldu.</div>
             </a>
             <a href="/blog/de-gea-fax-makinesi-transferi-batirdi" style="display: block; padding: 16px; background: rgba(var(--fg-rgb), 0.05); border: 1px solid rgba(var(--fg-rgb), 0.1); border-radius: 10px; color: rgba(var(--fg-rgb), 0.85); text-decoration: none;">
-                <div style="font-size: 0.82rem; font-weight: 700; margin-bottom: 6px;">⚽ Bir Fax Makinesi Yüzünden Batan Dev Transfer</div>
-                <div style="font-size: 0.74rem; font-weight: 400; line-height: 1.5; color: rgba(var(--fg-rgb), 0.6);">Manchester United'dan Real Madrid'e gidecek dev bir anlaşma, transfer penceresinin son dakikalarında teknik bir aksaklık yüzünden suya düştü. Milyonlarca euroluk bir imza, basit bir fax makinesinin çalışmamasıyla nasıl iptal oldu?</div>
+                <div id="i18n-featArt2Title" style="font-size: 0.82rem; font-weight: 700; margin-bottom: 6px;">⚽ Bir Fax Makinesi Yüzünden Batan Dev Transfer</div>
+                <div id="i18n-featArt2Desc" style="font-size: 0.74rem; font-weight: 400; line-height: 1.5; color: rgba(var(--fg-rgb), 0.6);">Manchester United'dan Real Madrid'e gidecek dev bir anlaşma, transfer penceresinin son dakikalarında teknik bir aksaklık yüzünden suya düştü. Milyonlarca euroluk bir imza, basit bir fax makinesinin çalışmamasıyla nasıl iptal oldu?</div>
             </a>
             <a href="/blog/lebron-karari-canli-yayinda-acikladi" style="display: block; padding: 16px; background: rgba(var(--fg-rgb), 0.05); border: 1px solid rgba(var(--fg-rgb), 0.1); border-radius: 10px; color: rgba(var(--fg-rgb), 0.85); text-decoration: none;">
-                <div style="font-size: 0.82rem; font-weight: 700; margin-bottom: 6px;">🏀 'Yeteneklerimi Miami'ye Taşıyorum': Canlı Yayında Açıklanan Karar</div>
-                <div style="font-size: 0.74rem; font-weight: 400; line-height: 1.5; color: rgba(var(--fg-rgb), 0.6);">2010 yazında LeBron James, özel olarak yayınlanan bir televizyon programında Cleveland'dan ayrılıp Miami Heat'e katılma kararını duyurdu. "The Decision" olarak anılan bu gece, NBA tarihinin en çok konuşulan anlarından biri hâline geldi.</div>
+                <div id="i18n-featArt3Title" style="font-size: 0.82rem; font-weight: 700; margin-bottom: 6px;">🏀 'Yeteneklerimi Miami'ye Taşıyorum': Canlı Yayında Açıklanan Karar</div>
+                <div id="i18n-featArt3Desc" style="font-size: 0.74rem; font-weight: 400; line-height: 1.5; color: rgba(var(--fg-rgb), 0.6);">2010 yazında LeBron James, özel olarak yayınlanan bir televizyon programında Cleveland'dan ayrılıp Miami Heat'e katılma kararını duyurdu. "The Decision" olarak anılan bu gece, NBA tarihinin en çok konuşulan anlarından biri hâline geldi.</div>
             </a>
             <a href="/blog/toprak-kawasakiden-motogpye-yolculuk" style="display: block; padding: 16px; background: rgba(var(--fg-rgb), 0.05); border: 1px solid rgba(var(--fg-rgb), 0.1); border-radius: 10px; color: rgba(var(--fg-rgb), 0.85); text-decoration: none;">
-                <div style="font-size: 0.82rem; font-weight: 700; margin-bottom: 6px;">🏍️ Kawasaki'den MotoGP'ye: Toprak Razgatlıoğlu'nun İnanılmaz Yolculuğu</div>
-                <div style="font-size: 0.74rem; font-weight: 400; line-height: 1.5; color: rgba(var(--fg-rgb), 0.6);">Süper Sport şampiyonu Toprak Razgatlıoğlu, kariyerinin zirvesindeyken büyük bir risk alarak MotoGP'ye geçiş yaptı. Kawasaki'den ayrılıp tamamen yeni bir maceraya atılan bu karar, Türk motor sporları tarihinde bir dönüm noktası oldu.</div>
+                <div id="i18n-featArt4Title" style="font-size: 0.82rem; font-weight: 700; margin-bottom: 6px;">🏍️ Kawasaki'den MotoGP'ye: Toprak Razgatlıoğlu'nun İnanılmaz Yolculuğu</div>
+                <div id="i18n-featArt4Desc" style="font-size: 0.74rem; font-weight: 400; line-height: 1.5; color: rgba(var(--fg-rgb), 0.6);">Süper Sport şampiyonu Toprak Razgatlıoğlu, kariyerinin zirvesindeyken büyük bir risk alarak MotoGP'ye geçiş yaptı. Kawasaki'den ayrılıp tamamen yeni bir maceraya atılan bu karar, Türk motor sporları tarihinde bir dönüm noktası oldu.</div>
             </a>
         </div>
         <a id="i18n-blogCardLink" href="/blog" style="display: inline-block; padding: 10px 22px; background: rgba(var(--fg-rgb), 0.06); border: 1px solid rgba(var(--fg-rgb), 0.12); border-radius: 8px; color: var(--accent-gold); font-weight: 700; font-size: 0.85rem; text-decoration: none;">
@@ -3668,6 +3680,15 @@
         'i18n-heroTitle': { en: 'Two clubs. One hidden connection.' },
         'i18n-heroSubtitle': { en: "Do you remember which player played for both? Type two clubs, and let TransferKolik find the rest." },
         'i18n-blogCardLink': { en: '📰 All Transfer Stories — Blog' },
+        'i18n-featuredArticlesTitle': { en: '📰 Featured Transfer Stories' },
+        'i18n-featArt1Title': { en: "⚽ From Club Legend to 'Traitor': Figo's Move to Real Madrid" },
+        'i18n-featArt1Desc': { en: 'A Barcelona favorite in 1998, Figo signed for arch-rivals Real Madrid in the summer of 2000, in one of the most controversial transfers in La Liga history. The reaction from the stands when he returned to Camp Nou became one of the most infamous moments in football history.' },
+        'i18n-featArt2Title': { en: '⚽ A Blockbuster Transfer Sunk By a Fax Machine' },
+        'i18n-featArt2Desc': { en: "A blockbuster move from Manchester United to Real Madrid collapsed in the final minutes of the transfer window due to a technical glitch. How did a deal worth millions of euros fall through because of a fax machine that simply wouldn't work?" },
+        'i18n-featArt3Title': { en: "🏀 \"I'm Taking My Talents to South Beach\": The Decision Announced Live on TV" },
+        'i18n-featArt3Desc': { en: 'In the summer of 2010, LeBron James announced his decision to leave Cleveland and join the Miami Heat on a special live broadcast. The night, now known simply as "The Decision," became one of the most talked-about moments in NBA history.' },
+        'i18n-featArt4Title': { en: "🏍️ From Kawasaki to MotoGP: Toprak Razgatlıoğlu's Incredible Journey" },
+        'i18n-featArt4Desc': { en: 'Superbike champion Toprak Razgatlıoğlu took a huge risk at the peak of his career by making the switch to MotoGP. Leaving Kawasaki for an entirely new adventure marked a turning point in Turkish motorsport history.' },
         'i18n-basketballBtn': { en: '🏀 Basketball' },
         'i18n-aboutTitle': { en: 'What is TransferKolik?' },
         'i18n-aboutBody': { en: `TransferKolik is a free platform, focused on Turkish sports fans, where you can easily research which clubs and national teams a player has represented throughout their career. It works for both football and basketball (EuroLeague, EuroCup, and NBA). By entering two club or country names, you can find every player who has played for both in seconds — a practical tool for both reminiscing about legends of the past and tracking today's transfers. Below, we explain every mode and feature on the site in more detail.` },
@@ -7150,12 +7171,33 @@
             const fallbackAvatarHtml = `<div id="bioFallbackAvatar" style="width:96px; height:96px; border-radius:50%; background:linear-gradient(135deg, var(--accent-gold), rgba(var(--accent-gold-rgb),0.6)); display:flex; align-items:center; justify-content:center; font-size:1.8rem; font-weight:800; color:#fff; flex-shrink:0; box-shadow:0 6px 18px rgba(0,0,0,0.25);">${initials}</div>`;
 
             // 🎨 Kariyer zaman çizelgesi — kulüp isimlerini basit, şık noktalarla birbirine bağlıyoruz.
-            const timelineHtml = clubList.map((club, idx) => `
+            // 🎯 YENİ: 19 kulüp gibi aşırı uzun bir listenin tamamını göstermek
+            // kötü/kalabalık görünüyordu — 8'den fazla kulüp varsa, ilk 3 ve
+            // son 3'ü gösterip aradakileri "+ X kulüp daha" ile daraltıyoruz.
+            const renderTimelineItem = (club, idx) => `
                 <div style="display:flex; align-items:flex-start; gap:8px;">
                     <span style="width:8px; height:8px; border-radius:50%; background:${idx === clubList.length - 1 ? 'var(--accent-gold)' : 'rgba(var(--fg-rgb),0.3)'}; flex-shrink:0; margin-top:6px;"></span>
                     <span style="font-size:0.82rem;"><span style="font-weight:${idx === clubList.length - 1 ? '700' : '500'}; color:rgba(var(--fg-rgb),${idx === clubList.length - 1 ? '0.95' : '0.65'});">${escapeHtml(club)}</span> <span style="font-size:0.68rem; opacity:0.5;">${escapeHtml(moves[idx].season)}</span></span>
                 </div>
-            `).join('<div style="width:1px; height:10px; background:rgba(var(--fg-rgb),0.15); margin-left:3.5px;"></div>');
+            `;
+            const TIMELINE_TRUNCATE_THRESHOLD = 8;
+            let timelineItemsHtml;
+            if (clubList.length > TIMELINE_TRUNCATE_THRESHOLD) {
+                const headCount = 3;
+                const tailCount = 3;
+                const hiddenCount = clubList.length - headCount - tailCount;
+                const headItems = clubList.slice(0, headCount).map((club, idx) => renderTimelineItem(club, idx));
+                const ellipsisItem = `
+                    <div style="display:flex; align-items:center; gap:8px; padding-left: 2px;">
+                        <span style="font-size:0.75rem; color:rgba(var(--fg-rgb),0.45); font-style:italic;">⋯ ve ${hiddenCount} kulüp daha ⋯</span>
+                    </div>
+                `;
+                const tailItems = clubList.slice(clubList.length - tailCount).map((club, idx) => renderTimelineItem(club, clubList.length - tailCount + idx));
+                timelineItemsHtml = [...headItems, ellipsisItem, ...tailItems];
+            } else {
+                timelineItemsHtml = clubList.map((club, idx) => renderTimelineItem(club, idx));
+            }
+            const timelineHtml = timelineItemsHtml.join('<div style="width:1px; height:10px; background:rgba(var(--fg-rgb),0.15); margin-left:3.5px;"></div>');
 
             content.innerHTML = `
                 <div style="display:flex; gap:20px; align-items:flex-start; flex-wrap:wrap; margin-bottom:18px; padding:18px; background:rgba(var(--card-tint-rgb),0.25); border-radius:14px; border:1px solid rgba(var(--fg-rgb),0.08);">

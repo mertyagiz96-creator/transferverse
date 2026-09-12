@@ -388,7 +388,7 @@ object TransferImport {
             openConnection().use { conn ->
                 buildString {
                     appendLine("🔍 '$nameQuery' için players tablosunda arama:")
-                    conn.prepareStatement("SELECT id, name FROM players WHERE name LIKE ?").use { stmt ->
+                    conn.prepareStatement("SELECT id, name, image_url FROM players WHERE name LIKE ?").use { stmt ->
                         stmt.setString(1, "%$nameQuery%")
                         stmt.executeQuery().use { rs ->
                             var found = false
@@ -396,6 +396,7 @@ object TransferImport {
                                 found = true
                                 val id = rs.getLong("id")
                                 appendLine("  - id=$id, name=\"${rs.getString("name")}\"")
+                                appendLine("    image_url=\"${rs.getString("image_url")}\"")
                                 appendLine("    Bu id'nin transfers tablosundaki TÜM kayıtları:")
                                 conn.prepareStatement(
                                     "SELECT from_club, to_club, season FROM transfers WHERE transfer_id = ? ORDER BY season"

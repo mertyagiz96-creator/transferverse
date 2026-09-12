@@ -975,7 +975,67 @@ object DatabaseClient {
                 println("fetchFootballDailyPlayerPhotoFallback hata ($variant): ${e.message}")
             }
         }
+
+        // 🎯 YENİ: TheSportsDB HİÇBİR varyantta bulamadıysa (Jonathan Obika
+        // gibi az bilinen oyuncularda oluyor), son çare olarak Wikipedia'nın
+        // kendi özet API'sini deniyoruz — birçok futbolcunun (özellikle
+        // İngiliz alt lig oyuncularının) Wikipedia'da gerçek bir fotoğrafı
+        // oluyor, TheSportsDB'de olmasa bile.
+        try {
+            val wikiPhoto = fetchWikipediaPlayerPhoto(playerName)
+            if (!wikiPhoto.isNullOrBlank()) {
+                footballDailyPlayerPhotoCache[cacheKey] = wikiPhoto
+                try {
+                    withConnection { conn ->
+                        conn.prepareStatement("INSERT OR REPLACE INTO football_daily_player_photos (player_name_std, photo_url) VALUES (?, ?)").use { stmt ->
+                            stmt.setString(1, cacheKey)
+                            stmt.setString(2, wikiPhoto)
+                            stmt.executeUpdate()
+                        }
+                    }
+                } catch (e: Exception) {
+                    println("football_daily_player_photos (wiki) yazma hatası: ${e.message}")
+                }
+                return wikiPhoto
+            }
+        } catch (e: Exception) {
+            println("fetchWikipediaPlayerPhoto hata: ${e.message}")
+        }
         return null
+    }
+
+    // 🎯 YENİ: Wikipedia'nın "özet" API'si — sayfanın infobox fotoğrafını
+    // döndürüyor. TheSportsDB'nin kapsamadığı (özellikle az bilinen İngiliz
+    // alt lig oyuncuları gibi) isimler için ikinci bir kaynak.
+    private suspend fun fetchWikipediaPlayerPhoto(playerName: String): String? {
+        return try {
+            val encodedName = playerName.trim().replace(" ", "_")
+            println("🔍 Wikipedia denendi: '$playerName' -> encodedName='$encodedName'")
+            val response = httpClient.get("https://en.wikipedia.org/api/rest_v1/page/summary/$encodedName") {
+                // 🎯 KÖK SEBEP DÜZELTMESİ: Wikipedia API'si, tanımlayıcı bir
+                // User-Agent başlığı olmadan istekleri REDDEDİYOR (kendi
+                // politikaları gereği) — bizim genel httpClient'ta bu hiç
+                // yoktu, bu yüzden istek sessizce başarısız oluyordu.
+                header("User-Agent", "TransferKolik/1.0 (https://transferkolik.com; contact@transferkolik.com)")
+            }
+            println("🔍 Wikipedia yanıt durumu: ${response.status}")
+            if (!response.status.isSuccess()) return null
+            val body = response.bodyAsText()
+            println("🔍 Wikipedia yanıt gövdesi (ilk 300 karakter): ${body.take(300)}")
+            val root = Json.parseToJsonElement(body).jsonObject
+            // 🛡️ Aynı isimli birden fazla kişi varsa Wikipedia "disambiguation"
+            // sayfası döner — bu durumda fotoğrafı KABUL ETMİYORUZ, yanlış
+            // kişinin fotoğrafını almaktansa hiç almamak daha güvenli.
+            val pageType = root["type"]?.jsonPrimitive?.contentOrNull
+            if (pageType == "disambiguation") return null
+            val foundUrl = root["thumbnail"]?.jsonObject?.get("source")?.jsonPrimitive?.contentOrNull
+                ?: root["originalimage"]?.jsonObject?.get("source")?.jsonPrimitive?.contentOrNull
+            println("🔍 Wikipedia'dan bulunan fotoğraf URL'si: $foundUrl")
+            foundUrl
+        } catch (e: Exception) {
+            println("🔍 Wikipedia HATASI: ${e.javaClass.simpleName} - ${e.message}")
+            null
+        }
     }
 
     fun fetchCommonBasketballPlayers(team1: String, team2: String): List<BasketballPlayerResult> {
@@ -1472,16 +1532,15 @@ object DatabaseClient {
                 val clubConditions = LUCKY_CLUBS_FOR_BIO.joinToString(" OR ") {
                     "from_club_std LIKE ? OR to_club_std LIKE ?"
                 }
-                // 🎯 KÖK SEBEP DÜZELTMESİ: eskiden sıralama TOPLAM transfer
-                // sayısına bakıyordu — bu, lucky kulüplerle ilgisi olmayan
-                // ama çok dolaşan birinin (ya da veride birden fazla aynı
-                // isimli kişinin karışmasıyla oluşan bozuk bir kaydın) öne
-                // çıkmasına yol açıyordu. Artık SADECE lucky kulüplerdeki
-                // transfer sayısına (luckyCount) göre sıralıyoruz.
                 val exactMatchClubs = setOf("inter", "porto")
+                // 🎯 KÖK SEBEP DÜZELTMESİ: SQL, "Manchester United U21" gibi
+                // ALTYAPI/YEDEK takım kayıtlarını da "gerçek Manchester United
+                // bağlantısı" sayıyordu (Scott Wootton'da yaşandığı gibi) —
+                // isYouthClub() kontrolü burada HİÇ uygulanmıyordu. Artık
+                // adayları SQL'de geniş çekip, luckyCount'u KOTLIN tarafında,
+                // isYouthClub ile altyapı kayıtlarını dışlayarak hesaplıyoruz.
                 val sql = """
-                    SELECT p.id, p.name, p.position, p.nationality, p.image_url,
-                           (SELECT COUNT(*) FROM transfers t2 WHERE t2.transfer_id = p.id AND ($clubConditions)) as luckyCount
+                    SELECT p.id, p.name, p.position, p.nationality, p.image_url
                     FROM players p
                     WHERE strftime('%m-%d', p.birthdate) = ?
                     AND EXISTS (
@@ -1489,38 +1548,63 @@ object DatabaseClient {
                         WHERE t.transfer_id = p.id
                         AND ($clubConditions)
                     )
-                    ORDER BY luckyCount DESC
-                    LIMIT 1
                 """.trimIndent()
 
+                data class Candidate(val id: Int, val name: String, val position: String, val nationality: String, val imageUrl: String?)
+                val candidates = mutableListOf<Candidate>()
                 conn.prepareStatement(sql).use { stmt ->
                     var idx = 1
-                    // ⚠️ $clubConditions SQL metninde İKİ KEZ geçiyor: önce SELECT
-                    // içindeki luckyCount alt sorgusunda (metinde WHERE'den ÖNCE
-                    // yer aldığı için parametre sırasında da önce gelir), sonra
-                    // monthDay, sonra EXISTS koşulunda. Bu SIRAYLA bağlıyoruz.
-                    for (club in LUCKY_CLUBS_FOR_BIO) { // luckyCount alt sorgusu
-                        val pattern = if (club in exactMatchClubs) club else "%$club%"
-                        stmt.setString(idx++, pattern)
-                        stmt.setString(idx++, pattern)
-                    }
-                    stmt.setString(idx++, monthDay) // WHERE strftime(...) = ?
-                    for (club in LUCKY_CLUBS_FOR_BIO) { // EXISTS koşulu
+                    stmt.setString(idx++, monthDay)
+                    for (club in LUCKY_CLUBS_FOR_BIO) {
                         val pattern = if (club in exactMatchClubs) club else "%$club%"
                         stmt.setString(idx++, pattern)
                         stmt.setString(idx++, pattern)
                     }
                     stmt.executeQuery().use { rs ->
-                        if (rs.next()) {
-                            val pId = rs.getInt("id")
-                            val fullName = rs.getString("name") ?: ""
-                            val position = rs.getString("position") ?: ""
-                            val rawNat = rs.getString("nationality") ?: ""
-                            val imageUrl = rs.getString("image_url")
-                            result = buildDailyBioFromPlayerId(conn, pId, fullName, position, rawNat, imageUrl)
+                        while (rs.next()) {
+                            candidates.add(
+                                Candidate(
+                                    id = rs.getInt("id"),
+                                    name = rs.getString("name") ?: "",
+                                    position = rs.getString("position") ?: "",
+                                    nationality = rs.getString("nationality") ?: "",
+                                    imageUrl = rs.getString("image_url")
+                                )
+                            )
                         }
                     }
                 }
+                if (candidates.isEmpty()) return@withConnection
+
+                // Her aday için gerçek (altyapı hariç) luckyCount'u hesaplıyoruz.
+                data class Scored(val cand: Candidate, val luckyCount: Int, val hasRealPhoto: Boolean)
+                val scored = candidates.map { cand ->
+                    var luckyCount = 0
+                    conn.prepareStatement("SELECT from_club, to_club FROM transfers WHERE transfer_id = ?").use { stmt ->
+                        stmt.setInt(1, cand.id)
+                        stmt.executeQuery().use { rs ->
+                            while (rs.next()) {
+                                val f = rs.getString("from_club")?.toStandardSearch()
+                                val t = rs.getString("to_club")?.toStandardSearch()
+                                fun matchesLucky(club: String?): Boolean {
+                                    if (club == null) return false
+                                    return LUCKY_CLUBS_FOR_BIO.any { lc ->
+                                        if (lc in exactMatchClubs) club == lc else club.contains(lc)
+                                    }
+                                }
+                                if (!isYouthClub(f) && matchesLucky(f)) luckyCount++
+                                if (!isYouthClub(t) && matchesLucky(t)) luckyCount++
+                            }
+                        }
+                    }
+                    val hasRealPhoto = !cand.imageUrl.isNullOrBlank() && !cand.imageUrl.contains("default.jpg", ignoreCase = true)
+                    Scored(cand, luckyCount, hasRealPhoto)
+                }.filter { it.luckyCount > 0 } // 🛡️ sadece altyapıda değil, GERÇEKTEN oynamış olanlar
+
+                if (scored.isEmpty()) return@withConnection
+
+                val best = scored.sortedWith(compareByDescending<Scored> { it.hasRealPhoto }.thenByDescending { it.luckyCount }).first()
+                result = buildDailyBioFromPlayerId(conn, best.cand.id, best.cand.name, best.cand.position, best.cand.nationality, best.cand.imageUrl)
             }
         } catch (e: Exception) {
             println("fetchBirthdayPlayerBio HATASI: ${e.message}")
@@ -1539,48 +1623,58 @@ object DatabaseClient {
         var result: DailyPlayerBio? = null
         try {
             withConnection { conn ->
-                // 🎯 KÖK SEBEP DÜZELTMESİ (2. tur): "LIMIT 1" hiçbir sıralama
-                // yapmadan ilk eşleşeni alıyordu. İlk düzeltmemde TOPLAM
-                // transfer sayısına göre sıraladım ama bu da yanlıştı — alt
-                // liglerde çok dolaşan biri, ünlü bir isimden daha yüksek
-                // transfer sayısına sahip olabiliyordu. Artık SADECE lucky
-                // kulüplerdeki (25 elit kulüp) transfer sayısına göre
-                // sıralıyoruz — "gerçekten bu kulüplerde oynamış mı" sorusuna
-                // çok daha doğru cevap veriyor.
-                val clubConditions = LUCKY_CLUBS_FOR_BIO.joinToString(" OR ") {
-                    "from_club_std LIKE ? OR to_club_std LIKE ?"
-                }
+                // 🎯 KÖK SEBEP DÜZELTMESİ: aynı isimde birden fazla kayıt varsa,
+                // hangisinin "gerçek" kişi olduğunu ayırt etmek için luckyCount
+                // kullanıyoruz — ama bunu artık isYouthClub ile altyapı
+                // kayıtlarını dışlayarak, Kotlin tarafında hesaplıyoruz (aynı
+                // fetchBirthdayPlayerBio'daki düzeltme).
                 val exactMatchClubs = setOf("inter", "porto")
-                val sql = """
-                    SELECT p.id, p.name, p.position, p.nationality, p.image_url,
-                           (SELECT COUNT(*) FROM transfers t2 WHERE t2.transfer_id = p.id AND ($clubConditions)) as luckyCount
-                    FROM players p
-                    WHERE p.name_std LIKE ?
-                    ORDER BY luckyCount DESC
-                    LIMIT 1
-                """.trimIndent()
-
-                conn.prepareStatement(sql).use { stmt ->
-                    var idx = 1
-                    // ⚠️ SQL metninde $clubConditions (luckyCount alt sorgusu) name_std
-                    // LIKE'dan ÖNCE geliyor — parametreleri bu sırayla bağlıyoruz.
-                    for (club in LUCKY_CLUBS_FOR_BIO) {
-                        val pattern = if (club in exactMatchClubs) club else "%$club%"
-                        stmt.setString(idx++, pattern)
-                        stmt.setString(idx++, pattern)
-                    }
-                    stmt.setString(idx++, "%$targetNorm%")
+                data class Candidate(val id: Int, val name: String, val position: String, val nationality: String, val imageUrl: String?)
+                val candidates = mutableListOf<Candidate>()
+                conn.prepareStatement("SELECT id, name, position, nationality, image_url FROM players WHERE name_std LIKE ?").use { stmt ->
+                    stmt.setString(1, "%$targetNorm%")
                     stmt.executeQuery().use { rs ->
-                        if (rs.next()) {
-                            val pId = rs.getInt("id")
-                            val fullName = rs.getString("name") ?: playerName
-                            val position = rs.getString("position") ?: ""
-                            val rawNat = rs.getString("nationality") ?: ""
-                            val imageUrl = rs.getString("image_url")
-                            result = buildDailyBioFromPlayerId(conn, pId, fullName, position, rawNat, imageUrl)
+                        while (rs.next()) {
+                            candidates.add(
+                                Candidate(
+                                    id = rs.getInt("id"),
+                                    name = rs.getString("name") ?: playerName,
+                                    position = rs.getString("position") ?: "",
+                                    nationality = rs.getString("nationality") ?: "",
+                                    imageUrl = rs.getString("image_url")
+                                )
+                            )
                         }
                     }
                 }
+                if (candidates.isEmpty()) return@withConnection
+
+                data class Scored(val cand: Candidate, val luckyCount: Int, val hasRealPhoto: Boolean)
+                val scored = candidates.map { cand ->
+                    var luckyCount = 0
+                    conn.prepareStatement("SELECT from_club, to_club FROM transfers WHERE transfer_id = ?").use { stmt ->
+                        stmt.setInt(1, cand.id)
+                        stmt.executeQuery().use { rs ->
+                            while (rs.next()) {
+                                val f = rs.getString("from_club")?.toStandardSearch()
+                                val t = rs.getString("to_club")?.toStandardSearch()
+                                fun matchesLucky(club: String?): Boolean {
+                                    if (club == null) return false
+                                    return LUCKY_CLUBS_FOR_BIO.any { lc ->
+                                        if (lc in exactMatchClubs) club == lc else club.contains(lc)
+                                    }
+                                }
+                                if (!isYouthClub(f) && matchesLucky(f)) luckyCount++
+                                if (!isYouthClub(t) && matchesLucky(t)) luckyCount++
+                            }
+                        }
+                    }
+                    val hasRealPhoto = !cand.imageUrl.isNullOrBlank() && !cand.imageUrl.contains("default.jpg", ignoreCase = true)
+                    Scored(cand, luckyCount, hasRealPhoto)
+                }
+
+                val best = scored.sortedWith(compareByDescending<Scored> { it.hasRealPhoto }.thenByDescending { it.luckyCount }).first()
+                result = buildDailyBioFromPlayerId(conn, best.cand.id, best.cand.name, best.cand.position, best.cand.nationality, best.cand.imageUrl)
             }
         } catch (e: Exception) {
             println("fetchLegacyPoolPlayerBio HATASI: ${e.message}")
