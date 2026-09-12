@@ -1880,13 +1880,20 @@ object DatabaseClient {
 
         val resolvedClubTerm1 = resolveClubSearchTerm(param1)
         val resolvedClubTerm2 = resolveClubSearchTerm(param2)
+        // 🎯 KÖK SEBEP DÜZELTMESİ: sadece alias'lı hâle ("man city") bakınca,
+        // veritabanında UZUN yazılmış ("Manchester City") gerçek kayıtlar hiç
+        // bulunamıyordu — "manchester city" metni "man city"yi alt metin
+        // olarak içermiyor ("chester" araya giriyor). Artık orijinal
+        // (alias'sız) hâli de AYRICA kontrol ediyoruz.
+        val originalClubTerm1 = std1
+        val originalClubTerm2 = std2
 
         val sql = """
             SELECT p.id, p.name, p.position, p.nationality, p.birthdate, p.slug, p.image_url, t.from_club, t.to_club, t.season 
             FROM players p 
             JOIN transfers t ON p.id = t.transfer_id
-            WHERE (t.from_club_std LIKE ? OR t.to_club_std LIKE ? OR p.nationality_std LIKE ?)
-               OR (t.from_club_std LIKE ? OR t.to_club_std LIKE ? OR p.nationality_std LIKE ?)
+            WHERE (t.from_club_std LIKE ? OR t.to_club_std LIKE ? OR t.from_club_std LIKE ? OR t.to_club_std LIKE ? OR p.nationality_std LIKE ?)
+               OR (t.from_club_std LIKE ? OR t.to_club_std LIKE ? OR t.from_club_std LIKE ? OR t.to_club_std LIKE ? OR p.nationality_std LIKE ?)
             """.trimIndent()
 
         val playerAllTransfers = mutableMapOf<Int, MutableList<Triple<String, String, String>>>()
@@ -1896,16 +1903,22 @@ object DatabaseClient {
             withConnection { conn ->
                 conn.prepareStatement(sql).use { stmt ->
                     val clubTerm1 = "%$resolvedClubTerm1%"
+                    val originalTerm1 = "%$originalClubTerm1%"
                     val countryTerm1 = "%$mappedCountry1%"
                     val clubTerm2 = "%$resolvedClubTerm2%"
+                    val originalTerm2 = "%$originalClubTerm2%"
                     val countryTerm2 = "%$mappedCountry2%"
 
                     stmt.setString(1, clubTerm1)
                     stmt.setString(2, clubTerm1)
-                    stmt.setString(3, countryTerm1)
-                    stmt.setString(4, clubTerm2)
-                    stmt.setString(5, clubTerm2)
-                    stmt.setString(6, countryTerm2)
+                    stmt.setString(3, originalTerm1)
+                    stmt.setString(4, originalTerm1)
+                    stmt.setString(5, countryTerm1)
+                    stmt.setString(6, clubTerm2)
+                    stmt.setString(7, clubTerm2)
+                    stmt.setString(8, originalTerm2)
+                    stmt.setString(9, originalTerm2)
+                    stmt.setString(10, countryTerm2)
 
                     stmt.executeQuery().use { rs ->
                         while (rs.next()) {
@@ -1955,10 +1968,12 @@ object DatabaseClient {
                 val t = tr.second
                 val s = tr.third
 
-                if (matchesOriginalClub(f, resolvedClubTerm1) || matchesOriginalClub(t, resolvedClubTerm1)) {
+                if (matchesOriginalClub(f, resolvedClubTerm1) || matchesOriginalClub(t, resolvedClubTerm1) ||
+                    matchesOriginalClub(f, originalClubTerm1) || matchesOriginalClub(t, originalClubTerm1)) {
                     seasons1.add(s)
                 }
-                if (matchesOriginalClub(f, resolvedClubTerm2) || matchesOriginalClub(t, resolvedClubTerm2)) {
+                if (matchesOriginalClub(f, resolvedClubTerm2) || matchesOriginalClub(t, resolvedClubTerm2) ||
+                    matchesOriginalClub(f, originalClubTerm2) || matchesOriginalClub(t, originalClubTerm2)) {
                     seasons2.add(s)
                 }
             }
@@ -2835,17 +2850,32 @@ object DatabaseClient {
         // uygulanmıyordu. Artık ana aramayla TAMAMEN AYNI, TEK kaynaktan
         // (matchesOriginalClub + isExactClubMatch) besleniyor — ikisi bir
         // daha asla birbirinden sapamaz, ayrı istisna listesi tutmuyoruz.
+        //
+        // 🎯 EK KÖK SEBEP DÜZELTMESİ: "Manchester City" gibi aramalar "man
+        // city"ye (alias) çevriliyordu — ama "manchester city" metni "man
+        // city"yi alt metin olarak içermiyor. Veritabanında bazı kayıtlar
+        // uzun ("Manchester City"), bazıları kısa ("Man City") yazılı olduğu
+        // için, artık HEM alias'lı HEM orijinal (alias'sız) hâli birlikte
+        // kontrol ediyoruz — De Bruyne'nin City'ye 15/16'daki GERÇEK
+        // gelişinin, sadece kısa yazılmış bir 25/26 ayrılış kaydı yüzünden
+        // gözden kaçmasına sebep olan hatanın aynısı buydu.
+        val club1Original = club1Raw.toStandardSearch()
+        val club2Original = club2Raw.toStandardSearch()
         data class CandInfo(val name: String, val nameStd: String, val transfers: MutableList<Pair<String, String>>)
         val candMap = mutableMapOf<Int, CandInfo>()
 
         withConnection { conn ->
             conn.prepareStatement(
-                "SELECT p.id, p.name, p.name_std, t.from_club, t.to_club FROM players p JOIN transfers t ON p.id = t.transfer_id WHERE t.from_club_std LIKE ? OR t.to_club_std LIKE ? OR t.from_club_std LIKE ? OR t.to_club_std LIKE ?"
+                "SELECT p.id, p.name, p.name_std, t.from_club, t.to_club FROM players p JOIN transfers t ON p.id = t.transfer_id WHERE t.from_club_std LIKE ? OR t.to_club_std LIKE ? OR t.from_club_std LIKE ? OR t.to_club_std LIKE ? OR t.from_club_std LIKE ? OR t.to_club_std LIKE ? OR t.from_club_std LIKE ? OR t.to_club_std LIKE ?"
             ).use { stmt ->
                 stmt.setString(1, "%$club1Std%")
                 stmt.setString(2, "%$club1Std%")
-                stmt.setString(3, "%$club2Std%")
-                stmt.setString(4, "%$club2Std%")
+                stmt.setString(3, "%$club1Original%")
+                stmt.setString(4, "%$club1Original%")
+                stmt.setString(5, "%$club2Std%")
+                stmt.setString(6, "%$club2Std%")
+                stmt.setString(7, "%$club2Original%")
+                stmt.setString(8, "%$club2Original%")
                 stmt.executeQuery().use { rs ->
                     while (rs.next()) {
                         val pid = rs.getInt("id")
@@ -2862,20 +2892,43 @@ object DatabaseClient {
         // 🎯 Ana aramadaki BİREBİR aynı iki aşamalı mantık: önce gevşek
         // (matchesOriginalClub — youth/Barcelona-Espanyol/Arsenal-Tula-Kyiv
         // istisnaları dahil) eşleşme, sonra "tam eşleşme varsa sadece onu
-        // kabul et" önceliklendirmesi.
+        // kabul et" önceliklendirmesi. Her ikisi de HEM alias'lı HEM
+        // orijinal hâle bakıyor.
         val loose = candMap.filter { (_, info) ->
-            val ok1 = info.transfers.any { (f, t) -> matchesOriginalClub(f, club1Std) || matchesOriginalClub(t, club1Std) }
-            val ok2 = info.transfers.any { (f, t) -> matchesOriginalClub(f, club2Std) || matchesOriginalClub(t, club2Std) }
+            val ok1 = info.transfers.any { (f, t) ->
+                matchesOriginalClub(f, club1Std) || matchesOriginalClub(t, club1Std) ||
+                    matchesOriginalClub(f, club1Original) || matchesOriginalClub(t, club1Original)
+            }
+            val ok2 = info.transfers.any { (f, t) ->
+                matchesOriginalClub(f, club2Std) || matchesOriginalClub(t, club2Std) ||
+                    matchesOriginalClub(f, club2Original) || matchesOriginalClub(t, club2Original)
+            }
             ok1 && ok2
         }
         if (loose.isEmpty()) return emptyList()
 
-        val hasExact1 = loose.values.any { info -> info.transfers.any { (f, t) -> isExactClubMatch(f, club1Std) || isExactClubMatch(t, club1Std) } }
-        val hasExact2 = loose.values.any { info -> info.transfers.any { (f, t) -> isExactClubMatch(f, club2Std) || isExactClubMatch(t, club2Std) } }
+        val hasExact1 = loose.values.any { info ->
+            info.transfers.any { (f, t) ->
+                isExactClubMatch(f, club1Std) || isExactClubMatch(t, club1Std) ||
+                    isExactClubMatch(f, club1Original) || isExactClubMatch(t, club1Original)
+            }
+        }
+        val hasExact2 = loose.values.any { info ->
+            info.transfers.any { (f, t) ->
+                isExactClubMatch(f, club2Std) || isExactClubMatch(t, club2Std) ||
+                    isExactClubMatch(f, club2Original) || isExactClubMatch(t, club2Original)
+            }
+        }
 
         return loose.entries.filter { (_, info) ->
-            val ok1 = if (hasExact1) info.transfers.any { (f, t) -> isExactClubMatch(f, club1Std) || isExactClubMatch(t, club1Std) } else true
-            val ok2 = if (hasExact2) info.transfers.any { (f, t) -> isExactClubMatch(f, club2Std) || isExactClubMatch(t, club2Std) } else true
+            val ok1 = if (hasExact1) info.transfers.any { (f, t) ->
+                isExactClubMatch(f, club1Std) || isExactClubMatch(t, club1Std) ||
+                    isExactClubMatch(f, club1Original) || isExactClubMatch(t, club1Original)
+            } else true
+            val ok2 = if (hasExact2) info.transfers.any { (f, t) ->
+                isExactClubMatch(f, club2Std) || isExactClubMatch(t, club2Std) ||
+                    isExactClubMatch(f, club2Original) || isExactClubMatch(t, club2Original)
+            } else true
             ok1 && ok2
         }.map { (id, info) -> SimplePlayerMatch(playerId = id, playerName = info.name, nameStd = info.nameStd) }
     }
@@ -2951,7 +3004,18 @@ object DatabaseClient {
     fun fetchPlayerAcrossClubs(terms: List<Pair<String, Boolean>>, minYear: Int? = null, seed: Long? = null): MultiClubPlayerResult? {
         if (terms.size < 2) return null
 
+        // 🎯 KÖK SEBEP DÜZELTMESİ: "Manchester City" araması "man city"ye
+        // (alias) çevriliyordu — ama "manchester city" metni "man city"yi
+        // ALT METİN olarak İÇERMİYOR ("chester" araya giriyor). Veritabanında
+        // BAZI kayıtlar "Manchester City" (uzun), bazıları "Man City" (kısa)
+        // olarak duruyor — sadece alias'lı hâle bakınca "Manchester City"
+        // yazan gerçek varış kaydı (De Bruyne'nin 15/16 City'ye gelişi gibi)
+        // hiç bulunamıyor, sadece kısa yazılmış BAŞKA bir kayıt (örn. 25/26
+        // ayrılış kaydı) yanlışlıkla "ilk yıl" sanılıyordu. Artık HEM alias'lı
+        // HEM orijinal hâli birlikte kontrol ediyoruz (verifyPlayerPlayedForClub'daki
+        // AYNI güvenli desen).
         val resolvedClubTerms = terms.map { (term, isCountry) -> if (isCountry) null else resolveClubSearchTerm(term) }
+        val originalClubTerms = terms.map { (term, isCountry) -> if (isCountry) null else term.toStandardSearch() }
         val mappedCountryTerms = terms.map { (term, isCountry) ->
             if (isCountry) {
                 val std = term.toStandardSearch()
@@ -2969,7 +3033,7 @@ object DatabaseClient {
                 """.trimIndent()
             )
             val conditions = terms.map { (_, isCountry) ->
-                if (isCountry) "p.nationality_std LIKE ?" else "(t.from_club_std LIKE ? OR t.to_club_std LIKE ?)"
+                if (isCountry) "p.nationality_std LIKE ?" else "(t.from_club_std LIKE ? OR t.to_club_std LIKE ? OR t.from_club_std LIKE ? OR t.to_club_std LIKE ?)"
             }
             append(conditions.joinToString(" OR "))
         }
@@ -2990,9 +3054,12 @@ object DatabaseClient {
                         if (isCountry) {
                             stmt.setString(idx++, "%${mappedCountryTerms[i]}%")
                         } else {
-                            val p = "%${resolvedClubTerms[i]}%"
-                            stmt.setString(idx++, p)
-                            stmt.setString(idx++, p)
+                            val pResolved = "%${resolvedClubTerms[i]}%"
+                            val pOriginal = "%${originalClubTerms[i]}%"
+                            stmt.setString(idx++, pResolved)
+                            stmt.setString(idx++, pResolved)
+                            stmt.setString(idx++, pOriginal)
+                            stmt.setString(idx++, pOriginal)
                         }
                     }
 
@@ -3024,7 +3091,10 @@ object DatabaseClient {
                                     }
                                 } else {
                                     val resolved = resolvedClubTerms[tIdx] ?: return@forEachIndexed
-                                    if (matchesOriginalClub(fromClub, resolved) || matchesOriginalClub(toClub, resolved)) {
+                                    val original = originalClubTerms[tIdx] ?: return@forEachIndexed
+                                    val matches = matchesOriginalClub(fromClub, resolved) || matchesOriginalClub(toClub, resolved) ||
+                                        matchesOriginalClub(fromClub, original) || matchesOriginalClub(toClub, original)
+                                    if (matches) {
                                         val bucket = playerTermSeasons.getOrPut(pId) { mutableMapOf() }
                                         val existing = bucket[originalTerm]
                                         if (existing == null || existing == "-" || parseSeasonToSortValue(season) < parseSeasonToSortValue(existing)) {

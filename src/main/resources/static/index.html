@@ -2281,7 +2281,7 @@
                     </div>
                 </div>
             </div>
-        <button id="langToggleBtn" style="margin-left: auto; background: none; border: none; font-size: 1.15rem; cursor: pointer; padding: 4px;" title="Switch language / Dili değiştir">🇬🇧</button>
+        <button id="langToggleBtn" style="margin-left: auto; background: rgba(var(--fg-rgb), 0.08); border: 1px solid rgba(var(--fg-rgb), 0.15); border-radius: 6px; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.02em; cursor: pointer; padding: 4px 7px; line-height: 1;" title="Switch language / Dili değiştir">EN</button>
         <a href="/blog" style="margin-left: 10px; font-size: 0.78rem; font-weight: 700; color: rgba(var(--fg-rgb), 0.7); text-decoration: none; white-space: nowrap;" title="Transfer Hikayeleri">
             📰 Blog
         </a>
@@ -3749,7 +3749,7 @@
             el.textContent = lang === 'en' ? TRANSLATIONS[id].en : TR_ORIGINALS[id];
         });
         const btn = document.getElementById('langToggleBtn');
-        if (btn) btn.textContent = lang === 'en' ? '🇹🇷' : '🇬🇧';
+        if (btn) btn.textContent = lang === 'en' ? 'TR' : 'EN';
         try { localStorage.setItem('transferkolik_lang', lang); } catch (e) { /* sessizce geç */ }
         // 💡 Günün Sorusu başlığı JS ile dinamik oluşuyor — dil değişince yeniden çiziyoruz.
         const dqHeading = document.getElementById('i18n-dailyQTitle');
@@ -3774,7 +3774,7 @@
         const btn = document.getElementById('langToggleBtn');
         if (btn) {
             btn.addEventListener('click', () => {
-                const current = btn.textContent.trim() === '🇬🇧' ? 'tr' : 'en';
+                const current = btn.textContent.trim() === 'EN' ? 'tr' : 'en';
                 const next = current === 'tr' ? 'en' : 'tr';
                 applyLanguage(next);
             });
@@ -9851,7 +9851,10 @@
         let listDebounceTimer = null;
         function renderClub321Suggestions() {
             const q = input.value.trim();
-            if (!q) { box.style.display = 'none'; return; }
+            // 🎯 YENİ: 1-2 harfte hem en pahalı (binlerce eşleşme) hem en
+            // anlamsız durum — kullanıcı zaten bu kadar kısa yazınca bir şey
+            // beklemiyor. 3+ harfe kadar hiç aramıyoruz.
+            if (q.length < 3) { box.style.display = 'none'; return; }
             const normalizedQuery = normalize(q);
             const aliasExpansion = expandQueryWithAliases(normalizedQuery);
             const matches = dedupeSuggestions(
@@ -9890,7 +9893,7 @@
 
         function scheduleClub321ListRender() {
             if (listDebounceTimer) clearTimeout(listDebounceTimer);
-            if (!input.value.trim()) { box.style.display = 'none'; return; }
+            if (input.value.trim().length < 3) { box.style.display = 'none'; return; }
             listDebounceTimer = setTimeout(renderClub321Suggestions, 120);
         }
 
