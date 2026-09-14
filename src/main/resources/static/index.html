@@ -3748,7 +3748,8 @@
     // Türkçesini gösteriyoruz.
     const NATIONALITY_TR = {
         'Belgium': 'Belçika', 'Germany': 'Almanya', 'Italy': 'İtalya',
-        'England': 'İngiltere', 'Brazil': 'Brezilya', 'France': 'Fransa'
+        'England': 'İngiltere', 'Brazil': 'Brezilya', 'France': 'Fransa',
+        'Turkey': 'Türkiye', 'Spain': 'İspanya', 'Czech Republic': 'Çekya'
     };
     // 💡 Dinamik (JS ile oluşturulan) metinler için küçük yardımcı — o anki
     // dile göre doğru metni döndürüyor. TRANSLATIONS haritasına dahil OLMAYAN
@@ -5860,7 +5861,15 @@
         { start: 'Leroy Sane', end: 'Arjen Robben', club: 'Bayern Munich', startYear: 2020, endYear: 2019, bridges: ['Thomas Muller'], nationality: 'Germany', flag: '🇩🇪' },
         { start: 'Achraf Hakimi', end: 'Thiago Silva', club: 'Paris SG', startYear: 2021, endYear: 2020, bridges: ['Marco Verratti'], nationality: 'Italy', flag: '🇮🇹' },
         { start: 'Aurelien Tchouameni', end: 'Isco', club: 'Real Madrid', startYear: 2022, endYear: 2021, bridges: ['Karim Benzema'], nationality: 'France', flag: '🇫🇷' },
-        { start: 'Pierre-Emerick Aubameyang', end: 'Patrick Kluivert', club: 'Lille', startYear: 2009, endYear: 2007, bridges: ['Eden Hazard'], nationality: 'Belgium', flag: '🇧🇪' }
+        { start: 'Pierre-Emerick Aubameyang', end: 'Patrick Kluivert', club: 'Lille', startYear: 2009, endYear: 2007, bridges: ['Eden Hazard'], nationality: 'Belgium', flag: '🇧🇪' },
+        { start: 'Mesut Ozil', end: 'Robin van Persie', club: 'Arsenal', startYear: 2013, endYear: 2011, bridges: ['Per Mertesacker'], nationality: 'Germany', flag: '🇩🇪' },
+        { start: 'Neymar', end: 'Ronaldinho', club: 'Barcelona', startYear: 2015, endYear: 2003, bridges: ['Xavi', 'Andres Iniesta'], nationality: 'Spain', flag: '🇪🇸' },
+        { start: 'Antoine Griezmann', end: 'Fernando Torres', club: 'Atletico Madrid', startYear: 2015, endYear: 2016, bridges: ['Koke'], nationality: 'Spain', flag: '🇪🇸' },
+        { start: 'Zlatan Ibrahimovic', end: 'Kaka', club: 'AC Milan', startYear: 2010, endYear: 2007, bridges: ['Gennaro Gattuso'], nationality: 'Italy', flag: '🇮🇹' },
+        { start: 'Erling Haaland', end: 'Robert Lewandowski', club: 'Borussia Dortmund', startYear: 2020, endYear: 2013, bridges: ['Marco Reus'], nationality: 'Germany', flag: '🇩🇪' },
+        { start: 'Johan Elmander', end: 'Harry Kewell', club: 'Galatasaray', startYear: 2011, endYear: 2008, bridges: ['Milan Baros'], nationality: 'Czech Republic', flag: '🇨🇿' },
+        { start: 'Robin van Persie', end: 'Dirk Kuyt', club: 'Fenerbahce', startYear: 2015, endYear: 2012, bridges: ['Volkan Demirel'], nationality: 'Turkey', flag: '🇹🇷' },
+        { start: 'Rachid Ghezzal', end: 'Ricardo Quaresma', club: 'Besiktas', startYear: 2022, endYear: 2010, bridges: ['Necip Uysal'], nationality: 'Turkey', flag: '🇹🇷' }
     ];
 
     // 🏀 Basketbol köprü havuzu — futboldakinden FARKLI olarak, "bridges" (hazır
@@ -5874,7 +5883,7 @@
     // gösteriliyor, gerçek soru olarak çıkarsa spoiler olurdu.
     const BB_CONNECTION_POOL_NBA = [
         { start: 'Anthony Davis', end: 'Dwight Howard', team: 'Los Angeles Lakers', startYear: 2019, endYear: 2020, bridges: [] },
-        { start: 'Jimmy Butler', end: 'Dwyane Wade', team: 'Miami Heat', startYear: 2019, endYear: 2019, bridges: [] },
+        { start: 'Jimmy Butler', end: 'Dwyane Wade', team: 'Miami Heat', startYear: 2019, endYear: 2019, bridges: ['Bam Adebayo'] },
         { start: 'Kevin Durant', end: 'Klay Thompson', team: 'Golden State Warriors', startYear: 2016, endYear: 2019, bridges: [] },
         { start: 'James Harden', end: 'Dwight Howard', team: 'Houston Rockets', startYear: 2012, endYear: 2016, bridges: [] },
         { start: 'Kawhi Leonard', end: 'David Robinson', team: 'San Antonio Spurs', startYear: 2011, endYear: 2003, bridges: ['Tim Duncan'] },
@@ -5888,7 +5897,8 @@
         { start: 'Nikola Milutinov', end: 'Vassilis Spanoulis', team: 'Olympiacos', startYear: 2015, endYear: 2013, bridges: [] },
         { start: 'Bogdan Bogdanovic', end: 'Jan Vesely', team: 'Fenerbahce', startYear: 2015, endYear: 2015, bridges: [] },
         { start: 'Kostas Sloukas', end: 'Ekpe Udoh', team: 'Fenerbahce', startYear: 2017, endYear: 2019, bridges: [] },
-        { start: 'Nikola Mirotic', end: 'Juan Carlos Navarro', team: 'Barcelona', startYear: 2011, endYear: 2008, bridges: [] }
+        { start: 'Nikola Mirotic', end: 'Juan Carlos Navarro', team: 'Barcelona', startYear: 2011, endYear: 2008, bridges: [] },
+        { start: 'Shane Larkin', end: 'Sasha Vujacic', team: 'Anadolu Efes', startYear: 2018, endYear: 2011, bridges: ['Dogus Balbay'] }
     ];
 
     function loadConnectionGame() {
