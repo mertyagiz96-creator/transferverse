@@ -3259,4 +3259,316 @@ object DatabaseClient {
         // burada da sadece birincil uyruğu gösteriyoruz.
         return cleaned.split(Regex("\\s{2,}")).firstOrNull()?.trim() ?: cleaned
     }
+
+    // 🔎 GEÇİCİ: blog makaleleri için gerçek istatistikleri hesaplıyor —
+    // uydurmamak için doğrudan veritabanından çekiyoruz.
+    // 🎯 KALICI ÇÖZÜM: bu hatayı (SQL LIKE'ın "X Youth"/"X U18"/"X Res." gibi
+    // altyapı kayıtlarını "gerçek X bağlantısı" sayması) bugün ÜÇ AYRI yerde
+    // tekrar tekrar yapmışım — her yeni özellikte aynı hatayı yapma riskini
+    // ortadan kaldırmak için, "bir oyuncu gerçekten (altyapı değil) bu
+    // kulüplerden birinde oynamış mı" sorusunu TEK, PAYLAŞILAN bir
+    // fonksiyona topluyoruz. Bundan sonra bu soruyu soran her yeni kod,
+    // ham SQL yazmak yerine BUNU çağırmalı.
+    private fun fetchGenuineClubConnectedPlayerIds(conn: java.sql.Connection, clubList: List<String>): Set<Int> {
+        val variants = clubList.flatMap { club -> setOf(club, resolveClubSearchTerm(club)) }.distinct()
+        val likeClause = variants.joinToString(" OR ") { "t3.from_club_std LIKE ? OR t3.to_club_std LIKE ?" }
+        val genuineIds = mutableSetOf<Int>()
+        conn.prepareStatement(
+            "SELECT DISTINCT t3.transfer_id, t3.from_club, t3.to_club FROM transfers t3 WHERE $likeClause"
+        ).use { stmt ->
+            var idx = 1
+            for (v in variants) {
+                stmt.setString(idx++, "%$v%")
+                stmt.setString(idx++, "%$v%")
+            }
+            stmt.executeQuery().use { rs ->
+                while (rs.next()) {
+                    val f = rs.getString("from_club")
+                    val t = rs.getString("to_club")
+                    val fStd = f?.toStandardSearch() ?: ""
+                    val tStd = t?.toStandardSearch() ?: ""
+                    // 🛡️ SADECE eşleşen tarafın KENDİSİ altyapı değilse sayıyoruz.
+                    val genuineMatch = variants.any { v ->
+                        (fStd.contains(v) && !isYouthClub(f)) || (tStd.contains(v) && !isYouthClub(t))
+                    }
+                    if (genuineMatch) genuineIds.add(rs.getInt("transfer_id"))
+                }
+            }
+        }
+        return genuineIds
+    }
+
+    fun computeStatArticles(): String {
+        val sb = StringBuilder()
+        try {
+            withConnection { conn ->
+                // 🎯 Artık tek, paylaşılan fonksiyonu çağırıyoruz — ham SQL
+                // LIKE yazmıyoruz, aynı hatayı bir daha yapma riski yok.
+                val famousPlayerIds = fetchGenuineClubConnectedPlayerIds(conn, LUCKY_CLUBS_FOR_BIO)
+                // 🎯 EK GÜÇLENDİRME: gerçek bir fotoğrafı olma şartı da ekliyoruz.
+                val realPhotoCondition = "p.image_url IS NOT NULL AND p.image_url != '' AND p.image_url NOT LIKE '%default.jpg%'"
+                val famousPlayerFilter = if (famousPlayerIds.isNotEmpty()) {
+                    "AND p.id IN (${famousPlayerIds.joinToString(",")}) AND $realPhotoCondition"
+                } else {
+                    "AND 1=0" // 🛡️ hiç aday yoksa boş sonuç dön, hata verme
+                }
+
+                // 1) En çok FARKLI kulüpte oynayan 10 oyuncu (altyapı hariç,
+                // en az bir tanınmış kulüpte oynamış olmalı)
+                sb.appendLine("=== 1) EN ÇOK KULÜP DEĞİŞTİREN 10 FUTBOLCU (tanınmış isimler) ===")
+                conn.prepareStatement(
+                    """
+                    SELECT p.name, COUNT(DISTINCT t.to_club_std) as club_count
+                    FROM players p JOIN transfers t ON p.id = t.transfer_id
+                    WHERE p.id < 9999000 AND t.to_club_std NOT GLOB '[0-9]*' $famousPlayerFilter
+                    GROUP BY p.id
+                    ORDER BY club_count DESC
+                    LIMIT 40
+                    """.trimIndent()
+                ).use { stmt ->
+                    stmt.executeQuery().use { rs ->
+                        while (rs.next()) {
+                            sb.appendLine("  ${rs.getString("name")} — ${rs.getInt("club_count")} farklı kulüp")
+                        }
+                    }
+                }
+
+                // 2) Bir sezonda en çok takım değiştiren oyuncular (tanınmış isimler)
+                sb.appendLine("\n=== 2) BİR SEZONDA EN ÇOK TAKIM DEĞİŞTİREN OYUNCULAR (tanınmış isimler) ===")
+                conn.prepareStatement(
+                    """
+                    SELECT p.name, t.season, COUNT(DISTINCT t.to_club_std) as clubs_in_season
+                    FROM players p JOIN transfers t ON p.id = t.transfer_id
+                    WHERE p.id < 9999000 AND t.to_club_std NOT GLOB '[0-9]*' $famousPlayerFilter
+                    GROUP BY p.id, t.season
+                    HAVING clubs_in_season >= 3
+                    ORDER BY clubs_in_season DESC
+                    LIMIT 40
+                    """.trimIndent()
+                ).use { stmt ->
+                    stmt.executeQuery().use { rs ->
+                        while (rs.next()) {
+                            sb.appendLine("  ${rs.getString("name")} — ${rs.getString("season")} sezonunda ${rs.getInt("clubs_in_season")} farklı kulüp")
+                        }
+                    }
+                }
+
+                // 3) en genç yaşta (gerçek, altyapı OLMAYAN bir kulüpte) debut
+                // yapan tanınmış oyuncular.
+                // 🎯 KÖK SEBEP DÜZELTMESİ: ilk denemede TÜM transferlerin en
+                // erken sezonunu alıyordum — bu da neredeyse herkeste "14
+                // yaşında altyapıya katıldı" gibi anlamsız, ayırt edici
+                // olmayan bir sonuç veriyordu (bu, hemen hemen her profesyonel
+                // futbolcuda olan bir şey). Artık SADECE altyapı OLMAYAN
+                // (gerçek/A takımı) transferler arasından en erkenini alıyoruz.
+                sb.appendLine("\n=== 3) EN GENÇ YAŞTA (ALTYAPI DEĞİL, GERÇEK KULÜPTE) DEBUT YAPAN TANINMIŞ OYUNCULAR ===")
+                conn.prepareStatement(
+                    """
+                    SELECT p.id, p.name, p.birthdate, t.to_club, t.season
+                    FROM players p JOIN transfers t ON p.id = t.transfer_id
+                    WHERE p.id < 9999000 AND p.birthdate IS NOT NULL AND p.birthdate != '' $famousPlayerFilter
+                    """.trimIndent()
+                ).use { stmt ->
+                    stmt.executeQuery().use { rs ->
+                        val earliestSeniorSeason = mutableMapOf<Int, Int>() // pid -> en erken A takımı sezon yılı
+                        val earliestSeniorClub = mutableMapOf<Int, String>() // pid -> o sezondaki kulüp
+                        val playerBirthYear = mutableMapOf<Int, Int>()
+                        val playerName = mutableMapOf<Int, String>()
+                        while (rs.next()) {
+                            val club = rs.getString("to_club")
+                            if (isYouthClub(club)) continue // 🛡️ altyapı kayıtlarını tamamen dışlıyoruz
+                            // 🎯 KÖK SEBEP DÜZELTMESİ: burada da (4. ve 5. sorguda
+                            // olduğu gibi) "42385", "22321" gibi çözülememiş
+                            // sayısal kulüp kayıtlarını unutmuşum, dışlıyoruz.
+                            if (club != null && club.all { it.isDigit() }) continue
+                            val pid = rs.getInt("id")
+                            val birthdate = rs.getString("birthdate") ?: continue
+                            val birthYear = birthdate.take(4).toIntOrNull() ?: continue
+                            val seasonStr = rs.getString("season") ?: continue
+                            val seasonYearShort = seasonStr.take(2).toIntOrNull() ?: continue
+                            val seasonYearFull = if (seasonYearShort >= 50) 1900 + seasonYearShort else 2000 + seasonYearShort
+                            playerBirthYear[pid] = birthYear
+                            playerName[pid] = rs.getString("name") ?: ""
+                            val current = earliestSeniorSeason[pid]
+                            if (current == null || seasonYearFull < current) {
+                                earliestSeniorSeason[pid] = seasonYearFull
+                                earliestSeniorClub[pid] = club ?: "?"
+                            }
+                        }
+                        data class DebutInfo(val name: String, val age: Int, val year: Int, val club: String)
+                        val results = earliestSeniorSeason.mapNotNull { (pid, seasonYear) ->
+                            val birthYear = playerBirthYear[pid] ?: return@mapNotNull null
+                            val age = seasonYear - birthYear
+                            if (age in 15..19) DebutInfo(playerName[pid] ?: "", age, seasonYear, earliestSeniorClub[pid] ?: "?") else null // 🛡️ mantıksız değerleri eliyoruz
+                        }
+                        results.sortedBy { it.age }.take(15).forEach { d ->
+                            sb.appendLine("  ${d.name} — ${d.club}'de yaklaşık ${d.age} yaşında (${d.year} sezonu civarı, A takımı debütü)")
+                        }
+                    }
+                }
+
+                // 4) bir kulüpte en uzun süre kalan tanınmış oyuncular.
+                // 🎯 KÖK SEBEP DÜZELTMESİ: "kaç farklı transfer kaydı var"
+                // saymak yanlış bir ölçümdü — hiç ayrılmayan bir oyuncu (Necip
+                // Uysal gibi, 17 yıl Beşiktaş'ta) sadece 1 kez "katıldı" kaydı
+                // üretiyor, sürekli kiralığa gidip gelen biri ise her
+                // seferinde yeni bir kayıt üretip yapay olarak öne çıkıyordu.
+                // Doğru ölçüm: o kulüpteki EN ERKEN ve EN GEÇ sezon arasındaki
+                // FARK — bu, gerçek kalış süresini yansıtıyor.
+                sb.appendLine("\n=== 4) BİR KULÜPTE EN UZUN SÜRE KALAN TANINMIŞ OYUNCULAR ===")
+                conn.prepareStatement(
+                    """
+                    SELECT p.id, p.name, t.to_club, t.to_club_std, t.season
+                    FROM players p JOIN transfers t ON p.id = t.transfer_id
+                    WHERE p.id < 9999000 AND t.to_club_std NOT GLOB '[0-9]*' $famousPlayerFilter
+                    """.trimIndent()
+                ).use { stmt ->
+                    stmt.executeQuery().use { rs ->
+                        data class ClubSpan(val name: String, val club: String, val years: MutableSet<Int>)
+                        val spans = mutableMapOf<Pair<Int, String>, ClubSpan>()
+                        while (rs.next()) {
+                            val club = rs.getString("to_club") ?: continue
+                            if (isYouthClub(club)) continue
+                            val clubStd = rs.getString("to_club_std") ?: continue
+                            val pid = rs.getInt("id")
+                            val seasonStr = rs.getString("season") ?: continue
+                            val yearShort = seasonStr.take(2).toIntOrNull() ?: continue
+                            val yearFull = if (yearShort >= 50) 1900 + yearShort else 2000 + yearShort
+                            val key = pid to clubStd
+                            val info = spans.getOrPut(key) { ClubSpan(rs.getString("name") ?: "", club, mutableSetOf()) }
+                            info.years.add(yearFull)
+                        }
+                        // 🎯 EK DÜZELTME: sadece ilk-son yıl farkına bakmak da
+                        // yanıltıcı çıktı — bir oyuncu bir kulüpten ayrılıp
+                        // ONLARCA YIL SONRA geri dönerse (Buffon'un Parma'ya
+                        // 2001'de ayrılıp 2021'de dönmesi gibi), bu aradaki
+                        // boşluğu "kesintisiz 27 yıl" gibi gösteriyordu. Artık
+                        // kayıtlı yıl sayısının, toplam aralığın makul bir
+                        // kısmını (en az %35'ini) kapsamasını şart koşuyoruz —
+                        // gerçekten kesintisiz/yoğun bir dönemi ayırt ediyor.
+                        spans.values
+                            .map { info ->
+                                val span = (info.years.maxOrNull() ?: 0) - (info.years.minOrNull() ?: 0)
+                                Triple(info, span, info.years.size)
+                            }
+                            // 🎯 PRAGMATİK KARAR: %35 eşiği, Necip Uysal gibi
+                            // GERÇEKTEN hiç ayrılmayan ama az kayıtlı (sadece
+                            // katılım + belki bir yenileme) oyuncuları da
+                            // eliyordu. Elimizdeki veriyle "az kayıt, uzun
+                            // aralık" durumunun Buffon'daki gibi bir "ayrılıp
+                            // döndü" mü, yoksa Necip'teki gibi "hiç ayrılmadı"
+                            // mı olduğunu kesin ayırt edemiyoruz — %20'ye
+                            // düşürüp daha dengeli bir nokta buluyoruz.
+                            .filter { (_, span, count) -> span >= 5 && count >= (span * 0.20) }
+                            .sortedByDescending { it.second }
+                            .take(15)
+                            .forEach { (info, years, count) ->
+                                val minY = info.years.minOrNull() ?: 0
+                                val maxY = info.years.maxOrNull() ?: 0
+                                sb.appendLine("  ${info.name} — ${info.club}'de yaklaşık $years yıl ($minY-$maxY arası, $count farklı sezonda kayıtlı)")
+                            }
+                    }
+                }
+                // 5) Aynı iki kulüpte en fazla oynayan oyuncu çiftleri
+                // (kompozisyon patlamasını önlemek için 3+ farklı kulüplü
+                // oyuncularla sınırlıyoruz, kulüp başına da bir üst sınır koyuyoruz,
+                // VE en az bir tanınmış kulüpte oynamış olma şartı ekliyoruz)
+                sb.appendLine("\n=== 5) AYNI İKİ (VEYA DAHA FAZLA) KULÜPTE EN FAZLA OYNAYAN OYUNCU ÇİFTLERİ (tanınmış isimler) ===")
+                data class PlayerClubs(val id: Int, val name: String, val clubs: MutableSet<String>)
+                val playerClubMap = mutableMapOf<Int, PlayerClubs>()
+                conn.prepareStatement(
+                    """
+                    SELECT p.id, p.name, t.to_club, t.to_club_std
+                    FROM players p JOIN transfers t ON p.id = t.transfer_id
+                    WHERE p.id < 9999000 AND t.to_club_std IS NOT NULL AND t.to_club_std != '' $famousPlayerFilter
+                    """.trimIndent()
+                ).use { stmt ->
+                    stmt.executeQuery().use { rs ->
+                        while (rs.next()) {
+                            val clubStd = rs.getString("to_club_std") ?: continue
+                            val clubRaw = rs.getString("to_club")
+                            // 🎯 KÖK SEBEP DÜZELTMESİ: "123", "515" gibi tamamen
+                            // sayısal, çözülememiş kayıtlar ile "Beşiktaş U19",
+                            // "Beşiktaş JK" gibi ALTYAPI varyantları, "ortak
+                            // kulüp" sayısını yapay olarak şişiriyordu (aslında
+                            // aynı kulübün farklı yazılışları). İkisini de dışlıyoruz.
+                            if (clubStd.all { it.isDigit() }) continue
+                            if (isYouthClub(clubRaw)) continue
+                            val pid = rs.getInt("id")
+                            val info = playerClubMap.getOrPut(pid) { PlayerClubs(pid, rs.getString("name") ?: "", mutableSetOf()) }
+                            info.clubs.add(clubStd)
+                        }
+                    }
+                }
+                // Sadece 3+ kulüplü oyuncularla sınırlıyoruz (hesaplama boyutu için)
+                val candidates = playerClubMap.values.filter { it.clubs.size in 3..15 }
+                val clubToPlayers = mutableMapOf<String, MutableList<PlayerClubs>>()
+                for (cand in candidates) {
+                    for (club in cand.clubs) {
+                        clubToPlayers.getOrPut(club) { mutableListOf() }.add(cand)
+                    }
+                }
+                val pairCounts = mutableMapOf<Pair<Int, Int>, Int>()
+                val pairNames = mutableMapOf<Pair<Int, Int>, Pair<String, String>>()
+                val pairSharedClubs = mutableMapOf<Pair<Int, Int>, Set<String>>()
+                for ((_, players) in clubToPlayers) {
+                    if (players.size > 400) continue // 🛡️ aşırı büyük kulüpleri atla (performans)
+                    for (i in players.indices) {
+                        for (j in i + 1 until players.size) {
+                            val a = players[i]; val b = players[j]
+                            val shared = a.clubs.intersect(b.clubs)
+                            if (shared.size < 2) continue
+                            val key = if (a.id < b.id) a.id to b.id else b.id to a.id
+                            if ((pairCounts[key] ?: 0) < shared.size) {
+                                pairCounts[key] = shared.size
+                                pairNames[key] = a.name to b.name
+                                pairSharedClubs[key] = shared
+                            }
+                        }
+                    }
+                }
+                pairCounts.entries.sortedByDescending { it.value }.take(30).forEach { (key, count) ->
+                    val (n1, n2) = pairNames[key] ?: ("?" to "?")
+                    val clubs = pairSharedClubs[key]?.joinToString(", ") ?: "?"
+                    sb.appendLine("  $n1 & $n2 — $count ortak kulüp: $clubs")
+                }
+
+                // 6) Süper Lig'de en yaygın yabancı uyruk + o uyruktan en çok
+                // oynayan isimler (Türkiye hariç, Süper Lig kulüpleri geniş bir
+                // listeyle taranıyor — yaklaşık bir liste, %100 eksiksiz değil)
+                sb.appendLine("\n=== 6) SÜPER LİG'DE EN YAYGIN YABANCI UYRUK ===")
+                val superLigClubs = listOf(
+                    "galatasaray", "fenerbahce", "besiktas", "trabzonspor", "basaksehir",
+                    "konyaspor", "sivasspor", "antalyaspor", "kayserispor", "alanyaspor",
+                    "kasimpasa", "gaziantep", "rizespor", "goztepe", "samsunspor",
+                    "eyupspor", "bodrumspor", "hatayspor", "adana demirspor", "ankaragucu",
+                    "fatih karagumruk", "istanbulspor", "pendikspor", "umraniyespor"
+                )
+                val clubConds = superLigClubs.joinToString(" OR ") { "t.to_club_std LIKE ?" }
+                conn.prepareStatement(
+                    """
+                    SELECT p.nationality, COUNT(DISTINCT p.id) as cnt
+                    FROM players p JOIN transfers t ON p.id = t.transfer_id
+                    WHERE p.id < 9999000 AND p.nationality NOT LIKE '%Turkey%' AND p.nationality NOT LIKE '%Türkiye%'
+                    AND ($clubConds)
+                    GROUP BY p.nationality
+                    ORDER BY cnt DESC
+                    LIMIT 8
+                    """.trimIndent()
+                ).use { stmt ->
+                    var idx = 1
+                    for (c in superLigClubs) stmt.setString(idx++, "%$c%")
+                    stmt.executeQuery().use { rs ->
+                        while (rs.next()) {
+                            sb.appendLine("  ${rs.getString("nationality")} — ${rs.getInt("cnt")} farklı oyuncu")
+                        }
+                    }
+                }
+
+            }
+        } catch (e: Exception) {
+            sb.appendLine("HATA: ${e.message}")
+        }
+        return sb.toString()
+    }
 }

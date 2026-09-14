@@ -203,6 +203,12 @@ fun main() {
                 call.respondText(report, ContentType.Text.Plain)
             }
 
+            // 🔎 GEÇİCİ: blog makaleleri için gerçek istatistikleri hesaplıyor.
+            get("/admin/stat-articles") {
+                val report = DatabaseClient.computeStatArticles()
+                call.respondText(report, ContentType.Text.Plain)
+            }
+
             // 🎯 YENİ: büyük kulüplerde (TR + Avrupa) geçen ama bizde hiç
             // olmayan oyuncuları TAM PROFİLLERİYLE oluşturuyor. Varsayılan
             // önizleme modunda — ?dryRun=false ile gerçekten yazar.
@@ -370,6 +376,184 @@ fun main() {
             // 📰 BLOG — gerçek, sunucu tarafında oluşturulan HTML sayfaları (JS'e
             // bağımlı değil), arama motoru botlarının tarayıp indeksleyebilmesi için.
             val blogArticles = mapOf(
+                "en-genc-yasta-debut-yapan-efsaneler" to Pair(
+                    "En Genç Yaşta A Takımında Forma Giyen Efsaneler",
+                    """
+                    <p>Bir futbolcunun kariyerinde en heyecan verici anlardan biri, A takımına ilk kez çıktığı 
+                    maçtır — bu an, genelde uzun bir altyapı sürecinin meyvesidir. Ama 
+                    bazı oyuncular için bu an, akranlarından çok daha erken gelir. TransferKolik'in veritabanını 
+                    taradık ve futbol tarihinin en tanınmış isimlerinden bazılarının, henüz 15 yaşındayken bile 
+                    gerçek bir A takımında (altyapı değil) forma giydiğini bulduk.</p>
+                    <p>Listede dikkat çeken isimler arasında Manchester City'nin efsanevi kalecisi <strong>Joe 
+                    Hart</strong> (Shrewsbury Town'da ilk kez forma giymiş), İtalya'nın en tartışmalı yeteneklerinden 
+                    <strong>Mario Balotelli</strong> (FC Lumezzane'de), İsviçre millî takımının savunma direği 
+                    <strong>Johann Vogel</strong> (Grasshopper Club Zürih'te) ve yine İsviçre'den <strong>Johan 
+                    Djourou</strong> (Etoile Carouge FC'de) bulunuyor. Brezilyalı forvet <strong>Jô</strong> 
+                    (Manchester City ve Everton formaları giymiş), Corinthians'ta ilk kez forma giymiş.</p>
+                    <p><strong>Tam liste (yaklaşık ilk çıkış yaşına göre, kulübüyle birlikte):</strong></p>
+                    <ol>
+                        <li>Tamás Hajnal — Ferencvárosi TC, ~15 yaşında (1996 civarı)</li>
+                        <li>Bojan Djordjic — IF Brommapojkarna, ~15 yaşında (1997 civarı)</li>
+                        <li>Matthew Etherington — Peterborough United, ~15 yaşında (1996 civarı)</li>
+                        <li>Johann Vogel — Grasshopper Club Zürih, ~15 yaşında (1992 civarı)</li>
+                        <li>Gürhan Gürsoy — Adanaspor, ~15 yaşında (2002 civarı)</li>
+                        <li>Marco Zoro — US Salernitana 1919, ~15 yaşında (1998 civarı)</li>
+                        <li>Jô — Corinthians, ~15 yaşında (2002 civarı)</li>
+                        <li>Johan Djourou — Etoile Carouge FC, ~15 yaşında (2002 civarı)</li>
+                        <li>Joe Hart — Shrewsbury Town, ~15 yaşında (2002 civarı)</li>
+                        <li>Mario Balotelli — FC Lumezzane, ~15 yaşında (2005 civarı)</li>
+                    </ol>
+                    <p>Bu kadar genç yaşta profesyonel futbola adım atmak büyük bir fırsat olduğu kadar, ciddi 
+                    bir baskı da getiriyor — fiziksel olarak henüz tam gelişmemiş bir oyuncunun yetişkin 
+                    profesyonellerle aynı sahada rekabet etmesi kolay değil. Listedeki isimlerin çoğunun sonraki 
+                    yıllarda gerçekten üst düzey kariyerler inşa etmiş olması (Joe Hart Manchester City ve İngiltere 
+                    millî takımının kalecisi oldu, Balotelli İtalya ile Avrupa Şampiyonası finali oynadı), bu erken 
+                    başlangıcın onlar için doğru bir karar olduğunu gösteriyor.</p>
+                    <p>Dikkat çekici bir şekilde, bu erken ilk çıkışların çoğu, oyuncunun daha sonra forma giydiği 
+                    büyük kulüplerde değil, kariyerlerinin başında oynadıkları daha küçük, yerel kulüplerde 
+                    gerçekleşmiş. Bu da, bir yıldızın hikayesinin genelde manşetlere çıkmayan, mütevazı bir 
+                    başlangıçla başladığını hatırlatıyor.</p>
+                    <p>TransferKolik'te bu isimlerden herhangi birini aratarak, kariyerlerinin tam zaman 
+                    çizelgesini görebilirsiniz.</p>
+                    """.trimIndent()
+                ),
+                "ayni-iki-kulupte-en-cok-oynayan-ikili" to Pair(
+                    "Aynı İki (veya Daha Fazla) Kulüpte Birlikte Oynayan İkonik İkililer",
+                    """
+                    <p>Futbolda bazı oyuncu ikilileri, kariyerleri boyunca birden fazla kez aynı kulüpte buluşur — 
+                    bir kulüpte birlikte yetişip, yıllar sonra başka bir kulüpte tekrar takım arkadaşı olurlar. 
+                    Bu, çoğu zaman tesadüf değil; futbol dünyasının kendine has bir "güven ağı" var — hocalar, 
+                    menajerler ve kulüp yöneticileri, daha önce birlikte çalıştıkları, güvendikleri isimleri tekrar 
+                    bir araya getirmeyi tercih ediyor. TransferKolik'in veritabanını tarayıp, aynı iki (hatta daha 
+                    fazla) kulüpte en çok birlikte forma giymiş oyuncu çiftlerini — ve tam olarak hangi kulüplerde 
+                    buluştuklarını — çıkardık.</p>
+                    <p>Listenin en tepesinde İtalyan ikili <strong>Michele Serena</strong> ve <strong>Christian 
+                    Vieri</strong> var — kariyerleri boyunca tam <strong>6 ortak kulüpte</strong> forma giymişler: 
+                    Inter Milan, Atlético Madrid, Fiorentina, Sampdoria, Juventus ve Venezia. Aynı sayıda ortak 
+                    kulübe sahip bir diğer İtalyan ikili, <strong>Nicola Amoruso</strong> ve <strong>Cristiano 
+                    Lucarelli</strong> — Atalanta, Parma, Torino, Perugia, Napoli ve Padova'da yolları kesişmiş.</p>
+                    <p>İngiltere cephesinde <strong>Danny Higginbotham</strong> ve <strong>Lee Martin</strong>, 
+                    Sheffield United, Stoke City, Ipswich Town, Nottingham Forest, Manchester United ve Royal 
+                    Antwerp'te birlikte forma giymiş. Benzer şekilde <strong>John Curtis</strong> ve 
+                    <strong>Ritchie De Laet</strong>, Wrexham, Portsmouth, Preston, Leicester, Sheffield United 
+                    ve Manchester United'da yollarının kesiştiğini görüyoruz.</p>
+                    <p><strong>Bazı dikkat çekici ikililer ve ortak kulüpleri:</strong></p>
+                    <ol>
+                        <li>Michele Serena & Christian Vieri — Inter Milan, Atlético Madrid, Fiorentina, Sampdoria, Juventus, Venezia</li>
+                        <li>Nicola Amoruso & Cristiano Lucarelli — Atalanta, Parma, Torino, Perugia, Napoli, Padova</li>
+                        <li>Danny Higginbotham & Lee Martin — Sheffield United, Stoke City, Ipswich Town, Nottingham Forest, Manchester United, Royal Antwerp</li>
+                        <li>John Curtis & Ritchie De Laet — Wrexham, Portsmouth, Preston North End, Leicester City, Sheffield United, Manchester United</li>
+                        <li>Massimo Donati & Filippo Maniero — Hellas Verona, Palermo, AC Milan, Atalanta, Sampdoria, Torino, Parma</li>
+                        <li>Amauri & Antonio Nocerino — Torino, Parma, Juventus, Palermo, Messina, Piacenza</li>
+                        <li>Jérôme Leroy & Stéphane Dalmat — Châteauroux, Rennes, Sochaux, Lens, Paris Saint-Germain, Marseille</li>
+                    </ol>
+                    <p>Bu tür tekrarlanan takım arkadaşlıkları genelde birkaç mekanizmayla oluşuyor: aynı 
+                    menajerlik ajansının iki oyuncuyu da temsil etmesi ve paket anlaşmalar önermesi, bir teknik 
+                    direktörün yeni göreve başladığı kulübe daha önce çalıştığı, güvendiği oyuncuları da getirmesi, 
+                    ya da bir kulübün başka bir kulüpten transfer yaparken "kanıtlanmış, uyumlu çalışan bir ikiliyi" 
+                    birlikte almayı tercih etmesi.</p>
+                    <p>Bu tür ilişki ağlarını takip etmek, aslında TransferKolik'in en temel özelliklerinden 
+                    birinin de kalbinde yatıyor — sitemizdeki "iki kulüp gir, ortak oyuncuları bul" aracı, tam 
+                    olarak bu tür bağlantıları saniyeler içinde ortaya çıkarmak için tasarlandı.</p>
+                    <p>TransferKolik'te bu isimlerden herhangi ikisini yazarak, gerçekten hangi kulüplerde birlikte 
+                    oynadıklarını, hangi sezonlarda aynı kadroda yer aldıklarını tam olarak görebilirsiniz.</p>
+                    """.trimIndent()
+                ),
+                "bir-sezonda-en-cok-takim-degistirenler" to Pair(
+                    "Bir Sezonda En Çok Takım Değiştiren Oyuncular",
+                    """
+                    <p>Bir futbol sezonu genelde 9-10 ay sürer — çoğu oyuncu için bu süre boyunca tek bir kulüpte 
+                    kalmak normaldir. Ama bazı oyuncular için tek bir sezon, adeta bir kulüpten diğerine sürekli 
+                    geçiş dönemi hâline gelir. TransferKolik'in veritabanını taradığımızda, tek bir sezon içinde 
+                    inanılmaz sayıda kulüp değiştiren isimler bulduk — aralarında gerçekten tanıdık, güncel 
+                    isimler de var.</p>
+                    <p>Listenin zirvesinde 6 farklı kulüple <strong>Juan Bernat</strong> var — Bayern Münih ve 
+                    Paris Saint-Germain formaları giymiş sol bek, 2024/25 sezonunda 6 farklı kulüpte forma 
+                    giymiş. Aynı sayıda kulüple <strong>Fabiano</strong>, <strong>Rodrigo Contreras</strong> ve 
+                    <strong>Carlinhos</strong> da öne çıkıyor. Listede dikkat çeken diğer tanıdık isimler: eski 
+                    Ajax ve West Ham forveti <strong>Sébastien Haller</strong>, Manchester City ve Arsenal'de 
+                    forma giymiş <strong>Oleksandr Zinchenko</strong>, Chelsea ve Roma golcüsü <strong>Tammy 
+                    Abraham</strong>, Aston Villa'nın eski orta sahası <strong>Douglas Luiz</strong>, Portekiz 
+                    millî oyuncusu <strong>João Mário</strong> ve İtalya millî takımından <strong>Kristjan 
+                    Asllani</strong> — hepsi 2024/25 ya da 2025/26 sezonunda 5 farklı kulüpte forma giymiş.</p>
+                    <p><strong>Bazı dikkat çekici isimler ve o sezonki kulüp sayıları:</strong></p>
+                    <ol>
+                        <li>Juan Bernat — 2024/25 sezonunda 6 kulüp</li>
+                        <li>Sébastien Haller — 2024/25 sezonunda 5 kulüp</li>
+                        <li>Oleksandr Zinchenko — 2025/26 sezonunda 5 kulüp</li>
+                        <li>Pierluigi Gollini — 2024/25 sezonunda 5 kulüp</li>
+                        <li>Patrick Cutrone — 2025/26 sezonunda 5 kulüp</li>
+                        <li>Tammy Abraham — 2025/26 sezonunda 5 kulüp</li>
+                        <li>Douglas Luiz — 2025/26 sezonunda 5 kulüp</li>
+                        <li>João Mário — 2025/26 sezonunda 5 kulüp</li>
+                        <li>Kristjan Asllani — 2025/26 sezonunda 5 kulüp</li>
+                        <li>Lorenzo Lucca — 2025/26 sezonunda 5 kulüp</li>
+                    </ol>
+                    <p>Bu tür yoğun bir sezon genelde birkaç sebeple açıklanabilir: art arda kısa süreli kiralık 
+                    anlaşmalar, bir kulüple erken fesih sonrası hızlı yeni bir takım bulma, ya da sezon ortasında 
+                    yapılan bir dizi kiralık-geri dönüş hareketliliği. Özellikle 2024/25 ve 2025/26 sezonlarının 
+                    listede yoğun görünmesi, modern transfer piyasasındaki hareketliliğin son yıllarda daha da 
+                    arttığını gösteriyor — kısa süreli kiralıklar ve sezon içi transferler artık üst düzey 
+                    oyuncular için bile giderek daha yaygın.</p>
+                    <p>Bu tablo, bir oyuncunun kariyer yörüngesinin tek bir sezon içinde bile büyük ölçüde 
+                    değişebileceğini gösteriyor. Bu tür oyuncular için bir sezon, sahada geçirdikleri zaman kadar, 
+                    valiz toplayıp yeni bir şehre taşınmakla da geçiyor.</p>
+                    <p>TransferKolik'te bu isimlerden herhangi birini aratarak, o yoğun sezonun tam kronolojisini 
+                    — hangi tarihte hangi kulüpten hangi kulübe gittiklerini — görebilirsiniz.</p>
+                    """.trimIndent()
+                ),
+                "super-lig-en-yaygin-yabanci-uyruklar" to Pair(
+                    "Süper Lig'in Yabancı Lejyoner Haritası: Hangi Ülkeden Kaç Oyuncu?",
+                    """
+                    <p>Türkiye Süper Ligi, onlarca yıldır dünyanın dört bir yanından futbolcuya kapılarını açan bir 
+                    lig oldu. Yabancı oyuncu kotalarının zaman içinde değişmesi, kulüplerin uluslararası scouting 
+                    ağlarını genişletmesi ve Türkiye'nin coğrafi olarak Avrupa, Asya ve Afrika arasında bir köprü 
+                    konumunda olması, ligin bu denli çeşitli bir yabancı oyuncu profiline sahip olmasında etkili 
+                    oldu. TransferKolik'in veritabanını taradığımızda, Süper Lig kulüplerinde forma giymiş yabancı 
+                    oyuncuların hangi ülkelerden geldiğini ortaya çıkardık — sonuçlar, ligin uluslararası kimliğini 
+                    net bir şekilde gösteriyor.</p>
+                    <p>Listenin açık ara zirvesinde <strong>Brezilya</strong> var — veritabanımıza göre Süper Lig 
+                    tarihinde <strong>147 farklı Brezilyalı oyuncu</strong> forma giymiş. Bu, ikinci sıradaki 
+                    ülkenin neredeyse üç katı. Brezilya'yı <strong>Nijerya</strong> (52 oyuncu) ve 
+                    <strong>Portekiz</strong> (51 oyuncu) takip ediyor — aralarındaki fark oldukça az.</p>
+                    <p>Listenin devamında <strong>Polonya</strong> (39 oyuncu), <strong>Senegal</strong> (35 
+                    oyuncu), <strong>Hırvatistan</strong> (33 oyuncu), <strong>Sırbistan</strong> (32 oyuncu) ve 
+                    <strong>Gana</strong> (32 oyuncu) yer alıyor. Bu liste, Süper Lig'in sadece Avrupa'dan değil, 
+                    Güney Amerika'dan ve Batı Afrika'dan da yoğun bir futbolcu akışı aldığını gösteriyor.</p>
+                    <p><strong>Tam liste (Süper Lig'de forma giymiş farklı oyuncu sayısına göre):</strong></p>
+                    <ol>
+                        <li>Brezilya — 147 oyuncu</li>
+                        <li>Nijerya — 52 oyuncu</li>
+                        <li>Portekiz — 51 oyuncu</li>
+                        <li>Polonya — 39 oyuncu</li>
+                        <li>Senegal — 35 oyuncu</li>
+                        <li>Hırvatistan — 33 oyuncu</li>
+                        <li>Sırbistan — 32 oyuncu</li>
+                        <li>Gana — 32 oyuncu</li>
+                    </ol>
+                    <p>Brezilya'nın bu denli baskın olması şaşırtıcı değil — Brezilyalı oyuncular, teknik 
+                    yetenekleri ve uyum sağlama kabiliyetleriyle dünya genelinde en çok transfer edilen 
+                    milliyetlerden biri, ve Süper Lig kulüpleri de yıllardır bu havuzdan yoğun şekilde 
+                    faydalanıyor. Türk kulüplerinin Brezilya'daki scouting ağları, yıllar içinde ciddi bir 
+                    olgunluğa erişti — birçok kulübün artık Brezilya'da düzenli olarak izleme yaptığı, hatta 
+                    yerel ajanlarla uzun vadeli ilişkiler kurduğu biliniyor.</p>
+                    <p>Nijerya ve Senegal'in listede üst sıralarda olması ise, Türk kulüplerinin son yıllarda 
+                    Batı Afrika pazarına verdiği artan önemi yansıtıyor. Bu bölge, nispeten daha düşük transfer 
+                    ücretleriyle fiziksel olarak güçlü, hızlı oyuncular sunması nedeniyle özellikle orta ve 
+                    alt sıra Süper Lig kulüpleri için cazip bir kaynak hâline geldi. Polonya ve Hırvatistan gibi 
+                    Avrupa ülkelerinin de listede yer alması, ligin sadece "ucuz iş gücü" değil, Avrupa'nın 
+                    farklı futbol kültürlerinden de deneyimli oyuncular çektiğini gösteriyor.</p>
+                    <p>Süper Lig'in yabancı oyuncu kuralları, yıllar içinde defalarca değişti — bazı dönemlerde 
+                    kulüp başına yabancı oyuncu sayısı sıkı şekilde sınırlandırılırken, bazı dönemlerde bu kurallar 
+                    gevşetildi. Bu düzenleme değişiklikleri, hangi ülkelerden ne kadar oyuncunun ligde yer aldığını 
+                    doğrudan etkiledi — kota kısıtlamalarının gevşetildiği dönemlerde, kulüpler daha agresif bir 
+                    şekilde yurt dışı transfer stratejisi izleyebildi. Bugün bile, bir kulübün hangi ülkelerden 
+                    oyuncu tercih ettiği, o kulübün scouting bütçesi, mevcut menajerlik ilişkileri ve teknik 
+                    direktörün geçmiş tecrübeleri gibi faktörlerle şekilleniyor.</p>
+                    <p>TransferKolik'te herhangi bir ülke ismini yazıp, o ülkeden Süper Lig'de forma giymiş 
+                    tüm oyuncuları, hangi kulüpte hangi sezon oynadıklarıyla birlikte keşfedebilirsiniz.</p>
+                    """.trimIndent()
+                ),
                 "de-gea-fax-makinesi-transferi-batirdi" to Pair(
                     "Bir Fax Makinesi Yüzünden Batan Dev Transfer",
                     """
@@ -1472,6 +1656,10 @@ fun main() {
             // 🏷️ Hangi makale hangi spora ait — mevcut makale tanımlarına dokunmadan,
             // ayrı bir eşleme ile /blog listesinde futbol/basketbol ayrımı yapıyoruz.
             val articleSport = mapOf(
+                "en-genc-yasta-debut-yapan-efsaneler" to "futbol",
+                "ayni-iki-kulupte-en-cok-oynayan-ikili" to "futbol",
+                "bir-sezonda-en-cok-takim-degistirenler" to "futbol",
+                "super-lig-en-yaygin-yabanci-uyruklar" to "futbol",
                 "de-gea-fax-makinesi-transferi-batirdi" to "futbol",
                 "alexis-sanchez-mourinho-telefon-hamlesi" to "futbol",
                 "robinho-chelsea-tisortleri-iptal-transfer" to "futbol",
