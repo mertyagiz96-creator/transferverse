@@ -57,6 +57,19 @@ fun ensureFootballDbExists() {
     }
 }
 
+// 🛡️ GÜVENLİK: /admin/* uç noktaları, veritabanını okuyan VE DEĞİŞTİREBİLEN
+// (import-transfers, cleanup-bad-data vb.) hassas araçlar — hiçbir kimlik
+// doğrulaması olmadan herkese açıktı. Render.com'da ADMIN_KEY adında bir
+// ortam değişkeni tanımlayıp, bu uç noktalara ?key=... parametresiyle
+// erişilmesini şart koşuyoruz. ADMIN_KEY tanımlı değilse erişim TAMAMEN kapalı
+// (varsayılan olarak açık bırakmak yerine güvenli tarafta hata veriyoruz).
+private fun isAdminAuthorized(call: ApplicationCall): Boolean {
+    val expectedKey = System.getenv("ADMIN_KEY")
+    if (expectedKey.isNullOrBlank()) return false
+    val providedKey = call.request.queryParameters["key"]
+    return providedKey == expectedKey
+}
+
 fun main() {
     val port = System.getenv("PORT")?.toIntOrNull() ?: 8080
 
@@ -176,6 +189,11 @@ fun main() {
             // MODUNDA — hiçbir şey yazmıyor. ?dryRun=false eklersen gerçekten
             // yazar. İş bitince bu route + TransferImport.kt silinebilir.
             get("/admin/import-transfers") {
+                // 🛡️ Admin koruması
+                if (!isAdminAuthorized(call)) {
+                    call.respond(HttpStatusCode.Forbidden, "Yetkisiz erişim.")
+                    return@get
+                }
                 val dryRun = call.request.queryParameters["dryRun"]?.toBooleanStrictOrNull() ?: true
                 try {
                     val result = TransferImport.runImport(dryRun)
@@ -190,6 +208,11 @@ fun main() {
             // veritabanına bakıp "gerçekten eklendi mi" sorusuna kesin cevap
             // veriyor. Örn: /admin/check-player?name=Guendouzi
             get("/admin/check-player") {
+                // 🛡️ Admin koruması
+                if (!isAdminAuthorized(call)) {
+                    call.respond(HttpStatusCode.Forbidden, "Yetkisiz erişim.")
+                    return@get
+                }
                 val nameQuery = call.request.queryParameters["name"] ?: ""
                 val report = TransferImport.checkPlayerTransfers(nameQuery)
                 call.respondText(report, ContentType.Text.Plain)
@@ -198,6 +221,11 @@ fun main() {
             // 🔎 GEÇİCİ: eksik/boş görünen basketbol logolarının gerçek
             // sebebini gösteriyor. Örn: /admin/check-basketball-logo?name=Ratiopharm Ulm
             get("/admin/check-basketball-logo") {
+                // 🛡️ Admin koruması
+                if (!isAdminAuthorized(call)) {
+                    call.respond(HttpStatusCode.Forbidden, "Yetkisiz erişim.")
+                    return@get
+                }
                 val nameQuery = call.request.queryParameters["name"] ?: ""
                 val report = DatabaseClient.checkBasketballLogoStatus(nameQuery)
                 call.respondText(report, ContentType.Text.Plain)
@@ -205,6 +233,11 @@ fun main() {
 
             // 🔎 GEÇİCİ: blog makaleleri için gerçek istatistikleri hesaplıyor.
             get("/admin/stat-articles") {
+                // 🛡️ Admin koruması
+                if (!isAdminAuthorized(call)) {
+                    call.respond(HttpStatusCode.Forbidden, "Yetkisiz erişim.")
+                    return@get
+                }
                 val report = DatabaseClient.computeStatArticles()
                 call.respondText(report, ContentType.Text.Plain)
             }
@@ -213,6 +246,11 @@ fun main() {
             // olmayan oyuncuları TAM PROFİLLERİYLE oluşturuyor. Varsayılan
             // önizleme modunda — ?dryRun=false ile gerçekten yazar.
             get("/admin/create-missing-players") {
+                // 🛡️ Admin koruması
+                if (!isAdminAuthorized(call)) {
+                    call.respond(HttpStatusCode.Forbidden, "Yetkisiz erişim.")
+                    return@get
+                }
                 val dryRun = call.request.queryParameters["dryRun"]?.toBooleanStrictOrNull() ?: true
                 try {
                     val result = TransferImport.createMissingPlayersForBigClubs(dryRun)
@@ -225,6 +263,11 @@ fun main() {
             // 🧹 GEÇİCİ: Belhanda'nın sahte/tekrar eden kayıtlarını ve
             // Seyit Cem Ünsal'ın (kaynak veride karışmış) kaydını temizliyor.
             get("/admin/cleanup-bad-data") {
+                // 🛡️ Admin koruması
+                if (!isAdminAuthorized(call)) {
+                    call.respond(HttpStatusCode.Forbidden, "Yetkisiz erişim.")
+                    return@get
+                }
                 val dryRun = call.request.queryParameters["dryRun"]?.toBooleanStrictOrNull() ?: true
                 try {
                     val report = TransferImport.cleanupKnownBadData(dryRun)
@@ -238,6 +281,11 @@ fun main() {
             // TÜM satırları (bugünkü import'larımız + Belhanda gibi elle
             // eklenmiş eski kayıtlar dahil) dolduruyor.
             get("/admin/repair-std-columns") {
+                // 🛡️ Admin koruması
+                if (!isAdminAuthorized(call)) {
+                    call.respond(HttpStatusCode.Forbidden, "Yetkisiz erişim.")
+                    return@get
+                }
                 val dryRun = call.request.queryParameters["dryRun"]?.toBooleanStrictOrNull() ?: true
                 try {
                     val report = TransferImport.repairMissingStdColumns(dryRun)
@@ -252,6 +300,11 @@ fun main() {
             // gerçek isimleriyle onarıyor — bugünkü işimizden bağımsız,
             // eski bir veri kalitesi sorunu.
             get("/admin/repair-empty-names") {
+                // 🛡️ Admin koruması
+                if (!isAdminAuthorized(call)) {
+                    call.respond(HttpStatusCode.Forbidden, "Yetkisiz erişim.")
+                    return@get
+                }
                 val dryRun = call.request.queryParameters["dryRun"]?.toBooleanStrictOrNull() ?: true
                 try {
                     val report = TransferImport.repairEmptyPlayerNames(dryRun)
