@@ -399,14 +399,14 @@ object TransferImport {
                                 appendLine("    image_url=\"${rs.getString("image_url")}\"")
                                 appendLine("    Bu id'nin transfers tablosundaki TÜM kayıtları:")
                                 conn.prepareStatement(
-                                    "SELECT from_club, to_club, season FROM transfers WHERE transfer_id = ? ORDER BY season"
+                                    "SELECT from_club, from_club_std, to_club, to_club_std, season FROM transfers WHERE transfer_id = ? ORDER BY season"
                                 ).use { stmt2 ->
                                     stmt2.setLong(1, id)
                                     stmt2.executeQuery().use { rs2 ->
                                         var transferCount = 0
                                         while (rs2.next()) {
                                             transferCount++
-                                            appendLine("      ${rs2.getString("from_club")} → ${rs2.getString("to_club")} [${rs2.getString("season")}]")
+                                            appendLine("      [${rs2.getString("season")}] ${rs2.getString("from_club")} (std: ${rs2.getString("from_club_std")}) → ${rs2.getString("to_club")} (std: ${rs2.getString("to_club_std")})")
                                         }
                                         if (transferCount == 0) appendLine("      (HİÇ transfer kaydı yok!)")
                                     }

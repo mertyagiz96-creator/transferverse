@@ -162,7 +162,15 @@ object DatabaseClient {
         // sistem iki farklı kulüp sanıyordu (senin gösterdiğin ekran görüntüsü).
         // Olası yazılış biçimlerinin hepsini ekliyoruz.
         "paris saint-germain" to "paris sg",
-        "paris saint germain" to "paris sg"
+        "paris saint germain" to "paris sg",
+        // 🎯 KÖK SEBEP DÜZELTMESİ: "Nottingham Forest", "Forest" ve
+        // "Nott'm Forest" — üçü de veritabanında farklı kayıtlarda geçiyordu
+        // ve hiçbiri birbirine bağlı değildi. Bu, "aynı sezonda kaç farklı
+        // kulüp" gibi sayımları yapay olarak şişiriyordu (Douglas Luiz
+        // örneğinde görüldüğü gibi). Veritabanının kullandığı kısa forma
+        // ("nott'm forest") bağlıyoruz.
+        "nottingham forest" to "nott'm forest",
+        "forest" to "nott'm forest"
     )
 
     private fun resolveClubSearchTerm(raw: String): String {
@@ -3316,41 +3324,60 @@ object DatabaseClient {
                 // 1) En çok FARKLI kulüpte oynayan 10 oyuncu (altyapı hariç,
                 // en az bir tanınmış kulüpte oynamış olmalı)
                 sb.appendLine("=== 1) EN ÇOK KULÜP DEĞİŞTİREN 10 FUTBOLCU (tanınmış isimler) ===")
-                conn.prepareStatement(
-                    """
-                    SELECT p.name, COUNT(DISTINCT t.to_club_std) as club_count
-                    FROM players p JOIN transfers t ON p.id = t.transfer_id
-                    WHERE p.id < 9999000 AND t.to_club_std NOT GLOB '[0-9]*' $famousPlayerFilter
-                    GROUP BY p.id
-                    ORDER BY club_count DESC
-                    LIMIT 40
-                    """.trimIndent()
-                ).use { stmt ->
-                    stmt.executeQuery().use { rs ->
-                        while (rs.next()) {
-                            sb.appendLine("  ${rs.getString("name")} — ${rs.getInt("club_count")} farklı kulüp")
+                // 🎯 KÖK SEBEP DÜZELTMESİ: ham to_club_std sütununu saymak
+                // yanlıştı — "Nottingham Forest" / "Forest" / "Nott'm Forest"
+                // gibi AYNI kulübün farklı yazımları farklı kulüp sayılıyordu
+                // (Douglas Luiz örneğinde bulundu). Artık her kulübü
+                // resolveClubSearchTerm ile normalize EDİP öyle sayıyoruz.
+                run {
+                    data class Row1(val pid: Int, val name: String, val club: String)
+                    val rows1 = mutableListOf<Row1>()
+                    conn.prepareStatement(
+                        """
+                        SELECT p.id, p.name, t.to_club
+                        FROM players p JOIN transfers t ON p.id = t.transfer_id
+                        WHERE p.id < 9999000 AND t.to_club_std NOT GLOB '[0-9]*' $famousPlayerFilter
+                        """.trimIndent()
+                    ).use { stmt ->
+                        stmt.executeQuery().use { rs ->
+                            while (rs.next()) {
+                                rows1.add(Row1(rs.getInt("id"), rs.getString("name") ?: "", rs.getString("to_club") ?: continue))
+                            }
                         }
                     }
+                    val byPlayer = rows1.groupBy { it.pid }
+                    byPlayer.values
+                        .map { list -> list.first().name to list.map { resolveClubSearchTerm(it.club) }.toSet().size }
+                        .sortedByDescending { it.second }
+                        .take(40)
+                        .forEach { (name, count) -> sb.appendLine("  $name — $count farklı kulüp") }
                 }
 
                 // 2) Bir sezonda en çok takım değiştiren oyuncular (tanınmış isimler)
                 sb.appendLine("\n=== 2) BİR SEZONDA EN ÇOK TAKIM DEĞİŞTİREN OYUNCULAR (tanınmış isimler) ===")
-                conn.prepareStatement(
-                    """
-                    SELECT p.name, t.season, COUNT(DISTINCT t.to_club_std) as clubs_in_season
-                    FROM players p JOIN transfers t ON p.id = t.transfer_id
-                    WHERE p.id < 9999000 AND t.to_club_std NOT GLOB '[0-9]*' $famousPlayerFilter
-                    GROUP BY p.id, t.season
-                    HAVING clubs_in_season >= 3
-                    ORDER BY clubs_in_season DESC
-                    LIMIT 40
-                    """.trimIndent()
-                ).use { stmt ->
-                    stmt.executeQuery().use { rs ->
-                        while (rs.next()) {
-                            sb.appendLine("  ${rs.getString("name")} — ${rs.getString("season")} sezonunda ${rs.getInt("clubs_in_season")} farklı kulüp")
+                run {
+                    data class Row2(val pid: Int, val name: String, val season: String, val club: String)
+                    val rows2 = mutableListOf<Row2>()
+                    conn.prepareStatement(
+                        """
+                        SELECT p.id, p.name, t.season, t.to_club
+                        FROM players p JOIN transfers t ON p.id = t.transfer_id
+                        WHERE p.id < 9999000 AND t.to_club_std NOT GLOB '[0-9]*' $famousPlayerFilter
+                        """.trimIndent()
+                    ).use { stmt ->
+                        stmt.executeQuery().use { rs ->
+                            while (rs.next()) {
+                                val season = rs.getString("season") ?: continue
+                                rows2.add(Row2(rs.getInt("id"), rs.getString("name") ?: "", season, rs.getString("to_club") ?: continue))
+                            }
                         }
                     }
+                    rows2.groupBy { it.pid to it.season }
+                        .map { (key, list) -> Triple(list.first().name, key.second, list.map { resolveClubSearchTerm(it.club) }.toSet().size) }
+                        .filter { it.third >= 3 }
+                        .sortedByDescending { it.third }
+                        .take(40)
+                        .forEach { (name, season, count) -> sb.appendLine("  $name — $season sezonunda $count farklı kulüp") }
                 }
 
                 // 3) en genç yaşta (gerçek, altyapı OLMAYAN bir kulüpte) debut
@@ -3476,6 +3503,7 @@ object DatabaseClient {
                 sb.appendLine("\n=== 5) AYNI İKİ (VEYA DAHA FAZLA) KULÜPTE EN FAZLA OYNAYAN OYUNCU ÇİFTLERİ (tanınmış isimler) ===")
                 data class PlayerClubs(val id: Int, val name: String, val clubs: MutableSet<String>)
                 val playerClubMap = mutableMapOf<Int, PlayerClubs>()
+                val displayNameMap = mutableMapOf<String, String>() // resolved -> okunabilir isim
                 conn.prepareStatement(
                     """
                     SELECT p.id, p.name, t.to_club, t.to_club_std
@@ -3494,9 +3522,17 @@ object DatabaseClient {
                             // aynı kulübün farklı yazılışları). İkisini de dışlıyoruz.
                             if (clubStd.all { it.isDigit() }) continue
                             if (isYouthClub(clubRaw)) continue
+                            // 🎯 KÖK SEBEP DÜZELTMESİ (2. tur): ham to_club_std'yi
+                            // doğrudan kullanmak da yanlıştı — "Nottingham Forest"
+                            // / "Forest" / "Nott'm Forest" gibi AYNI kulübün farklı
+                            // yazımları FARKLI kulüp sayılıyordu (Douglas Luiz'de
+                            // bulundu). Artık resolveClubSearchTerm ile normalize
+                            // edilmiş hâlini kullanıyoruz.
+                            val resolved = resolveClubSearchTerm(clubRaw ?: clubStd)
+                            displayNameMap.getOrPut(resolved) { clubRaw ?: resolved }
                             val pid = rs.getInt("id")
                             val info = playerClubMap.getOrPut(pid) { PlayerClubs(pid, rs.getString("name") ?: "", mutableSetOf()) }
-                            info.clubs.add(clubStd)
+                            info.clubs.add(resolved)
                         }
                     }
                 }
@@ -3529,7 +3565,7 @@ object DatabaseClient {
                 }
                 pairCounts.entries.sortedByDescending { it.value }.take(30).forEach { (key, count) ->
                     val (n1, n2) = pairNames[key] ?: ("?" to "?")
-                    val clubs = pairSharedClubs[key]?.joinToString(", ") ?: "?"
+                    val clubs = pairSharedClubs[key]?.joinToString(", ") { displayNameMap[it] ?: it } ?: "?"
                     sb.appendLine("  $n1 & $n2 — $count ortak kulüp: $clubs")
                 }
 

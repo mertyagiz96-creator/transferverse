@@ -382,7 +382,7 @@ fun main() {
                     <p>Bir futbolcunun kariyerinde en heyecan verici anlardan biri, A takımına ilk kez çıktığı 
                     maçtır — bu an, genelde uzun bir altyapı sürecinin meyvesidir. Ama 
                     bazı oyuncular için bu an, akranlarından çok daha erken gelir. TransferKolik'in veritabanını 
-                    taradık ve futbol tarihinin en tanınmış isimlerinden bazılarının, henüz 15 yaşındayken bile 
+                    taradık ve futbol tarihinin en tanınmış isimlerinden bazılarının, henüz 18 yaşından ÖNCE 
                     gerçek bir A takımında (altyapı değil) forma giydiğini bulduk.</p>
                     <p>Listede dikkat çeken isimler arasında Manchester City'nin efsanevi kalecisi <strong>Joe 
                     Hart</strong> (Shrewsbury Town'da ilk kez forma giymiş), İtalya'nın en tartışmalı yeteneklerinden 
@@ -390,18 +390,18 @@ fun main() {
                     <strong>Johann Vogel</strong> (Grasshopper Club Zürih'te) ve yine İsviçre'den <strong>Johan 
                     Djourou</strong> (Etoile Carouge FC'de) bulunuyor. Brezilyalı forvet <strong>Jô</strong> 
                     (Manchester City ve Everton formaları giymiş), Corinthians'ta ilk kez forma giymiş.</p>
-                    <p><strong>Tam liste (yaklaşık ilk çıkış yaşına göre, kulübüyle birlikte):</strong></p>
+                    <p><strong>Tam liste (kulübüyle birlikte):</strong></p>
                     <ol>
-                        <li>Tamás Hajnal — Ferencvárosi TC, ~15 yaşında (1996 civarı)</li>
-                        <li>Bojan Djordjic — IF Brommapojkarna, ~15 yaşında (1997 civarı)</li>
-                        <li>Matthew Etherington — Peterborough United, ~15 yaşında (1996 civarı)</li>
-                        <li>Johann Vogel — Grasshopper Club Zürih, ~15 yaşında (1992 civarı)</li>
-                        <li>Gürhan Gürsoy — Adanaspor, ~15 yaşında (2002 civarı)</li>
-                        <li>Marco Zoro — US Salernitana 1919, ~15 yaşında (1998 civarı)</li>
-                        <li>Jô — Corinthians, ~15 yaşında (2002 civarı)</li>
-                        <li>Johan Djourou — Etoile Carouge FC, ~15 yaşında (2002 civarı)</li>
-                        <li>Joe Hart — Shrewsbury Town, ~15 yaşında (2002 civarı)</li>
-                        <li>Mario Balotelli — FC Lumezzane, ~15 yaşında (2005 civarı)</li>
+                        <li>Tamás Hajnal — Ferencvárosi TC, 18 yaşından önce (1996 civarı)</li>
+                        <li>Bojan Djordjic — IF Brommapojkarna, 18 yaşından önce (1997 civarı)</li>
+                        <li>Matthew Etherington — Peterborough United, 18 yaşından önce (1996 civarı)</li>
+                        <li>Johann Vogel — Grasshopper Club Zürih, 18 yaşından önce (1992 civarı)</li>
+                        <li>Gürhan Gürsoy — Adanaspor, 18 yaşından önce (2002 civarı)</li>
+                        <li>Marco Zoro — US Salernitana 1919, 18 yaşından önce (1998 civarı)</li>
+                        <li>Jô — Corinthians, 18 yaşından önce (2002 civarı)</li>
+                        <li>Johan Djourou — Etoile Carouge FC, 18 yaşından önce (2002 civarı)</li>
+                        <li>Joe Hart — Shrewsbury Town, 18 yaşından önce (2002 civarı)</li>
+                        <li>Mario Balotelli — FC Lumezzane, 18 yaşından önce (2005 civarı)</li>
                     </ol>
                     <p>Bu kadar genç yaşta profesyonel futbola adım atmak büyük bir fırsat olduğu kadar, ciddi 
                     bir baskı da getiriyor — fiziksel olarak henüz tam gelişmemiş bir oyuncunun yetişkin 
@@ -467,39 +467,66 @@ fun main() {
                     geçiş dönemi hâline gelir. TransferKolik'in veritabanını taradığımızda, tek bir sezon içinde 
                     inanılmaz sayıda kulüp değiştiren isimler bulduk — aralarında gerçekten tanıdık, güncel 
                     isimler de var.</p>
-                    <p>Listenin zirvesinde 6 farklı kulüple <strong>Juan Bernat</strong> var — Bayern Münih ve 
-                    Paris Saint-Germain formaları giymiş sol bek, 2024/25 sezonunda 6 farklı kulüpte forma 
-                    giymiş. Aynı sayıda kulüple <strong>Fabiano</strong>, <strong>Rodrigo Contreras</strong> ve 
-                    <strong>Carlinhos</strong> da öne çıkıyor. Listede dikkat çeken diğer tanıdık isimler: eski 
-                    Ajax ve West Ham forveti <strong>Sébastien Haller</strong>, Manchester City ve Arsenal'de 
-                    forma giymiş <strong>Oleksandr Zinchenko</strong>, Chelsea ve Roma golcüsü <strong>Tammy 
-                    Abraham</strong>, Aston Villa'nın eski orta sahası <strong>Douglas Luiz</strong>, Portekiz 
-                    millî oyuncusu <strong>João Mário</strong> ve İtalya millî takımından <strong>Kristjan 
-                    Asllani</strong> — hepsi 2024/25 ya da 2025/26 sezonunda 5 farklı kulüpte forma giymiş.</p>
+                    <p>Listenin zirvesinde 6 farklı kulüple <strong>Fabiano</strong>, <strong>Rodrigo 
+                    Contreras</strong>, <strong>Carlinhos</strong>, <strong>Alessandro Fontanarosa</strong>, 
+                    <strong>Issiaka Kamate</strong> ve <strong>Tomás Palacios</strong> var. Listede dikkat çeken 
+                    diğer tanıdık isimler: Bayern Münih ve Paris Saint-Germain formaları giymiş sol bek 
+                    <strong>Juan Bernat</strong>, eski Ajax ve West Ham forveti <strong>Sébastien Haller</strong>, 
+                    Chelsea ve Roma golcüsü <strong>Tammy Abraham</strong>, Portekiz millî oyuncusu <strong>João 
+                    Mário</strong> ve İtalya millî takımından <strong>Kristjan Asllani</strong> — hepsi 2024/25 
+                    ya da 2025/26 sezonunda 5 farklı kulüpte forma giymiş.</p>
                     <p><strong>Bazı dikkat çekici isimler ve o sezonki kulüp sayıları:</strong></p>
                     <ol>
-                        <li>Juan Bernat — 2024/25 sezonunda 6 kulüp</li>
+                        <li>Fabiano — 2009/10 sezonunda 6 kulüp</li>
+                        <li>Rodrigo Contreras — 2016/17 sezonunda 6 kulüp</li>
+                        <li>Carlinhos — 2020/21 sezonunda 6 kulüp</li>
+                        <li>Juan Bernat — 2024/25 sezonunda 5 kulüp</li>
                         <li>Sébastien Haller — 2024/25 sezonunda 5 kulüp</li>
-                        <li>Oleksandr Zinchenko — 2025/26 sezonunda 5 kulüp</li>
-                        <li>Pierluigi Gollini — 2024/25 sezonunda 5 kulüp</li>
-                        <li>Patrick Cutrone — 2025/26 sezonunda 5 kulüp</li>
                         <li>Tammy Abraham — 2025/26 sezonunda 5 kulüp</li>
-                        <li>Douglas Luiz — 2025/26 sezonunda 5 kulüp</li>
                         <li>João Mário — 2025/26 sezonunda 5 kulüp</li>
                         <li>Kristjan Asllani — 2025/26 sezonunda 5 kulüp</li>
+                        <li>Pau López — 2024/25 sezonunda 5 kulüp</li>
                         <li>Lorenzo Lucca — 2025/26 sezonunda 5 kulüp</li>
                     </ol>
                     <p>Bu tür yoğun bir sezon genelde birkaç sebeple açıklanabilir: art arda kısa süreli kiralık 
                     anlaşmalar, bir kulüple erken fesih sonrası hızlı yeni bir takım bulma, ya da sezon ortasında 
                     yapılan bir dizi kiralık-geri dönüş hareketliliği. Özellikle 2024/25 ve 2025/26 sezonlarının 
                     listede yoğun görünmesi, modern transfer piyasasındaki hareketliliğin son yıllarda daha da 
-                    arttığını gösteriyor — kısa süreli kiralıklar ve sezon içi transferler artık üst düzey 
-                    oyuncular için bile giderek daha yaygın.</p>
+                    arttığını gösteriyor.</p>
                     <p>Bu tablo, bir oyuncunun kariyer yörüngesinin tek bir sezon içinde bile büyük ölçüde 
-                    değişebileceğini gösteriyor. Bu tür oyuncular için bir sezon, sahada geçirdikleri zaman kadar, 
-                    valiz toplayıp yeni bir şehre taşınmakla da geçiyor.</p>
-                    <p>TransferKolik'te bu isimlerden herhangi birini aratarak, o yoğun sezonun tam kronolojisini 
-                    — hangi tarihte hangi kulüpten hangi kulübe gittiklerini — görebilirsiniz.</p>
+                    değişebileceğini gösteriyor. TransferKolik'te bu isimlerden herhangi birini aratarak, o 
+                    yoğun sezonun tam kronolojisini görebilirsiniz.</p>
+                    """.trimIndent()
+                ),
+                "turk-futbolunda-en-cok-birlikte-oynayan-ikililer" to Pair(
+                    "Türk Futbolunda En Çok Birlikte Oynayan Oyuncu İkilileri",
+                    """
+                    <p>Türkiye'de futbol camiası, göründüğünden çok daha "küçük" bir dünya — aynı oyuncular, 
+                    kariyerleri boyunca şaşırtıcı sıklıkta birbirleriyle aynı kulüpte buluşuyor. TransferKolik'in 
+                    veritabanını tarayıp, Türk futbolunda en çok birlikte forma giymiş oyuncu ikililerini ve tam 
+                    olarak hangi kulüplerde buluştuklarını çıkardık.</p>
+                    <p>Listenin zirvesinde <strong>Emrah Eren</strong> ve <strong>Uğur Demirok</strong> var — 
+                    kariyerleri boyunca tam <strong>8 ortak kulüpte</strong> forma giymişler: Akhisarspor, 
+                    Konyaspor, Gaziantepspor, Trabzonspor, Galatasaray, İstanbulspor, Adanaspor ve Kartalspor. 
+                    Aynı sayıda ortak kulübe sahip bir diğer ikili, <strong>Yalçın Ayhan</strong> ve 
+                    <strong>Murat Erdoğan</strong> — MKE Ankaragücü, Kasımpaşa, Gaziantepspor, İstanbulspor, 
+                    Manisaspor, Sakaryaspor ve Galatasaray'da yolları kesişmiş.</p>
+                    <p><strong>Bazı dikkat çekici ikililer ve ortak kulüpleri:</strong></p>
+                    <ol>
+                        <li>Emrah Eren & Uğur Demirok — Akhisarspor, Konyaspor, Gaziantepspor, Trabzonspor, Galatasaray, İstanbulspor, Adanaspor, Kartalspor (8 kulüp)</li>
+                        <li>Yalçın Ayhan & Murat Erdoğan — MKE Ankaragücü, Kasımpaşa, Gaziantepspor, İstanbulspor, Manisaspor, Sakaryaspor, Galatasaray (8 kulüp)</li>
+                        <li>Erhan Albayrak & Murat Hacıoğlu — Konyaspor, Çaykur Rizespor, MKE Ankaragücü, Fenerbahçe, Kocaelispor, Altay SK (7 kulüp)</li>
+                        <li>Fahri Tatan & Ömer Şişmanoğlu — Sakaryaspor, Erzurumspor, Yeni Malatyaspor, Eskişehirspor, Denizlispor, Konyaspor, Beşiktaş (7 kulüp)</li>
+                        <li>Serdar Özkan & Aydın Karabulut — Bursaspor, Antalyaspor, Gençlerbirliği, Sivasspor, Elazığspor, MKE Ankaragücü, Beşiktaş (7 kulüp)</li>
+                        <li>Orkun Uşak & Mustafa Sarp — Başakşehir, Mersin İdmanyurdu, Kardemir Karabükspor, Manisaspor, Galatasaray, Kayseri Erciyesspor, Elazığspor (7 kulüp)</li>
+                    </ol>
+                    <p>Bu tür tekrarlanan takım arkadaşlıkları, Türk futbolunun kendine özgü bir dinamiğini de 
+                    yansıtıyor — özellikle orta ve alt sıra kulüpler arasında oyuncu transferleri sık sık aynı 
+                    çevrelerde dolaşıyor, benzer menajerlik ilişkileri ve teknik direktör-oyuncu bağları yıllar 
+                    içinde tekrar tekrar aynı isimleri bir araya getiriyor.</p>
+                    <p>TransferKolik'te bu isimlerden herhangi ikisini yazarak, gerçekten hangi kulüplerde 
+                    birlikte oynadıklarını, hangi sezonlarda aynı kadroda yer aldıklarını tam olarak 
+                    görebilirsiniz.</p>
                     """.trimIndent()
                 ),
                 "super-lig-en-yaygin-yabanci-uyruklar" to Pair(
@@ -1659,6 +1686,7 @@ fun main() {
                 "en-genc-yasta-debut-yapan-efsaneler" to "futbol",
                 "ayni-iki-kulupte-en-cok-oynayan-ikili" to "futbol",
                 "bir-sezonda-en-cok-takim-degistirenler" to "futbol",
+                "turk-futbolunda-en-cok-birlikte-oynayan-ikililer" to "futbol",
                 "super-lig-en-yaygin-yabanci-uyruklar" to "futbol",
                 "de-gea-fax-makinesi-transferi-batirdi" to "futbol",
                 "alexis-sanchez-mourinho-telefon-hamlesi" to "futbol",
