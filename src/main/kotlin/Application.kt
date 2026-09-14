@@ -435,32 +435,35 @@ fun main() {
                     <p>Bir futbolcunun kariyerinde en heyecan verici anlardan biri, A takımına ilk kez çıktığı 
                     maçtır — bu an, genelde uzun bir altyapı sürecinin meyvesidir. Ama 
                     bazı oyuncular için bu an, akranlarından çok daha erken gelir. TransferKolik'in veritabanını 
-                    taradık ve futbol tarihinin en tanınmış isimlerinden bazılarının, henüz 18 yaşından ÖNCE 
-                    gerçek bir A takımında (altyapı değil) forma giydiğini bulduk.</p>
+                    taradık ve futbol tarihinin en tanınmış isimlerinden bazılarının, henüz 15-17 yaşlarındayken 
+                    gerçek bir A takımında (altyapı değil) forma giydiğini bulduk — her birini bağımsız kaynaklarla 
+                    doğruladık.</p>
                     <p>Listede dikkat çeken isimler arasında Manchester City'nin efsanevi kalecisi <strong>Joe 
-                    Hart</strong> (Shrewsbury Town'da ilk kez forma giymiş), İtalya'nın en tartışmalı yeteneklerinden 
-                    <strong>Mario Balotelli</strong> (FC Lumezzane'de), İsviçre millî takımının savunma direği 
-                    <strong>Johann Vogel</strong> (Grasshopper Club Zürih'te) ve yine İsviçre'den <strong>Johan 
-                    Djourou</strong> (Etoile Carouge FC'de) bulunuyor. Brezilyalı forvet <strong>Jô</strong> 
-                    (Manchester City ve Everton formaları giymiş), Corinthians'ta ilk kez forma giymiş.</p>
-                    <p><strong>Tam liste (kulübüyle birlikte):</strong></p>
+                    Hart</strong> (Shrewsbury Town'da, doğum gününün tam ertesi günü, 17 yaşında), İtalya'nın en 
+                    tartışmalı yeteneklerinden <strong>Mario Balotelli</strong> (FC Lumezzane'de, 15 yaşında), 
+                    İsviçre millî takımının savunma direği <strong>Johann Vogel</strong> (Grasshopper Club 
+                    Zürih'te, 15 yaşında) bulunuyor. Türk futbolunun genç yıldızı <strong>Gürhan Gürsoy</strong>, 
+                    Adanaspor'da tam 15 yaş 7 ay 3 günlükken forma giyerek dönemin Süper Lig'inde en genç oyuncu 
+                    unvanını almıştı.</p>
+                    <p><strong>Tam liste (kulübü ve doğrulanmış yaşıyla birlikte):</strong></p>
                     <ol>
-                        <li>Tamás Hajnal — Ferencvárosi TC, 18 yaşından önce (1996 civarı)</li>
-                        <li>Bojan Djordjic — IF Brommapojkarna, 18 yaşından önce (1997 civarı)</li>
-                        <li>Matthew Etherington — Peterborough United, 18 yaşından önce (1996 civarı)</li>
-                        <li>Johann Vogel — Grasshopper Club Zürih, 18 yaşından önce (1992 civarı)</li>
-                        <li>Gürhan Gürsoy — Adanaspor, 18 yaşından önce (2002 civarı)</li>
-                        <li>Marco Zoro — US Salernitana 1919, 18 yaşından önce (1998 civarı)</li>
-                        <li>Jô — Corinthians, 18 yaşından önce (2002 civarı)</li>
-                        <li>Johan Djourou — Etoile Carouge FC, 18 yaşından önce (2002 civarı)</li>
-                        <li>Joe Hart — Shrewsbury Town, 18 yaşından önce (2002 civarı)</li>
-                        <li>Mario Balotelli — FC Lumezzane, 18 yaşından önce (2005 civarı)</li>
+                        <li>Johann Vogel — Grasshopper Club Zürih, 15 yaşında (22 Temmuz 1992)</li>
+                        <li>Bojan Djordjic — IF Brommapojkarna, 15 yaşında (1997)</li>
+                        <li>Matthew Etherington — Peterborough United, 15 yaş 262 gün (Mayıs 1997)</li>
+                        <li>Gürhan Gürsoy — Adanaspor, 15 yaş 7 ay 3 gün (27 Nisan 2003)</li>
+                        <li>Mario Balotelli — FC Lumezzane, 15 yaşında (2 Nisan 2006)</li>
+                        <li>Marco Zoro — US Salernitana 1919, 15-16 yaşında (1999)</li>
+                        <li>Tamás Hajnal — Ferencvárosi TC, 16 yaşında (1997)</li>
+                        <li>Jô — Corinthians, 16 yaşında (2003)</li>
+                        <li>Johan Djourou — Arsenal, 17 yaşında (2003/04)</li>
+                        <li>Joe Hart — Shrewsbury Town, 17 yaşında (doğum gününün ertesi günü, Nisan 2004)</li>
                     </ol>
                     <p>Bu kadar genç yaşta profesyonel futbola adım atmak büyük bir fırsat olduğu kadar, ciddi 
                     bir baskı da getiriyor — fiziksel olarak henüz tam gelişmemiş bir oyuncunun yetişkin 
                     profesyonellerle aynı sahada rekabet etmesi kolay değil. Listedeki isimlerin çoğunun sonraki 
                     yıllarda gerçekten üst düzey kariyerler inşa etmiş olması (Joe Hart Manchester City ve İngiltere 
-                    millî takımının kalecisi oldu, Balotelli İtalya ile Avrupa Şampiyonası finali oynadı), bu erken 
+                    millî takımının kalecisi oldu, Balotelli İtalya ile Avrupa Şampiyonası finali oynadı, Johan 
+                    Djourou Arsenal ve İsviçre millî takımında uzun yıllar forma giydi), bu erken 
                     başlangıcın onlar için doğru bir karar olduğunu gösteriyor.</p>
                     <p>Dikkat çekici bir şekilde, bu erken ilk çıkışların çoğu, oyuncunun daha sonra forma giydiği 
                     büyük kulüplerde değil, kariyerlerinin başında oynadıkları daha küçük, yerel kulüplerde 
