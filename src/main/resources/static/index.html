@@ -3528,6 +3528,11 @@
         // yedek) AYRI AYRI 2174 kaydı TEKRAR TEKRAR tarıyordu — her tuş vuruşunda
         // gözle görülür bir yavaşlığa yol açıyordu. Artık TEK GEÇİŞTE, ikisini de
         // aynı anda takip ediyoruz.
+        // 🎯 KÖK SEBEP DÜZELTMESİ: 3 harften kısa girişlerde (örn. tek "c" harfi),
+        // ~2000+ kayıtlık listede NEREDEYSE HER kayıt eşleşiyordu (çünkü "c" gibi
+        // tek bir harf çoğu isimde geçiyor) — bu, gereksiz yere en pahalı senaryoyu
+        // tetikliyordu. Kısa girişlerde bu taramayı TAMAMEN atlıyoruz.
+        if (key.length < 3) return null;
         const youthLikePattern = /primavera|next gen|under|youth|yth|u1[5-9]|u2[0-3]|\bii\b|reserves|b-team|\bb$/i;
         let bestMatch = null;      // altyapı hariç, en kısa aday
         let bestAnyMatch = null;   // hiç filtre yok, son çare
@@ -3547,7 +3552,11 @@
         // 💡 Hiçbir kaynakta yoksa, ANCAK O ZAMAN TheSportsDB'yi arka planda
         // deniyoruz — gelince refreshVisibleClubIcons/refreshClubLogoIcons ile
         // ekran kendini düzeltecek.
-        fetchSportsDbLogo(clubName);
+        // 🎯 KÖK SEBEP DÜZELTMESİ: burada "clubName" diye TANIMSIZ bir değişken
+        // kullanılıyordu (fonksiyonun parametresi "key") — bu, HER çağrıda bir
+        // JavaScript hatası (ReferenceError) fırlatıyordu. Doğru değişkene (key)
+        // düzelttik.
+        fetchSportsDbLogo(key);
         return null;
     }
 
